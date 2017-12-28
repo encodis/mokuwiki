@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+
+"""
+moku-wiki
+
+Convert page links into Markdown links, using slugified name. For example
+
+	This is a link to [[Some Other Page]] with stuff
+
+becomes
+
+	This is a link to [Some Other Page](some_other_page.html) with stuff
+
+Also inserts a level 1 heading using the title of the page (from the metadata) and renames the output file to the slugified title (to ensure consistency).
+
+TODO
+
+The script is furiously bereft of error checking (name conflicts etc)
+"""
+
+import os
+import re
+import sys
+
+regex_name = re.compile(r"\[\[.*\]\]")
+regex_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
+regex_header = re.compile(r"\.\.\.(\r\n|\r|\n)")
+
+def convert_page_link(s):
+	link_name = str(s.group())[2:-2]
+	file_name = slugify(link_name) + ".html"
+	return "[" + link_name + "](" + file_name + ")"
+
+def slugify(s):
+	# see also https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
+	# re: Django comment about removing unicode chars
+	return s.strip().replace(' ', '_').lower()
+
+###
+
+if len(sys.argv) != 3:
+	print "usage: " + sys.argv[0] + " source_dir target_dir"
+	exit()
+
+source = sys.argv[1]
+target = sys.argv[2]
+
+for file in os.listdir(source):
+
+	with open( os.path.join(source, file), "r" ) as input_file:
+		contents = input_file.read()
+
+	title = regex_title.search(contents).group(1)
+
+	# add header
+	contents = contents.replace("...\n", "...\n\n# " + title + "\n")
+
+	# replace page links
+	contents = regex_name.sub(convert_page_link, contents)
+
+	# get new file name
+	title = slugify(title) + ".md"
+
+	with open( os.path.join(target, title), "w" ) as output_file:
+		output_file.write(contents)
