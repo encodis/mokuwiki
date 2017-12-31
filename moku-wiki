@@ -22,21 +22,42 @@ import os
 import re
 import sys
 
-regex_name = re.compile(r"\[\[.*\]\]")
-regex_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
-regex_header = re.compile(r"\.\.\.(\r\n|\r|\n)")
+regex_page_link = re.compile(r"\[\[.*\]\]")
+regex_tags_link = re.compile(r"\{\{.*\}\}")
+regex_meta_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
+regex_meta_tags = re.compile(r"[T|t]ags:(.*)(\r\n|\r|\n)")
+regex_yaml_end = re.compile(r"\.\.\.(\r\n|\r|\n)")
 
-def convert_page_link(s):
-	link_name = str(s.group())[2:-2]
-	file_name = slugify(link_name) + ".html"
-	return "[" + link_name + "](" + file_name + ")"
+def convert_page_link(page):
+	link_name = str(page.group())[2:-2]
+	file_name = ""
+
+	if "|" in link_name:
+		link_name, file_name =  link_name.split("|")
+
+	if not file_name:
+		file_name = slugify(link_name)
+
+	return "[" + link_name + "](" + file_name + ".html)"
+
+def convert_tag_link(tag):
+	page_list = ""
+
+	# TODO process "tag1 +tag2 -tag3 tag4" etc - need to convert lists into sets and union etc
+	# s = set(list) etc
+	# assume first tag is not typed and subsequent ones may be: + is union, - is intersection, blank is or
+
+	for page in index_tags[ str(tag.group())[2:-2] ]:
+		page_list += "[" + page + "]\n\n"
+
+	return page_list
 
 def slugify(s):
 	# see also https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
 	# re: Django comment about removing unicode chars
 	return s.strip().replace(' ', '_').lower()
 
-###
+### MAIN ###
 
 if len(sys.argv) != 3:
 	print "usage: " + sys.argv[0] + " source_dir target_dir"
@@ -45,20 +66,43 @@ if len(sys.argv) != 3:
 source = sys.argv[1]
 target = sys.argv[2]
 
+index_tags = {}
+
+## separate loop to create index
+
 for file in os.listdir(source):
 
 	with open( os.path.join(source, file), "r" ) as input_file:
 		contents = input_file.read()
 
-	title = regex_title.search(contents).group(1)
+	title = regex_meta_title.search(contents).group(1).strip()
+	tags = regex_meta_tags.search(contents).group(1).replace(' ', '').split(",")
 
-	# add header
-	contents = contents.replace("...\n", "...\n\n# " + title + "\n")
+	# add each tag to index, with titles as set
+	for tag in tags:
+		if tag not in index_tags:
+			index_tags[tag] = list()
+		index_tags[tag].append(title)
+
+for file in os.listdir(source):
+
+	with open( os.path.join(source, file), "r" ) as input_file:
+		contents = input_file.read()
+
+	# TODO need to check each of these for None
+	title = regex_meta_title.search(contents).group(1).strip()
+	tags = regex_meta_tags.search(contents).group(1).replace(' ', '').split(",")
+
+	# add header (assumes first ... ends YAML block)
+	contents = contents.replace("...\n", "...\n\n# " + title + "\n", 1)
+
+	# replace tags links - use create_page_links() function to create paras from index, use [[ ]] format
+	contents = regex_tags_link.sub(convert_tag_link, contents)
 
 	# replace page links
-	contents = regex_name.sub(convert_page_link, contents)
+	contents = regex_page_link.sub(convert_page_link, contents)
 
-	# get new file name
+	# get new file name by adding ".md" to title
 	title = slugify(title) + ".md"
 
 	with open( os.path.join(target, title), "w" ) as output_file:
