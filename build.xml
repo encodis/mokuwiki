@@ -31,6 +31,7 @@
         <exec
             executable="${moku-wiki.exe}"
             searchpath="false"
+            resolveexecutable="true"
             dir=".">
             <arg value="${input.dir}"/>
             <arg value="${output.dir}"/>
@@ -59,8 +60,8 @@
         description="Deploy moku-wiki">
 
         <copy
-            from="${moku-wiki.exe}"
-            to="${deploy.dir}"/>
+            file="${moku-wiki.exe}"
+            todir="${deploy.dir}"/>
 
     </target>
 

@@ -59,12 +59,29 @@ def convert_page_link(page):
 	file_name = ""
 
 	if "|" in link_name:
-		link_name, file_name =  link_name.split("|")
+		link_name, file_name = link_name.split("|")
 
 	if not file_name:
 		file_name = create_valid_filename(link_name)
 
-	return "[" + link_name + "](" + file_name + ".html)"
+	# TODO if page does not exist in index then turn into bracketed span with class='broken'
+
+	print "convert " + link_name
+
+	if search_index_title(file_name):
+		return "[" + link_name + "](" + file_name + ".html)"
+	else:
+		return "[" + link_name + "]{.broken}"
+
+###
+
+def search_index_title(title):
+	for key, value in index_tags.items():
+		for v in value:
+			if title in create_valid_filename(v):
+				return True
+
+	return False
 
 ###
 
@@ -76,7 +93,7 @@ def convert_tag_link(tags):
 	page_set = set(index_tags[tag_list[0]])
 
 	# add other categories
-	for idx, tag in enumerate(tag_list[1:]):
+	for i, tag in enumerate(tag_list[1:]):
 		tag_val = tag
 
 		if tag[0] == '+' or tag[0] == '-':
@@ -94,7 +111,7 @@ def convert_tag_link(tags):
 
 	page_list = ""
 
-	for page in page_set:
+	for page in sorted(list(page_set)):
 		page_list += "[[" + page + "]]\n\n"
 
 	return page_list
@@ -144,6 +161,7 @@ for file in os.listdir(source):
 		title = title.group(1).strip()
 
 	# add header (assumes first ... ends YAML block)
+	### NOTE may not need this if we use the right template
 	contents = contents.replace("...\n", "...\n\n# " + title + "\n", 1)
 
 	# replace tags links - use create_page_links() function to create paras from index, use [[ ]] format
