@@ -1,7 +1,7 @@
 ---
 title: The Second Page
 author: Phil
-tags: bbb,ccc
+tags: [def,xyz]
 ...
 
 This is the second page. [[The First Page]] contains more info.

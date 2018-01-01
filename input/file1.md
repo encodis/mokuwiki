@@ -1,12 +1,12 @@
 ---
 title: The First Page
 author: Phil
-tags: aaa, bbb
+tags: [abc, def]
 ...
 
 This is the first page. There may be more.
 
-## List of things in tag AAA
+## List of things in tag
 
-{{ccc}}
+{{def abc}}
 

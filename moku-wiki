@@ -22,11 +22,36 @@ import os
 import re
 import sys
 
-regex_page_link = re.compile(r"\[\[.*\]\]")
-regex_tags_link = re.compile(r"\{\{.*\}\}")
-regex_meta_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
-regex_meta_tags = re.compile(r"[T|t]ags:(.*)(\r\n|\r|\n)")
-regex_yaml_end = re.compile(r"\.\.\.(\r\n|\r|\n)")
+###
+
+def create_tag_index():
+
+	for file in os.listdir(source):
+
+		with open( os.path.join(source, file), "r" ) as input_file:
+			contents = input_file.read()
+
+		title = regex_meta_title.search(contents)
+
+		if not title:
+			continue
+		else:
+			title = title.group(1).strip()
+
+		tags = regex_meta_tags.search(contents)
+
+		if not tags:
+			continue
+		else:
+			tags = tags.group(1).translate(None, ' []').split(",")
+
+		# add each tag to index, with titles as set
+		for tag in tags:
+			if tag not in index_tags:
+				index_tags[tag] = list()
+			index_tags[tag].append(title)
+
+###
 
 def convert_page_link(page):
 	link_name = str(page.group())[2:-2]
@@ -36,28 +61,57 @@ def convert_page_link(page):
 		link_name, file_name =  link_name.split("|")
 
 	if not file_name:
-		file_name = slugify(link_name)
+		file_name = create_valid_filename(link_name)
 
 	return "[" + link_name + "](" + file_name + ".html)"
 
-def convert_tag_link(tag):
+###
+
+def convert_tag_link(tags):
+	tag_list = str(tags.group())[2:-2]
+	tag_list = tag_list.split(" ")
+
+	# get initial category
+	page_set = set(index_tags[tag_list[0]])
+
+	# add other categories
+	for idx, tag in enumerate(tag_list[1:]):
+		tag_val = tag
+
+		if tag[0] == '+' or tag[0] == '-':
+			tag_val = tag[1:]
+
+		if tag_val not in index_tags:
+			continue
+
+		if tag[0] == '+':
+			page_set = page_set & set(index_tags[tag_val])
+		elif tag[0] == '-':
+			page_set = page_set - set(index_tags[tag_val])
+		else:
+			page_set = page_set | set(index_tags[tag_val])
+
 	page_list = ""
 
-	# TODO process "tag1 +tag2 -tag3 tag4" etc - need to convert lists into sets and union etc
-	# s = set(list) etc
-	# assume first tag is not typed and subsequent ones may be: + is union, - is intersection, blank is or
-
-	for page in index_tags[ str(tag.group())[2:-2] ]:
-		page_list += "[" + page + "]\n\n"
+	for page in page_set:
+		page_list += "[[" + page + "]]\n\n"
 
 	return page_list
 
-def slugify(s):
+###
+
+def create_valid_filename(s):
 	# see also https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
 	# re: Django comment about removing unicode chars
 	return s.strip().replace(' ', '_').lower()
 
 ### MAIN ###
+
+regex_page_link = re.compile(r"\[\[.*\]\]")
+regex_tags_link = re.compile(r"\{\{.*\}\}")
+regex_meta_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
+regex_meta_tags = re.compile(r"[T|t]ags:(.*)(\r\n|\r|\n)")
+regex_yaml_end = re.compile(r"\.\.\.(\r\n|\r|\n)")
 
 if len(sys.argv) != 3:
 	print "usage: " + sys.argv[0] + " source_dir target_dir"
@@ -68,21 +122,11 @@ target = sys.argv[2]
 
 index_tags = {}
 
-## separate loop to create index
+# create index
 
-for file in os.listdir(source):
+create_tag_index()
 
-	with open( os.path.join(source, file), "r" ) as input_file:
-		contents = input_file.read()
-
-	title = regex_meta_title.search(contents).group(1).strip()
-	tags = regex_meta_tags.search(contents).group(1).replace(' ', '').split(",")
-
-	# add each tag to index, with titles as set
-	for tag in tags:
-		if tag not in index_tags:
-			index_tags[tag] = list()
-		index_tags[tag].append(title)
+# process files
 
 for file in os.listdir(source):
 
@@ -90,8 +134,13 @@ for file in os.listdir(source):
 		contents = input_file.read()
 
 	# TODO need to check each of these for None
-	title = regex_meta_title.search(contents).group(1).strip()
-	tags = regex_meta_tags.search(contents).group(1).replace(' ', '').split(",")
+	title = regex_meta_title.search(contents)
+
+	if not title:
+		print sys.argv[0] + ": skipping '" + file + "', no title found"
+		continue
+	else:
+		title = title.group(1).strip()
 
 	# add header (assumes first ... ends YAML block)
 	contents = contents.replace("...\n", "...\n\n# " + title + "\n", 1)
@@ -103,7 +152,7 @@ for file in os.listdir(source):
 	contents = regex_page_link.sub(convert_page_link, contents)
 
 	# get new file name by adding ".md" to title
-	title = slugify(title) + ".md"
+	title = create_valid_filename(title) + ".md"
 
 	with open( os.path.join(target, title), "w" ) as output_file:
 		output_file.write(contents)
