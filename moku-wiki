@@ -43,6 +43,7 @@ def create_tag_index():
 		if not tags:
 			continue
 		else:
+			# if there are tags remove spaces and brackets then split into list
 			tags = tags.group(1).translate(None, ' []').split(",")
 
 		# add each tag to index, with titles as set

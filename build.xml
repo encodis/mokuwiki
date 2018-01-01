@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project
+    name="moku-wiki"
+    xmlns:if="ant:if"
+    xmlns:unless="ant:unless">
+
+    <!-- include antcontrib -->
+    <taskdef resource="net/sf/antcontrib/antlib.xml"/>
+
+    <!-- set up environment variables -->
+    <property environment="env"/>
+
+    <!-- set up local properties -->
+    <property name="moku-wiki.exe" value="moku-wiki"/>
+    <property name="deploy.dir" value="/usr/local/bin"/>
+    <property name="build.dir" value="build"/>
+    <property name="test.dir" value="test"/>
+    <property name="input.dir" value="${test.dir}/input"/>
+    <property name="output.dir" value="${test.dir}/output"/>
+
+    <!-- build targets -->
+
+    <target
+        name="test"
+        description="Run local moku-wiki on test files">
+
+        <delete dir="${output.dir}"/>
+        <mkdir dir="${output.dir}"/>
+
+        <exec
+            executable="${moku-wiki.exe}"
+            searchpath="false"
+            dir=".">
+            <arg value="${input.dir}"/>
+            <arg value="${output.dir}"/>
+        </exec>
+
+        <for param="file">
+            <sequential>
+
+                <local name="output.file"/>
+                <basename property="output.file" file="@{file}" suffix=".md"/>
+
+                <pandoc
+                    input="@{file}"
+                    output="${build.dir}/${output.file}.html"/>
+
+            </sequential>
+
+            <fileset dir="${output.dir}">
+                <include name="*.md"/>
+            </fileset>
+        </for>
+    </target>
+
+    <target
+        name="deploy"
+        description="Deploy moku-wiki">
+
+        <copy
+            from="${moku-wiki.exe}"
+            to="${deploy.dir}"/>
+
+    </target>
+
+
+    <macrodef
+        name="pandoc"
+        description="Run pandoc with parameters">
+
+        <!-- NOTE is this really 'convert markdown to something like HTML' or can we keep generality? -->
+
+        <attribute
+            name="input"
+            description="Input file"/>
+
+        <attribute
+            name="output"
+            description="Output file"/>
+
+        <attribute
+            name="format"
+            default=""
+            description="Output format"/>
+
+        <attribute
+            name="options"
+            default=""
+            description="List of options"/>
+
+        <attribute
+            name="template"
+            default=""
+            description="Template file"/>
+
+        <attribute
+            name="style"
+            default=""
+            description="Style"/>
+
+        <attribute
+            name="lua-filters"
+            default=""
+            description="List of lua filters"/>
+
+        <sequential>
+
+            <!-- check if pandoc executable is available -->
+            <find-pandoc-exe/>
+
+            <!-- TODO convert comma sep list of filters into -luafilter=f1 -luafilter=f2 -->
+            <!-- TODO convert comma sep list of options, e.g. self-contained,standalone etc -->
+            <!-- TODO how to do input format like markdown+smart, @format@extensions -->
+
+            <!-- convert markdown -->
+            <exec
+                executable="${pandoc.exe}"
+                searchpath="true"
+                dir=".">
+                <arg value="--standalone"/>
+                <arg value="--self-contained"/>
+                <arg value="--from=markdown+smart"/>
+                <arg value="--to=html5"/>
+                <arg value="--template=@{template}" unless:blank="@{template}"/>
+                <arg value="--css=@{style}" unless:blank="@{style}"/>
+                <arg value="--output=@{output}"/>
+
+                <arg value="@{input}"/>
+            </exec>
+
+        </sequential>
+    </macrodef>
+
+    <macrodef
+        name="find-pandoc-exe"
+        description="Find and set the path to the pandoc executable">
+
+        <sequential>
+
+            <local name="pandoc.exe.already.set"/>
+            <property name="pandoc.exe.already.set" value="true" if:set="pandoc.exe"/>
+
+            <!-- set pandoc.exe property, can be overridden -->
+            <condition property="pandoc.exe" value="pandoc.exe">
+              <os family="windows"/>
+            </condition>
+
+            <condition property="pandoc.exe" value="pandoc">
+              <not><os family="windows"/></not>
+            </condition>
+
+            <!-- check that executable is in the PATH -->
+            <fail message="[find-pandoc-exe] A 'pandoc' executable file cannot be found on the path">
+              <condition>
+                  <not>
+                      <available file="${pandoc.exe}" filepath="${env.PATH}" />
+                  </not>
+              </condition>
+            </fail>
+
+            <echo message="[find-pandoc-exe] ${pandoc.exe}" unless:set="pandoc.exe.already.set"/>
+
+        </sequential>
+    </macrodef>
+
+</project>

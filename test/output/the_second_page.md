@@ -1,7 +1,7 @@
 ---
 title: The Second Page
 author: Phil
-tags: def,xyz
+tags: [def,xyz]
 ...
 
 # The Second Page
