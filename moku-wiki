@@ -126,7 +126,7 @@ def create_valid_filename(s):
 
 ### MAIN ###
 
-regex_page_link = re.compile(r"\[\[[\w\s|]*\]\]")
+regex_page_link = re.compile(r"\[\[[\w\s|']*\]\]")
 regex_tags_link = re.compile(r"\{\{[\w\s+-]*\}\}")
 regex_meta_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
 regex_meta_tags = re.compile(r"[T|t]ags:(.*)(\r\n|\r|\n)")
