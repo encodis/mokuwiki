@@ -66,8 +66,6 @@ def convert_page_link(page):
 
 	# TODO if page does not exist in index then turn into bracketed span with class='broken'
 
-	print "convert " + link_name
-
 	if search_index_title(file_name):
 		return "[" + link_name + "](" + file_name + ".html)"
 	else:
@@ -90,6 +88,9 @@ def convert_tag_link(tags):
 	tag_list = tag_list.split(" ")
 
 	# get initial category
+	if tag_list[0] not in index_tags:
+		return
+
 	page_set = set(index_tags[tag_list[0]])
 
 	# add other categories
@@ -125,8 +126,8 @@ def create_valid_filename(s):
 
 ### MAIN ###
 
-regex_page_link = re.compile(r"\[\[.*\]\]")
-regex_tags_link = re.compile(r"\{\{.*\}\}")
+regex_page_link = re.compile(r"\[\[[\w\s|]*\]\]")
+regex_tags_link = re.compile(r"\{\{[\w\s+-]*\}\}")
 regex_meta_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
 regex_meta_tags = re.compile(r"[T|t]ags:(.*)(\r\n|\r|\n)")
 regex_yaml_end = re.compile(r"\.\.\.(\r\n|\r|\n)")
