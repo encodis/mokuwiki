@@ -62,13 +62,17 @@ def convert_page_link(page):
 		link_name, file_name = link_name.split("|")
 
 	if not file_name:
+		# if no file_name supplied, make one from link_name
 		file_name = create_valid_filename(link_name)
+	else:
+		# otherwise make sure file_name is valid
+		file_name = create_valid_filename(file_name)
 
-	# TODO if page does not exist in index then turn into bracketed span with class='broken'
-
+	# make link
 	if search_index_title(file_name):
 		return "[" + link_name + "](" + file_name + ".html)"
 	else:
+		# if page does not exist in index then turn into bracketed span with class='broken'
 		return "[" + link_name + "]{.broken}"
 
 ###
@@ -88,14 +92,25 @@ def convert_tag_link(tags):
 	tag_list = tag_list.split(" ")
 
 	# get initial category
-	if tag_list[0] not in index_tags:
+	tag_val = tag_list[0]
+	page_contents = ""
+
+	# if the first tag is "*" then list all pages, sorted. the comprehension flattens the lists of lists
+	if "*" in tag_val:
+
+		for page in sorted(list( set( [item for lst in index_tags.values() for item in lst ]) )):
+			page_contents += "[[" + page + "]]\n\n"
+
+		return page_contents
+
+	# continue if not showing all pages 
+	if tag_val not in index_tags:
 		return
 
 	page_set = set(index_tags[tag_list[0]])
 
 	# add other categories
 	for i, tag in enumerate(tag_list[1:]):
-		tag_val = tag
 
 		if tag[0] == '+' or tag[0] == '-':
 			tag_val = tag[1:]
@@ -110,12 +125,10 @@ def convert_tag_link(tags):
 		else:
 			page_set = page_set | set(index_tags[tag_val])
 
-	page_list = ""
-
 	for page in sorted(list(page_set)):
-		page_list += "[[" + page + "]]\n\n"
+		page_contents += "[[" + page + "]]\n\n"
 
-	return page_list
+	return page_contents
 
 ###
 
@@ -127,10 +140,10 @@ def create_valid_filename(s):
 ### MAIN ###
 
 regex_page_link = re.compile(r"\[\[[\w\s|']*\]\]")
-regex_tags_link = re.compile(r"\{\{[\w\s+-]*\}\}")
+regex_tags_link = re.compile(r"\{\{[\w\s\*+-]*\}\}")
 regex_meta_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
 regex_meta_tags = re.compile(r"[T|t]ags:(.*)(\r\n|\r|\n)")
-regex_yaml_end = re.compile(r"\.\.\.(\r\n|\r|\n)")
+# regex_yaml_end = re.compile(r"\.\.\.(\r\n|\r|\n)")
 
 if len(sys.argv) != 3:
 	print "usage: " + sys.argv[0] + " source_dir target_dir"
@@ -161,9 +174,11 @@ for file in os.listdir(source):
 	else:
 		title = title.group(1).strip()
 
+	### TODO if tags is NOT bracketed then put brackets around them so pandoc can iterate over them as a YAML sequence?
+
 	# add header (assumes first ... ends YAML block)
 	### NOTE may not need this if we use the right template
-	contents = contents.replace("...\n", "...\n\n# " + title + "\n", 1)
+	#contents = contents.replace("...\n", "...\n\n# " + title + "\n", 1)
 
 	# replace tags links - use create_page_links() function to create paras from index, use [[ ]] format
 	contents = regex_tags_link.sub(convert_tag_link, contents)

@@ -8,5 +8,8 @@ This is the first page. There may be more.
 
 ## List of things in tag
 
-{{def abc}}
+{{xyz}}
 
+### List of all pages in wiki
+
+{{*}}

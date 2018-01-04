@@ -1,1 +1,3 @@
 .build-tools.cson
+build/
+test/output/
