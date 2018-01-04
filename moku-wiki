@@ -28,6 +28,9 @@ def create_tag_index():
 
 	for file in os.listdir(source):
 
+		if file.startsWith("."):
+			continue
+
 		with open( os.path.join(source, file), "r" ) as input_file:
 			contents = input_file.read()
 
@@ -103,7 +106,7 @@ def convert_tag_link(tags):
 
 		return page_contents
 
-	# continue if not showing all pages 
+	# continue if not showing all pages
 	if tag_val not in index_tags:
 		return
 
@@ -161,6 +164,9 @@ create_tag_index()
 # process files
 
 for file in os.listdir(source):
+
+	if file.startsWith("."):
+		continue
 
 	with open( os.path.join(source, file), "r" ) as input_file:
 		contents = input_file.read()
