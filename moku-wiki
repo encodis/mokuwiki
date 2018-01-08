@@ -28,7 +28,7 @@ def create_tag_index():
 
 	for file in os.listdir(source):
 
-		if file.startsWith("."):
+		if file.startswith("."):
 			continue
 
 		with open( os.path.join(source, file), "r" ) as input_file:
@@ -138,11 +138,12 @@ def convert_tag_link(tags):
 def create_valid_filename(s):
 	# see also https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
 	# re: Django comment about removing unicode chars
-	return s.strip().replace(' ', '_').lower()
+	s = str(s).strip().replace(' ', '_').lower()
+	return re.sub(r'(?u)[^-\w.]', '', s)
 
 ### MAIN ###
 
-regex_page_link = re.compile(r"\[\[[\w\s|']*\]\]")
+regex_page_link = re.compile(r"\[\[[\w\s,|']*\]\]")
 regex_tags_link = re.compile(r"\{\{[\w\s\*+-]*\}\}")
 regex_meta_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
 regex_meta_tags = re.compile(r"[T|t]ags:(.*)(\r\n|\r|\n)")
@@ -165,7 +166,7 @@ create_tag_index()
 
 for file in os.listdir(source):
 
-	if file.startsWith("."):
+	if file.startswith("."):
 		continue
 
 	with open( os.path.join(source, file), "r" ) as input_file:

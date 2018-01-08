@@ -27,6 +27,8 @@
 
         <delete dir="${output.dir}"/>
         <mkdir dir="${output.dir}"/>
+        <delete dir="${build.dir}"/>
+        <mkdir dir="${build.dir}"/>
 
         <exec
             executable="${moku-wiki.exe}"
