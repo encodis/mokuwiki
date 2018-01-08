@@ -83,6 +83,12 @@ def convert_page_link(page):
 def search_index_title(title):
 	for key, value in index_tags.items():
 		for v in value:
+			# TODO should cache filename and title in index, ALSO should be = not in
+			## then could also check for slugified name conflicts
+			## moku_index would be a dict with key "tags" and value is dictionary, then also has key "title" with value file_name
+			## then index_tags calls would be moku_index["tags"]
+			## for JS search function could also change this into "page" "strings" (which contains tokens from title)
+			## but would still need title to make the page name 
 			if title in create_valid_filename(v):
 				return True
 

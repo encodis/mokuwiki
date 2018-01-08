@@ -63,9 +63,10 @@ Note that only the page and tag links are converted, everything else should be l
 4.  The output filename of a file will be a "slugified" version of the title (which might completely unrelated to the *input* filename). So an input file with the name "file1.md" and a title of "A Page Title" will produce an output file named "a_page_title.md" in the output folder.
 5.  You can define a "display" name using `[[Display Name|A Page Name]]` which will become `[Display Name](a_page_name.html)`.
 6.  It assumes that the eventual output will be HTML, so the links end in ".html".
-5.  Tags must be in a YAML list (i.e. enclosed in brackets).
-6.  Tags cannot contain spaces, brackets or punctuation (specify multi-word tags with underscores "like_this").
-6.  Additional tags can be specified using various operators:
+7.  If an equivalent title cannot be found for a link then it outputs a bracketed span with the class "broken", e.g. `[No Such Page]{.broken}`. This can be used to style broken links.
+8.  Tags must be in a YAML list (i.e. enclosed in brackets).
+9.  Tags cannot contain spaces, brackets or punctuation (specify multi-word tags with underscores "like_this").
+10.  Additional tags can be specified using various operators:
     a. "tag1 tag2" includes pages with tag1 *or* tag2
     b. "tag1 +tag2" includes pages with tag1 *and* tag2
     c. "tag1 -tag2" includes pages with tag1 that do *not* have tag2
@@ -73,7 +74,7 @@ Note that only the page and tag links are converted, everything else should be l
 
 The script does **NOT** convert the Markdown to HTML (or anything else). It simply converts the page/tag links in preparation for such conversion. As such it could be used in conjunction with the various static web site generators out there.
 
-> NOTE: Originally the project was referred to as "fake wiki". This brought to mind "mock wiki", and in a fit of alliterative humour I changed it to "moku-wiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it.
+> NOTE: Originally the project was referred to as "fake wiki". This brought to mind "mock wiki", and in a fit of alliterative humour I changed it to "moku-wiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software.
 
 # Installation
 
@@ -87,8 +88,7 @@ $ moku-wiki input-dir output-dir
 
 # Assumptions
 
-1.  [pandoc](pandoc.org) is being used as the Markdown processor (or at least, some converter that supports the `pandoc` Markdown syntax). It will need YAML metadata support.
-
+1.  [pandoc](pandoc.org) is being used as the Markdown processor (or at least, some converter that supports the `pandoc` Markdown syntax). The processor will need YAML metadata support.
 
 # Caveats
 
@@ -96,6 +96,7 @@ $ moku-wiki input-dir output-dir
 2.  Error checking/handling is minimal/woefully inadequate.
 3.  There are lots of things you can't do (spaces in tag names, brackets in titles etc) that could probably be addressed by better regular expressions or a more complete model of what's going on.
 4.  `moku-wiki` only converts the page link and tag list markup---anything else will have to be done by say, a `pandoc` template or similar.
+5.  There is no conflict checking, so if two pages have the same title then there will be problems. 
 
 # To Do
 
