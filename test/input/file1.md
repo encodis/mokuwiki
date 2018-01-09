@@ -1,5 +1,5 @@
 ---
-title: The First Page, Here
+title: The First Page
 author: Phil
 tags: [abc, def]
 ...

@@ -1,21 +1,21 @@
 #!/usr/bin/env python
 
-"""
-moku-wiki
+""" moku-wiki
 
-Convert page links into Markdown links, using slugified name. For example
+Converts a folder of Markdown files, applying the following transforms:
 
-	This is a link to [[Some Other Page]] with stuff
+*  Inter-page links can be specified using the target page's title (as specified in its YAML
+metadata block), e.g. '[[A Page Title]]'. This is converted to a standard Markdown link to the
+HTML version of that page: '[A Page Title](a_page_title.html)'.
 
-becomes
+*  Tags can also be specified in the YAML metadata block. They can be referenced in a page using
+the following syntax: '{{tag1}}'. This will produce a list of page links that have the "tag1" tag.
 
-	This is a link to [Some Other Page](some_other_page.html) with stuff
+The files in the specified output folder are named according to their title (not their input file
+name). For example, a page with the "title" metadata of "A Page Title" will be converted to
+"a_page_title.md". Output files can then be processed using a Markdown processor (the assumptions
+is that pandoc is being used).
 
-Also inserts a level 1 heading using the title of the page (from the metadata) and renames the output file to the slugified title (to ensure consistency).
-
-TODO
-
-The script is furiously bereft of error checking (name conflicts etc)
 """
 
 import os
@@ -24,120 +24,113 @@ import sys
 
 ###
 
-def create_tag_index():
+def create_indexes():
 
-	for file in os.listdir(source):
+	for file in os.listdir(source_dir):
 
 		if file.startswith("."):
 			continue
 
-		with open( os.path.join(source, file), "r" ) as input_file:
+		with open(os.path.join(source_dir, file), "r") as input_file:
 			contents = input_file.read()
 
 		title = regex_meta_title.search(contents)
 
-		if not title:
-			continue
-		else:
+		if title:
 			title = title.group(1).strip()
+		else:
+			continue
+
+		if title not in index_titles:
+			index_titles[title] = create_valid_filename(title)
+		else:
+			print sys.argv[0] + ": skipping '" + file + "', duplicate title '" + title + "'"
+			continue
 
 		tags = regex_meta_tags.search(contents)
 
-		if not tags:
-			continue
-		else:
+		if tags:
 			# if there are tags remove spaces and brackets then split into list
 			tags = tags.group(1).translate(None, ' []').split(",")
+		else:
+			continue
 
 		# add each tag to index, with titles as set
 		for tag in tags:
 			if tag not in index_tags:
-				index_tags[tag] = list()
-			index_tags[tag].append(title)
+				index_tags[tag] = set()
+
+			index_tags[tag].add(title)
+
 
 ###
 
 def convert_page_link(page):
-	link_name = str(page.group())[2:-2]
-	file_name = ""
+	# format is [[Page name]] or [[Show name|Page name]]
 
-	if "|" in link_name:
-		link_name, file_name = link_name.split("|")
+	page_name = str(page.group())[2:-2]
+	show_name = page_name
 
-	if not file_name:
-		# if no file_name supplied, make one from link_name
-		file_name = create_valid_filename(link_name)
+	if "|" in page_name:
+		show_name, page_name = page_name.split("|")
+
+	if page_name in index_titles:
+		# if title exists in index make into a link
+		return "[" + show_name + "](" + index_titles[page_name] + ".html)"
 	else:
-		# otherwise make sure file_name is valid
-		file_name = create_valid_filename(file_name)
+		# if title does not exist in index then turn into bracketed span with class='broken'
+		return "[" + page_name + "]{.broken}"
 
-	# make link
-	if search_index_title(file_name):
-		return "[" + link_name + "](" + file_name + ".html)"
-	else:
-		# if page does not exist in index then turn into bracketed span with class='broken'
-		return "[" + link_name + "]{.broken}"
-
-###
-
-def search_index_title(title):
-	for key, value in index_tags.items():
-		for v in value:
-			# TODO should cache filename and title in index, ALSO should be = not in
-			## then could also check for slugified name conflicts
-			## moku_index would be a dict with key "tags" and value is dictionary, then also has key "title" with value file_name
-			## then index_tags calls would be moku_index["tags"]
-			## for JS search function could also change this into "page" "strings" (which contains tokens from title)
-			## but would still need title to make the page name 
-			if title in create_valid_filename(v):
-				return True
-
-	return False
 
 ###
 
 def convert_tag_link(tags):
 	tag_list = str(tags.group())[2:-2]
 	tag_list = tag_list.split(" ")
+	page_set = set()
 
 	# get initial category
-	tag_val = tag_list[0]
-	page_contents = ""
+	tag_name = tag_list[0]
 
-	# if the first tag is "*" then list all pages, sorted. the comprehension flattens the lists of lists
-	if "*" in tag_val:
-
-		for page in sorted(list( set( [item for lst in index_tags.values() for item in lst ]) )):
-			page_contents += "[[" + page + "]]\n\n"
-
-		return page_contents
-
-	# continue if not showing all pages
-	if tag_val not in index_tags:
-		return
-
-	page_set = set(index_tags[tag_list[0]])
-
-	# add other categories
-	for i, tag in enumerate(tag_list[1:]):
-
-		if tag[0] == '+' or tag[0] == '-':
-			tag_val = tag[1:]
-
-		if tag_val not in index_tags:
-			continue
-
-		if tag[0] == '+':
-			page_set = page_set & set(index_tags[tag_val])
-		elif tag[0] == '-':
-			page_set = page_set - set(index_tags[tag_val])
+	# check that first tag value exists
+	if tag_name not in index_tags:
+		
+		# if the first tag is "*" then list all pages; otherwise return empty string
+		if "*" in tag_name:
+			page_set = set(index_titles.keys())
 		else:
-			page_set = page_set | set(index_tags[tag_val])
+			return
+
+	else:
+		# copy first tag set
+		page_set = set(index_tags[tag_list[0]])
+
+		# add other categories
+		for __, tag in enumerate(tag_list[1:]):
+
+			if tag[0] == '+' or tag[0] == '-':
+				tag_name = tag[1:]
+			else:
+				tag_name = tag
+
+			if tag_name not in index_tags:
+				continue
+
+			if tag[0] == '+':
+				page_set = page_set & index_tags[tag_name]
+			elif tag[0] == '-':
+				page_set = page_set - index_tags[tag_name]
+			else:
+				page_set = page_set | index_tags[tag_name]
+
+	# format the set into a string of page links, sorted alphabetically
+	page_list = ""
 
 	for page in sorted(list(page_set)):
-		page_contents += "[[" + page + "]]\n\n"
+		page_list += "[[" + page + "]]\n\n"
 
-	return page_contents
+	return page_list
+
 
 ###
 
@@ -147,60 +140,57 @@ def create_valid_filename(s):
 	s = str(s).strip().replace(' ', '_').lower()
 	return re.sub(r'(?u)[^-\w.]', '', s)
 
-### MAIN ###
 
-regex_page_link = re.compile(r"\[\[[\w\s,|']*\]\]")
-regex_tags_link = re.compile(r"\{\{[\w\s\*+-]*\}\}")
-regex_meta_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
-regex_meta_tags = re.compile(r"[T|t]ags:(.*)(\r\n|\r|\n)")
-# regex_yaml_end = re.compile(r"\.\.\.(\r\n|\r|\n)")
+### MAIN ###
 
 if len(sys.argv) != 3:
 	print "usage: " + sys.argv[0] + " source_dir target_dir"
 	exit()
 
-source = sys.argv[1]
-target = sys.argv[2]
+source_dir = sys.argv[1]
+target_dir = sys.argv[2]
 
-index_tags = {}
+# prepare regular expressions
 
-# create index
+regex_meta_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
+regex_meta_tags = re.compile(r"[T|t]ags:(.*)(\r\n|\r|\n)")
 
-create_tag_index()
+regex_page_link = re.compile(r"\[\[[\w\s,|']*\]\]")
+regex_tags_link = re.compile(r"\{\{[\w\s\*+-]*\}\}")
+
+# set up indexes
+
+index_tags = {}		# index of tags, containing set of titles with that tag
+index_titles = {}	# index of titles, containing associated base file name
+
+# create indexes
+
+create_indexes()
 
 # process files
 
-for file in os.listdir(source):
+for file in os.listdir(source_dir):
 
 	if file.startswith("."):
 		continue
 
-	with open( os.path.join(source, file), "r" ) as input_file:
+	with open(os.path.join(source_dir, file), "r") as input_file:
 		contents = input_file.read()
 
-	# TODO need to check each of these for None
 	title = regex_meta_title.search(contents)
 
-	if not title:
+	if title:
+		title = title.group(1).strip()
+	else:
 		print sys.argv[0] + ": skipping '" + file + "', no title found"
 		continue
-	else:
-		title = title.group(1).strip()
 
-	### TODO if tags is NOT bracketed then put brackets around them so pandoc can iterate over them as a YAML sequence?
-
-	# add header (assumes first ... ends YAML block)
-	### NOTE may not need this if we use the right template
-	#contents = contents.replace("...\n", "...\n\n# " + title + "\n", 1)
-
-	# replace tags links - use create_page_links() function to create paras from index, use [[ ]] format
+	# replace tags links first (may create page links)
 	contents = regex_tags_link.sub(convert_tag_link, contents)
 
 	# replace page links
 	contents = regex_page_link.sub(convert_page_link, contents)
 
-	# get new file name by adding ".md" to title
-	title = create_valid_filename(title) + ".md"
-
-	with open( os.path.join(target, title), "w" ) as output_file:
+	# get output file name by adding ".md" to title's file name
+	with open(os.path.join(target_dir, index_titles[title] + ".md"), "w") as output_file:
 		output_file.write(contents)
