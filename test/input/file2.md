@@ -1,5 +1,6 @@
 ---
 title: The Second Page
+alias: Page Two
 author: Phil
 tags: [def,xyz]
 ...

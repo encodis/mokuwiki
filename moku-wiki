@@ -8,8 +8,18 @@ Converts a folder of Markdown files, applying the following transforms:
 metadata block), e.g. '[[A Page Title]]'. This is converted to a standard Markdown link to the
 HTML version of that page: '[A Page Title](a_page_title.html)'.
 
+*  The YAML metadata can also have an "alias" field which can be used to link to that page instead
+of the title. This can be useful if the actual title that is to be displayed (the "formal" title,
+if you will) is long but has a common shorter form. Aliases must be unique and not the same as any
+title.
+
 *  Tags can also be specified in the YAML metadata block. They can be referenced in a page using
 the following syntax: '{{tag1}}'. This will produce a list of page links that have the "tag1" tag.
+Lists of pages can be created by combining tags in various ways:
+	*  {{tag1 tag2}} lists all pages with 'tag1' or 'tag2'
+	*  {{tag1 +tag2}} lists all pages with 'tag1' and 'tag2'
+	*  {{tag1 -tag2}} lists all pages with 'tag1' that do not have 'tag2'
+	*  {{*}} list all pages that have any tag at all
 
 The files in the specified output folder are named according to their title (not their input file
 name). For example, a page with the "title" metadata of "A Page Title" will be converted to
@@ -34,6 +44,7 @@ def create_indexes():
 		with open(os.path.join(source_dir, file), "r") as input_file:
 			contents = input_file.read()
 
+		# get title
 		title = regex_meta_title.search(contents)
 
 		if title:
@@ -47,6 +58,18 @@ def create_indexes():
 			print sys.argv[0] + ": skipping '" + file + "', duplicate title '" + title + "'"
 			continue
 
+		# get alias (if any)
+		alias = regex_meta_alias.search(contents)
+
+		if alias:
+			alias = alias.group(1).strip()
+
+			if alias not in index_alias and alias not in index_titles:
+				index_alias[alias] = title
+			else:
+				print sys.argv[0] + ": duplicate alias '" + alias + "' in file '" + file + "'"
+
+		# get tags (if any)
 		tags = regex_meta_tags.search(contents)
 
 		if tags:
@@ -74,6 +97,9 @@ def convert_page_link(page):
 	if "|" in page_name:
 		show_name, page_name = page_name.split("|")
 
+	if page_name in index_alias:
+		page_name = index_alias[page_name]
+
 	if page_name in index_titles:
 		# if title exists in index make into a link
 		return "[" + show_name + "](" + index_titles[page_name] + ".html)"
@@ -94,7 +120,7 @@ def convert_tag_link(tags):
 
 	# check that first tag value exists
 	if tag_name not in index_tags:
-		
+
 		# if the first tag is "*" then list all pages; otherwise return empty string
 		if "*" in tag_name:
 			page_set = set(index_titles.keys())
@@ -153,6 +179,7 @@ target_dir = sys.argv[2]
 # prepare regular expressions
 
 regex_meta_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
+regex_meta_alias = re.compile(r"[A|a]lias:(.*)(\r\n|\r|\n)")
 regex_meta_tags = re.compile(r"[T|t]ags:(.*)(\r\n|\r|\n)")
 
 regex_page_link = re.compile(r"\[\[[\w\s,|']*\]\]")
@@ -162,6 +189,7 @@ regex_tags_link = re.compile(r"\{\{[\w\s\*+-]*\}\}")
 
 index_tags = {}		# index of tags, containing set of titles with that tag
 index_titles = {}	# index of titles, containing associated base file name
+index_alias = {}	# index of title aliases (one per page only, must be unique and not in a title)
 
 # create indexes
 
