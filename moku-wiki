@@ -45,11 +45,9 @@ def create_indexes():
 			contents = input_file.read()
 
 		# get title
-		title = regex_meta_title.search(contents)
+		title = parse_metadata("title", contents)
 
-		if title:
-			title = title.group(1).strip()
-		else:
+		if not title:
 			continue
 
 		if title not in index_titles:
@@ -59,22 +57,19 @@ def create_indexes():
 			continue
 
 		# get alias (if any)
-		alias = regex_meta_alias.search(contents)
+		alias = parse_metadata("alias", contents)
 
-		if alias:
-			alias = alias.group(1).strip()
-
-			if alias not in index_alias and alias not in index_titles:
-				index_alias[alias] = title
-			else:
-				print sys.argv[0] + ": duplicate alias '" + alias + "' in file '" + file + "'"
+		if alias not in index_alias and alias not in index_titles:
+			index_alias[alias] = title
+		else:
+			print sys.argv[0] + ": duplicate alias '" + alias + "' in file '" + file + "'"
 
 		# get tags (if any)
-		tags = regex_meta_tags.search(contents)
+		tags = parse_metadata("tags", contents)
 
 		if tags:
 			# if there are tags remove spaces and brackets then split into list
-			tags = tags.group(1).translate(None, ' []').split(",")
+			tags = tags.translate(None, ' []').split(",")
 		else:
 			continue
 
@@ -167,6 +162,20 @@ def create_valid_filename(s):
 	return re.sub(r'(?u)[^-\w.]', '', s)
 
 
+###
+
+def parse_metadata(metadata, contents):
+	if metadata not in regex_meta:
+		return None
+
+	value = regex_meta[metadata].search(contents)
+
+	if value:
+		value = value.group(1).strip()
+
+	return value
+
+
 ### MAIN ###
 
 if len(sys.argv) != 3:
@@ -178,9 +187,10 @@ target_dir = sys.argv[2]
 
 # prepare regular expressions
 
-regex_meta_title = re.compile(r"[T|t]itle:(.*)(\r\n|\r|\n)")
-regex_meta_alias = re.compile(r"[A|a]lias:(.*)(\r\n|\r|\n)")
-regex_meta_tags = re.compile(r"[T|t]ags:(.*)(\r\n|\r|\n)")
+regex_meta = {}
+regex_meta["title"] = re.compile(r"[T|t]itle:(.*)[\r\n|\r|\n]")
+regex_meta["alias"] = re.compile(r"[A|a]lias:(.*)[\r\n|\r|\n]")
+regex_meta["tags"] = re.compile(r"[T|t]ags:(.*)[\r\n|\r|\n]")
 
 regex_page_link = re.compile(r"\[\[[\w\s,|']*\]\]")
 regex_tags_link = re.compile(r"\{\{[\w\s\*+-]*\}\}")
@@ -205,11 +215,9 @@ for file in os.listdir(source_dir):
 	with open(os.path.join(source_dir, file), "r") as input_file:
 		contents = input_file.read()
 
-	title = regex_meta_title.search(contents)
+	title = parse_metadata("title", contents)
 
-	if title:
-		title = title.group(1).strip()
-	else:
+	if not title:
 		print sys.argv[0] + ": skipping '" + file + "', no title found"
 		continue
 

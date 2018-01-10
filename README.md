@@ -5,6 +5,10 @@ For a while I've been running the excellent [dokuwiki](https://www.dokuwiki.org)
 So this project hosts a Python script (`moku-wiki`) that takes an input folder of Markdown documents and processes them according to the following rules, putting the results in an output folder:
 
 *  Inter-page links can be specified using the target page's title, e.g. `[[A Page Title]]`. This is converted to a standard Markdown link to the HTML version of that page: `[A Page Title](a_page_title.html)`.
+*   The YAML metadata can also have an "alias" field which can be used to link to that page instead
+of the title. This can be useful if the actual title that is to be displayed (the "formal" title,
+if you will) is long but has a common shorter form. Aliases must be unique and not the same as any
+title.
 *  Tags can be specified in the YAML. Tags can be referenced in a page using the following syntax: `{{tag1}}`. This will produce a list of page links that have the "tag1" tag.
 
 As an example, here is a typical input file:
@@ -12,6 +16,7 @@ As an example, here is a typical input file:
 ```
 ---
 title: The First Page
+alias: Page 1
 author: Phil
 tags: [abc, def]
 ...
@@ -33,6 +38,7 @@ This will produce:
 ```
 ---
 title: The First Page
+alias: Page 1
 author: Phil
 tags: [abc, def]
 ...
@@ -120,5 +126,6 @@ filename : [ title, [tag tag tag] ]
 for each file in filename; if term in title... if term in tags...
 ```
 
-you could add specific keywords in metadata if required (or add summary field?), just add these to the tags
+you could add specific keywords in metadata if required (or add summary field?), just add these to the tags. Also alias.
 
+So you need filename (to create link), title (to create link name), and then all of these split into individual words: title, alias, tags, summary and keywords. And deduplicated (but that's OK, assemble all of these into a temporary set, the convert to list for JSON output). 
