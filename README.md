@@ -128,4 +128,14 @@ for each file in filename; if term in title... if term in tags...
 
 you could add specific keywords in metadata if required (or add summary field?), just add these to the tags. Also alias.
 
-So you need filename (to create link), title (to create link name), and then all of these split into individual words: title, alias, tags, summary and keywords. And deduplicated (but that's OK, assemble all of these into a temporary set, the convert to list for JSON output). 
+So you need filename (to create link), title (to create link name), and then all of these split into individual words: title, alias, tags, summary and keywords. And deduplicated (but that's OK, assemble all of these into a temporary set, the convert to list for JSON output).
+
+[
+    {
+      "file" : the_filename,
+      "title" : the_title,
+      "terms" : [ word1, word2, word3 ] 
+    },
+    ...
+]
+

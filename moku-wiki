@@ -31,6 +31,7 @@ is that pandoc is being used).
 import os
 import re
 import sys
+import json
 
 ###
 
@@ -83,6 +84,38 @@ def create_indexes():
 
 ###
 
+def update_search_index(contents):
+
+	# at this point must have a title
+	title = parse_metadata("title", contents)
+	terms = title.lower().split(" ")
+
+	alias = parse_metadata("alias", contents)
+	if alias:
+		terms.extend(alias.lower().split(" "))
+
+	summary = parse_metadata("summary", contents)
+	if summary:
+		terms.extend(summary.lower().split(" "))
+
+	tags = parse_metadata("tags", contents)
+	if tags:
+		terms.extend(tags.translate(None, ' []').replace(",", " ").lower().split(" "))
+
+	keywords = parse_metadata("keywords", contents)
+	if keywords:
+		terms.extend(keywords.translate(None, ' []').replace(",", " ").lower().split(" "))
+
+	# update search index, use unique terms only
+	### TODO terms should actually be a string, then easy to search in JS
+	### ''.join(str(s) for s in set(terms))
+	###search = { "file" : index_titles[title], "title" : title, "terms" : list(set(terms)) }
+	search = { "file" : index_titles[title], "title" : title, "terms" : ' '.join(str(s) for s in set(terms)) }
+	index_search.append(search)
+
+
+###
+
 def convert_page_link(page):
 	# format is [[Page name]] or [[Show name|Page name]]
 
@@ -92,6 +125,7 @@ def convert_page_link(page):
 	if "|" in page_name:
 		show_name, page_name = page_name.split("|")
 
+	# recover any alias for the title
 	if page_name in index_alias:
 		page_name = index_alias[page_name]
 
@@ -191,6 +225,8 @@ regex_meta = {}
 regex_meta["title"] = re.compile(r"[T|t]itle:(.*)[\r\n|\r|\n]")
 regex_meta["alias"] = re.compile(r"[A|a]lias:(.*)[\r\n|\r|\n]")
 regex_meta["tags"] = re.compile(r"[T|t]ags:(.*)[\r\n|\r|\n]")
+regex_meta["keywords"] = re.compile(r"[K|k]eywords:(.*)[\r\n|\r|\n]")
+regex_meta["summary"] = re.compile(r"[S|s]ummary:(.*)[\r\n|\r|\n]")
 
 regex_page_link = re.compile(r"\[\[[\w\s,|']*\]\]")
 regex_tags_link = re.compile(r"\{\{[\w\s\*+-]*\}\}")
@@ -200,6 +236,8 @@ regex_tags_link = re.compile(r"\{\{[\w\s\*+-]*\}\}")
 index_tags = {}		# index of tags, containing set of titles with that tag
 index_titles = {}	# index of titles, containing associated base file name
 index_alias = {}	# index of title aliases (one per page only, must be unique and not in a title)
+
+index_search = []	# index for JSON search terms
 
 # create indexes
 
@@ -221,7 +259,7 @@ for file in os.listdir(source_dir):
 		print sys.argv[0] + ": skipping '" + file + "', no title found"
 		continue
 
-	# replace tags links first (may create page links)
+	# replace tags links first (this may create page links)
 	contents = regex_tags_link.sub(convert_tag_link, contents)
 
 	# replace page links
@@ -230,3 +268,12 @@ for file in os.listdir(source_dir):
 	# get output file name by adding ".md" to title's file name
 	with open(os.path.join(target_dir, index_titles[title] + ".md"), "w") as output_file:
 		output_file.write(contents)
+
+	# add terms to search index
+	update_search_index(contents)
+
+# write search index
+
+with open(os.path.join(target_dir, "index.json"), "w") as json_file:
+	json.dump(index_search, json_file, indent=4)
+

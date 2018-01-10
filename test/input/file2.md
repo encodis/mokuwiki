@@ -3,6 +3,8 @@ title: The Second Page
 alias: Page Two
 author: Phil
 tags: [def,xyz]
+summary: Stuff and nonsense
+keywords: [foo, bar]
 ...
 
 [[The Third Page]]. This is the second page. [[The First Page]] contains more info.
