@@ -60,10 +60,11 @@ def create_indexes():
 		# get alias (if any)
 		alias = parse_metadata("alias", contents)
 
-		if alias not in index_alias and alias not in index_titles:
-			index_alias[alias] = title
-		else:
-			print sys.argv[0] + ": duplicate alias '" + alias + "' in file '" + file + "'"
+		if alias:
+			if alias not in index_alias and alias not in index_titles:
+				index_alias[alias] = title
+			else:
+				print sys.argv[0] + ": duplicate alias '" + alias + "' in file '" + file + "'"
 
 		# get tags (if any)
 		tags = parse_metadata("tags", contents)
