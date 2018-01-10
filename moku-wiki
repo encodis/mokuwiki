@@ -107,9 +107,6 @@ def update_search_index(contents):
 		terms.extend(keywords.translate(None, ' []').replace(",", " ").lower().split(" "))
 
 	# update search index, use unique terms only
-	### TODO terms should actually be a string, then easy to search in JS
-	### ''.join(str(s) for s in set(terms))
-	###search = { "file" : index_titles[title], "title" : title, "terms" : list(set(terms)) }
 	search = { "file" : index_titles[title], "title" : title, "terms" : ' '.join(str(s) for s in set(terms)) }
 	index_search.append(search)
 
