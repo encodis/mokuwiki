@@ -3,7 +3,7 @@ title: The Second Page
 alias: Page Two
 author: Phil
 tags: [def,xyz]
-summary: Stuff and nonsense
+summary: Stuff and nonsense, with words
 keywords: [foo, bar]
 ...
 

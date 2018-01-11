@@ -86,28 +86,32 @@ def create_indexes():
 ###
 
 def update_search_index(contents):
-
 	# at this point must have a title
-	title = parse_metadata("title", contents)
-	terms = title.lower().split(" ")
+	terms = parse_metadata("title", contents)
 
 	alias = parse_metadata("alias", contents)
 	if alias:
-		terms.extend(alias.lower().split(" "))
+		terms += " " + alias
 
 	summary = parse_metadata("summary", contents)
 	if summary:
-		terms.extend(summary.lower().split(" "))
+		terms += " " + summary
 
 	tags = parse_metadata("tags", contents)
 	if tags:
-		terms.extend(tags.translate(None, ' []').replace(",", " ").lower().split(" "))
+		terms += " " + tags
 
 	keywords = parse_metadata("keywords", contents)
 	if keywords:
-		terms.extend(keywords.translate(None, ' []').replace(",", " ").lower().split(" "))
+		terms += " " + keywords
 
-	# update search index, use unique terms only
+	# remove punctuation etc from YAML values, make lower case
+	terms = terms.translate(None, '[]').replace(",", " ").strip().lower().split(" ")
+
+	# remove stop words
+	terms = [word for word in terms if word not in index_stopwords]
+
+	# update search index, use unique terms only (set() removes duplicates)
 	search = { "file" : index_titles[title], "title" : title, "terms" : ' '.join(str(s) for s in set(terms)) }
 	index_search.append(search)
 
@@ -123,7 +127,7 @@ def convert_page_link(page):
 	if "|" in page_name:
 		show_name, page_name = page_name.split("|")
 
-	# recover any alias for the title
+	# resolve any alias for the title
 	if page_name in index_alias:
 		page_name = index_alias[page_name]
 
@@ -236,6 +240,7 @@ index_titles = {}	# index of titles, containing associated base file name
 index_alias = {}	# index of title aliases (one per page only, must be unique and not in a title)
 
 index_search = []	# index for JSON search terms
+index_stopwords = ['a', 'an', 'and', 'be', 'by', 'i', 'it', 'is', 'the']
 
 # create indexes
 
