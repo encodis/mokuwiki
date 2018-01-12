@@ -39,7 +39,7 @@ def create_indexes():
 
 	for file in os.listdir(source_dir):
 
-		if file.startswith("."):
+		if file.startswith(".") or not file.endswith(".md"):
 			continue
 
 		with open(os.path.join(source_dir, file), "r") as input_file:
@@ -250,7 +250,7 @@ create_indexes()
 
 for file in os.listdir(source_dir):
 
-	if file.startswith("."):
+	if file.startswith(".") or not file.endswith(".md"):
 		continue
 
 	with open(os.path.join(source_dir, file), "r") as input_file:
