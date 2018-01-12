@@ -239,7 +239,7 @@ index_alias = {}	# index of title aliases (one per page only, must be unique and
 index_search = []	# index for JSON search terms
 index_stopwords = ['a', 'an', 'and', 'be', 'by', 'i', 'it', 'is', 'the']
 
-# get list of files
+# get list of Markdown files
 
 file_list = [file for file in os.listdir(source_dir) if re.match(r"[\w]+.*\.md", file)]
 
