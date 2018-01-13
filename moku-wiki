@@ -227,7 +227,7 @@ regex_meta["tags"] = re.compile(r"[T|t]ags:(.*)[\r\n|\r|\n]")
 regex_meta["keywords"] = re.compile(r"[K|k]eywords:(.*)[\r\n|\r|\n]")
 regex_meta["summary"] = re.compile(r"[S|s]ummary:(.*)[\r\n|\r|\n]")
 
-regex_page_link = re.compile(r"\[\[[\w\s,|']*\]\]")
+regex_page_link = re.compile(r"\[\[[\w\s,|'-]*\]\]")
 regex_tags_link = re.compile(r"\{\{[\w\s\*+-]*\}\}")
 
 # set up indexes
