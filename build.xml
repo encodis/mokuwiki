@@ -35,6 +35,7 @@
             searchpath="false"
             resolveexecutable="true"
             dir=".">
+            <arg value="--index"/>
             <arg value="${input.dir}"/>
             <arg value="${output.dir}"/>
         </exec>
