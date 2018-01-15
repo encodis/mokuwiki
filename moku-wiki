@@ -32,6 +32,7 @@ import os
 import re
 import sys
 import json
+import argparse
 
 ###
 
@@ -39,7 +40,7 @@ def create_indexes():
 
 	for file in file_list:
 
-		with open(os.path.join(source_dir, file), "r") as input_file:
+		with open(os.path.join(args.source, file), "r") as input_file:
 			contents = input_file.read()
 
 		# get title
@@ -48,8 +49,8 @@ def create_indexes():
 		if not title:
 			continue
 
-		if title not in index_titles:
-			index_titles[title] = create_valid_filename(title)
+		if title not in index["titles"]:
+			index["titles"][title] = create_valid_filename(title)
 		else:
 			print sys.argv[0] + ": skipping '" + file + "', duplicate title '" + title + "'"
 			continue
@@ -58,8 +59,8 @@ def create_indexes():
 		alias = parse_metadata("alias", contents)
 
 		if alias:
-			if alias not in index_alias and alias not in index_titles:
-				index_alias[alias] = title
+			if alias not in index["alias"] and alias not in index["titles"]:
+				index["alias"][alias] = title
 			else:
 				print sys.argv[0] + ": duplicate alias '" + alias + "' in file '" + file + "'"
 
@@ -74,10 +75,10 @@ def create_indexes():
 
 		# add each tag to index, with titles as set
 		for tag in tags:
-			if tag not in index_tags:
-				index_tags[tag] = set()
+			if tag not in index["tags"]:
+				index["tags"][tag] = set()
 
-			index_tags[tag].add(title)
+			index["tags"][tag].add(title)
 
 
 ###
@@ -106,11 +107,11 @@ def update_search_index(contents):
 	terms = terms.translate(None, '[]').replace(",", " ").strip().lower().split(" ")
 
 	# remove stop words
-	terms = [word for word in terms if word not in index_stopwords]
+	terms = [word for word in terms if word not in stop_list]
 
 	# update search index, use unique terms only (set() removes duplicates)
-	search = { "file" : index_titles[title], "title" : title, "terms" : ' '.join(str(s) for s in set(terms)) }
-	index_search.append(search)
+	search = { "file" : index["titles"][title], "title" : title, "terms" : ' '.join(str(s) for s in set(terms)) }
+	index["search"].append(search)
 
 
 ###
@@ -125,12 +126,12 @@ def convert_page_link(page):
 		show_name, page_name = page_name.split("|")
 
 	# resolve any alias for the title
-	if page_name in index_alias:
-		page_name = index_alias[page_name]
+	if page_name in index["alias"]:
+		page_name = index["alias"][page_name]
 
-	if page_name in index_titles:
+	if page_name in index["titles"]:
 		# if title exists in index make into a link
-		return "[" + show_name + "](" + index_titles[page_name] + ".html)"
+		return "[" + show_name + "](" + index["titles"][page_name] + ".html)"
 	else:
 		# if title does not exist in index then turn into bracketed span with class='broken'
 		return "[" + page_name + "]{.broken}"
@@ -147,17 +148,17 @@ def convert_tag_link(tags):
 	tag_name = tag_list[0]
 
 	# check that first tag value exists
-	if tag_name not in index_tags:
+	if tag_name not in index["tags"]:
 
 		# if the first tag is "*" then list all pages; otherwise return empty string
 		if "*" in tag_name:
-			page_set = set(index_titles.keys())
+			page_set = set(index["titles"].keys())
 		else:
 			return
 
 	else:
 		# copy first tag set
-		page_set = set(index_tags[tag_list[0]])
+		page_set = set(index["tags"][tag_list[0]])
 
 		# add other categories
 		for __, tag in enumerate(tag_list[1:]):
@@ -167,15 +168,15 @@ def convert_tag_link(tags):
 			else:
 				tag_name = tag
 
-			if tag_name not in index_tags:
+			if tag_name not in index["tags"]:
 				continue
 
 			if tag[0] == '+':
-				page_set = page_set & index_tags[tag_name]
+				page_set = page_set & index["tags"][tag_name]
 			elif tag[0] == '-':
-				page_set = page_set - index_tags[tag_name]
+				page_set = page_set - index["tags"][tag_name]
 			else:
-				page_set = page_set | index_tags[tag_name]
+				page_set = page_set | index["tags"][tag_name]
 
 	# format the set into a string of page links, sorted alphabetically
 	page_list = ""
@@ -211,12 +212,11 @@ def parse_metadata(metadata, contents):
 
 ### MAIN ###
 
-if len(sys.argv) != 3:
-	print "usage: " + sys.argv[0] + " source_dir target_dir"
-	exit()
-
-source_dir = sys.argv[1]
-target_dir = sys.argv[2]
+parser = argparse.ArgumentParser(description="Convert folder of Markdown files to support interpage linking and tags")
+parser.add_argument("source", help="Source directory")
+parser.add_argument("target", help="Target directory")
+parser.add_argument("-i", "--index", help="Produce search index", action="store_true")
+args = parser.parse_args()
 
 # prepare regular expressions
 
@@ -227,21 +227,23 @@ regex_meta["tags"] = re.compile(r"[T|t]ags:(.*)[\r\n|\r|\n]")
 regex_meta["keywords"] = re.compile(r"[K|k]eywords:(.*)[\r\n|\r|\n]")
 regex_meta["summary"] = re.compile(r"[S|s]ummary:(.*)[\r\n|\r|\n]")
 
-regex_page_link = re.compile(r"\[\[[\w\s,|'-]*\]\]")
-regex_tags_link = re.compile(r"\{\{[\w\s\*+-]*\}\}")
+regex_link = {}
+regex_link["page"] = re.compile(r"\[\[[\w\s,|'-]*\]\]")
+regex_link["tags"] = re.compile(r"\{\{[\w\s\*+-]*\}\}")
 
 # set up indexes
 
-index_tags = {}		# index of tags, containing set of titles with that tag
-index_titles = {}	# index of titles, containing associated base file name
-index_alias = {}	# index of title aliases (one per page only, must be unique and not in a title)
+index = {}
+index["tags"] = {}		# index of tags, containing set of titles with that tag
+index["titles"] = {}	# index of titles, containing associated base file name
+index["alias"] = {}		# index of title aliases (one per page only, must be unique and not in a title)
+index["search"] = []	# index for JSON search terms
 
-index_search = []	# index for JSON search terms
-index_stopwords = ['a', 'an', 'and', 'be', 'by', 'i', 'it', 'is', 'the']
+stop_list = ['a', 'an', 'and', 'be', 'by', 'i', 'it', 'is', 'the']
 
 # get list of Markdown files
 
-file_list = [file for file in os.listdir(source_dir) if re.match(r"[\w]+.*\.md", file)]
+file_list = [file for file in os.listdir(args.source) if re.match(r"[\w]+.*\.md", file)]
 
 # create indexes
 
@@ -251,7 +253,7 @@ create_indexes()
 
 for file in file_list:
 
-	with open(os.path.join(source_dir, file), "r") as input_file:
+	with open(os.path.join(args.source, file), "r") as input_file:
 		contents = input_file.read()
 
 	title = parse_metadata("title", contents)
@@ -261,20 +263,22 @@ for file in file_list:
 		continue
 
 	# replace tags links first (this may create page links)
-	contents = regex_tags_link.sub(convert_tag_link, contents)
+	contents = regex_link["tags"].sub(convert_tag_link, contents)
 
 	# replace page links
-	contents = regex_page_link.sub(convert_page_link, contents)
+	contents = regex_link["page"].sub(convert_page_link, contents)
 
 	# get output file name by adding ".md" to title's file name
-	with open(os.path.join(target_dir, index_titles[title] + ".md"), "w") as output_file:
+	with open(os.path.join(args.target, index["titles"][title] + ".md"), "w") as output_file:
 		output_file.write(contents)
 
 	# add terms to search index
-	update_search_index(contents)
+	if args.index:
+		update_search_index(contents)
 
 # write search index
 
-with open(os.path.join(target_dir, "index.json"), "w") as json_file:
-	json.dump(index_search, json_file, indent=4)
+if args.index:
+	with open(os.path.join(args.target, "index.json"), "w") as json_file:
+		json.dump(index["search"], json_file, indent=4)
 
