@@ -271,7 +271,7 @@ regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@+-]*\}\}")
 
 index = {}
 index["tags"] = {}		# index of tags, containing set of titles with that tag
-index["title"] = {}		# index of titles, containing associated base file name
+index["title"] = {}	# index of titles, containing associated base file name
 index["alias"] = {}		# index of title aliases (one per page only, must be unique and not in a title)
 index["search"] = []	# index for JSON search terms
 
