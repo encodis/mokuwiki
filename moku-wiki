@@ -21,7 +21,8 @@ Lists of pages can be created by combining tags in various ways:
 	*  {{tag1 -tag2}} lists all pages with 'tag1' that do not have 'tag2'
 	*  {{*}} list all pages that have any tag at all
 	*  {{#}} the total number of pages
-	*  {#tag} the total number of pages with 'tag'
+	*  {{#tag}} the total number of pages with 'tag'
+	*  {{@}} a list of all tags (bracketed spans with a class of 'tag')
 
 The files in the specified output folder are named according to their title (not their input file
 name). For example, a page with the "title" metadata of "A Page Title" will be converted to
@@ -80,11 +81,11 @@ def create_indexes():
 
 		# add each tag to index, with titles as set
 		for tag in tags:
+
 			if tag not in index["tags"]:
 				index["tags"][tag] = set()
 
 			index["tags"][tag].add(title)
-
 
 ###
 
@@ -152,6 +153,7 @@ def convert_page_link(page):
 	if page_name in index["titles"]:
 		# if title exists in index make into a link
 		page_link = "[" + show_name + "](" + index["titles"][page_name] + ".html)"
+
 	else:
 		if namespace:
 			# title not in index but namespace set, make up link on the fly
@@ -164,9 +166,9 @@ def convert_page_link(page):
 
 ###
 
-def convert_tag_link(tags):
+def convert_tags_link(tags):
 	tag_list = str(tags.group())[2:-2]
-	tag_list = tag_list.split(" ")
+	tag_list = tag_list.split()
 	page_set = set()
 
 	# get initial category
@@ -181,7 +183,7 @@ def convert_tag_link(tags):
 			page_set = set(index["titles"].keys())
 
 		elif "@" in tag_name:
-			# if the first tag contains a "@" then list all tags
+			# if the first tag contains a "@" then list all tags as bracketed span with class='tag'
 			return "[" + "]{.tag}\n\n[".join(sorted(index["tags"].keys())) + "]{.tag}"
 
 		elif "#" in tag_name:
@@ -299,7 +301,7 @@ for file in file_list:
 		continue
 
 	# replace tags links first (this may create page links)
-	contents = regex_link["tags"].sub(convert_tag_link, contents)
+	contents = regex_link["tags"].sub(convert_tags_link, contents)
 
 	# replace page links
 	contents = regex_link["page"].sub(convert_page_link, contents)
@@ -315,6 +317,7 @@ for file in file_list:
 # write search index
 
 if args.index:
+
 	with open(os.path.join(args.target, "index.json"), "w") as json_file:
 		json.dump(index["search"], json_file, indent=4)
 
