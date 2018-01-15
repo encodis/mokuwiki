@@ -16,3 +16,7 @@ This link does not exist [[The Third Page]].
 Some text. Some text. Some text. Some text. Some text. Some text.
 
 Another link that does not exist [[The Third Page]], unfortunately
+
+This wiki has {{#}} pages.
+
+There are {{#xyz}} pages with the 'xyz' tag.

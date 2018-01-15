@@ -20,18 +20,23 @@ Lists of pages can be created by combining tags in various ways:
 	*  {{tag1 +tag2}} lists all pages with 'tag1' and 'tag2'
 	*  {{tag1 -tag2}} lists all pages with 'tag1' that do not have 'tag2'
 	*  {{*}} list all pages that have any tag at all
+	*  {{#}} the total number of pages
+	*  {#tag} the total number of pages with 'tag'
 
 The files in the specified output folder are named according to their title (not their input file
 name). For example, a page with the "title" metadata of "A Page Title" will be converted to
 "a_page_title.md". Output files can then be processed using a Markdown processor (the assumptions
 is that pandoc is being used).
 
+Using the '--index' option will also output an "index.json" file that contains a JSON object
+suitable for use in a webpage.
+
 """
 
 import os
 import re
-import sys
 import json
+import string
 import argparse
 
 ###
@@ -52,7 +57,7 @@ def create_indexes():
 		if title not in index["titles"]:
 			index["titles"][title] = create_valid_filename(title)
 		else:
-			print sys.argv[0] + ": skipping '" + file + "', duplicate title '" + title + "'"
+			print "moku-wiki: skipping '" + file + "', duplicate title '" + title + "'"
 			continue
 
 		# get alias (if any)
@@ -62,7 +67,7 @@ def create_indexes():
 			if alias not in index["alias"] and alias not in index["titles"]:
 				index["alias"][alias] = title
 			else:
-				print sys.argv[0] + ": duplicate alias '" + alias + "' in file '" + file + "'"
+				print "moku-wiki: duplicate alias '" + alias + "' in file '" + file + "'"
 
 		# get tags (if any)
 		tags = parse_metadata("tags", contents)
@@ -104,7 +109,8 @@ def update_search_index(contents):
 		terms += " " + keywords
 
 	# remove punctuation etc from YAML values, make lower case
-	terms = terms.translate(None, '[]').replace(",", " ").strip().lower().split(" ")
+	table = string.maketrans(",_", "  ")
+	terms = terms.translate(table, '[]').strip().lower().split(" ")
 
 	# remove stop words
 	terms = [word for word in terms if word not in stop_list]
@@ -150,10 +156,18 @@ def convert_tag_link(tags):
 	# check that first tag value exists
 	if tag_name not in index["tags"]:
 
-		# if the first tag is "*" then list all pages; otherwise return empty string
+		# check for special characters
 		if "*" in tag_name:
+			# if the first tag contains a "*" then list all pages
 			page_set = set(index["titles"].keys())
+		elif "#" in tag_name:
+			# if the first tag contains a "#" then return the count
+			if tag_name == "#":
+				return str(len(index["titles"].keys()))
+			else:
+				return str(len(set(index["tags"][tag_name[1:]])))
 		else:
+			# otherwise return empty string
 			return
 
 	else:
@@ -229,7 +243,7 @@ regex_meta["summary"] = re.compile(r"[S|s]ummary:(.*)[\r\n|\r|\n]")
 
 regex_link = {}
 regex_link["page"] = re.compile(r"\[\[[\w\s,|'-]*\]\]")
-regex_link["tags"] = re.compile(r"\{\{[\w\s\*+-]*\}\}")
+regex_link["tags"] = re.compile(r"\{\{[\w\s\*#+-]*\}\}")
 
 # set up indexes
 
@@ -259,7 +273,7 @@ for file in file_list:
 	title = parse_metadata("title", contents)
 
 	if not title:
-		print sys.argv[0] + ": skipping '" + file + "', no title found"
+		print "moku-wiki: skipping '" + file + "', no title found"
 		continue
 
 	# replace tags links first (this may create page links)
