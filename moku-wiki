@@ -55,8 +55,8 @@ def create_indexes():
 		if not title:
 			continue
 
-		if title not in index["titles"]:
-			index["titles"][title] = create_valid_filename(title)
+		if title not in index["title"]:
+			index["title"][title] = create_valid_filename(title)
 		else:
 			print "moku-wiki: skipping '" + file + "', duplicate title '" + title + "'"
 			continue
@@ -65,7 +65,7 @@ def create_indexes():
 		alias = parse_metadata("alias", contents)
 
 		if alias:
-			if alias not in index["alias"] and alias not in index["titles"]:
+			if alias not in index["alias"] and alias not in index["title"]:
 				index["alias"][alias] = title
 			else:
 				print "moku-wiki: duplicate alias '" + alias + "' in file '" + file + "'"
@@ -117,7 +117,7 @@ def update_search_index(contents):
 	terms = [word for word in terms if word not in stop_list]
 
 	# update search index, use unique terms only (set() removes duplicates)
-	search = { "file" : index["titles"][title], "title" : title, "terms" : ' '.join(str(s) for s in set(terms)) }
+	search = { "file" : index["title"][title], "title" : title, "terms" : ' '.join(str(s) for s in set(terms)) }
 	index["search"].append(search)
 
 
@@ -150,9 +150,9 @@ def convert_page_link(page):
 
 	page_link = ""
 
-	if page_name in index["titles"]:
+	if page_name in index["title"]:
 		# if title exists in index make into a link
-		page_link = "[" + show_name + "](" + index["titles"][page_name] + ".html)"
+		page_link = "[" + show_name + "](" + index["title"][page_name] + ".html)"
 
 	else:
 		if namespace:
@@ -180,7 +180,7 @@ def convert_tags_link(tags):
 		# check for special characters
 		if "*" in tag_name:
 			# if the first tag contains a "*" then list all pages
-			page_set = set(index["titles"].keys())
+			page_set = set(index["title"].keys())
 
 		elif "@" in tag_name:
 			# if the first tag contains a "@" then list all tags as bracketed span with class='tag'
@@ -189,7 +189,7 @@ def convert_tags_link(tags):
 		elif "#" in tag_name:
 			# if the first tag contains a "#" then return the count
 			if tag_name == "#":
-				return str(len(index["titles"].keys()))
+				return str(len(index["title"].keys()))
 			else:
 				return str(len(set(index["tags"][tag_name[1:]])))
 
@@ -271,7 +271,7 @@ regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@+-]*\}\}")
 
 index = {}
 index["tags"] = {}		# index of tags, containing set of titles with that tag
-index["titles"] = {}	# index of titles, containing associated base file name
+index["title"] = {}		# index of titles, containing associated base file name
 index["alias"] = {}		# index of title aliases (one per page only, must be unique and not in a title)
 index["search"] = []	# index for JSON search terms
 
@@ -307,7 +307,7 @@ for file in file_list:
 	contents = regex_link["page"].sub(convert_page_link, contents)
 
 	# get output file name by adding ".md" to title's file name
-	with open(os.path.join(args.target, index["titles"][title] + ".md"), "w") as output_file:
+	with open(os.path.join(args.target, index["title"][title] + ".md"), "w") as output_file:
 		output_file.write(contents)
 
 	# add terms to search index
