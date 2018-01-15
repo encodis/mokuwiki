@@ -24,3 +24,7 @@ There are {{#xyz}} pages with the 'xyz' tag.
 This is a link to [[..:ns2:Another Sibling Namespace]]
 
 This is a link to [[Child NS|ns3:ns4:Another Child Namespace]]
+
+A list of all tags:
+
+{{@}}

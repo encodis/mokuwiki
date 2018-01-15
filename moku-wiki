@@ -110,7 +110,7 @@ def update_search_index(contents):
 
 	# remove punctuation etc from YAML values, make lower case
 	table = string.maketrans(",_", "  ")
-	terms = terms.translate(table, '[]').strip().lower().split(" ")
+	terms = terms.translate(table, '[]').lower().split()
 
 	# remove stop words
 	terms = [word for word in terms if word not in stop_list]
@@ -137,11 +137,11 @@ def convert_page_link(page):
 
 	if ":" in page_name:
 		namespace, page_name = page_name.rsplit(":", 1)
-
-		if not show_name:
-			show_name = page_name
-
 		namespace = namespace.replace(":","/") + "/"
+
+	# set show name if not already done
+	if not show_name:
+		show_name = page_name
 
 	# resolve any alias for the title
 	if page_name in index["alias"]:
@@ -179,12 +179,18 @@ def convert_tag_link(tags):
 		if "*" in tag_name:
 			# if the first tag contains a "*" then list all pages
 			page_set = set(index["titles"].keys())
+
+		elif "@" in tag_name:
+			# if the first tag contains a "@" then list all tags
+			return "[" + "]{.tag}\n\n[".join(sorted(index["tags"].keys())) + "]{.tag}"
+
 		elif "#" in tag_name:
 			# if the first tag contains a "#" then return the count
 			if tag_name == "#":
 				return str(len(index["titles"].keys()))
 			else:
 				return str(len(set(index["tags"][tag_name[1:]])))
+
 		else:
 			# otherwise return empty string
 			return
@@ -212,12 +218,7 @@ def convert_tag_link(tags):
 				page_set = page_set | index["tags"][tag_name]
 
 	# format the set into a string of page links, sorted alphabetically
-	page_list = ""
-
-	for page in sorted(list(page_set)):
-		page_list += "[[" + page + "]]\n\n"
-
-	return page_list
+	return "[[" + "]]\n\n[[".join(sorted(list(page_set))) + "]]\n\n"
 
 
 ###
@@ -262,7 +263,7 @@ regex_meta["summary"] = re.compile(r"[S|s]ummary:(.*)[\r\n|\r|\n]")
 
 regex_link = {}
 regex_link["page"] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
-regex_link["tags"] = re.compile(r"\{\{[\w\s\*#+-]*\}\}")
+regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@+-]*\}\}")
 
 # set up indexes
 
@@ -271,6 +272,8 @@ index["tags"] = {}		# index of tags, containing set of titles with that tag
 index["titles"] = {}	# index of titles, containing associated base file name
 index["alias"] = {}		# index of title aliases (one per page only, must be unique and not in a title)
 index["search"] = []	# index for JSON search terms
+
+# list of stop words for search indexing
 
 stop_list = ['a', 'an', 'and', 'be', 'by', 'i', 'it', 'is', 'the']
 

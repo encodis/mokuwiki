@@ -81,6 +81,7 @@ Note that only the page and tag links are converted, everything else should be l
     d. "*" is a shortcut to include _all_ pages in the wiki that have a tag (pages do not have to have a tag, so leave them out if you don't want them in this "index" list)
     e. "#" is a shortcut for the number of pages that have a tag
     f. "#tag" returns the number of pages that have the tag 'tag'
+    g. "@" will return a list of all tags (but as a plain list of paragraphs, so a set of links)
 11. Page names can contain references to namespaces, e.g. `[[..:ns2;Page Four]]` refers to "page_four.html" in the folder "../ns2". Namespaces cannot contain spaces and map directly to folder structures (replacing ":" with "/").
 
 The script does **NOT** convert the Markdown to HTML (or anything else). It simply converts the page/tag links in preparation for such conversion. As such it could be used in conjunction with the various static web site generators out there.
