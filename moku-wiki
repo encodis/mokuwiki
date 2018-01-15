@@ -124,24 +124,43 @@ def update_search_index(contents):
 
 def convert_page_link(page):
 	# format is [[Page name]] or [[Show name|Page name]]
+	# with namespaces [[namespace:Page name]] or [[Show name|namespace:Page name]]
 
 	page_name = str(page.group())[2:-2]
-	show_name = page_name
+	show_name = ""
 
 	if "|" in page_name:
 		show_name, page_name = page_name.split("|")
+
+	# resolve namespace
+	namespace = ""
+
+	if ":" in page_name:
+		namespace, page_name = page_name.rsplit(":", 1)
+
+		if not show_name:
+			show_name = page_name
+
+		namespace = namespace.replace(":","/") + "/"
 
 	# resolve any alias for the title
 	if page_name in index["alias"]:
 		page_name = index["alias"][page_name]
 
+	page_link = ""
+
 	if page_name in index["titles"]:
 		# if title exists in index make into a link
-		return "[" + show_name + "](" + index["titles"][page_name] + ".html)"
+		page_link = "[" + show_name + "](" + index["titles"][page_name] + ".html)"
 	else:
-		# if title does not exist in index then turn into bracketed span with class='broken'
-		return "[" + page_name + "]{.broken}"
+		if namespace:
+			# title not in index but namespace set, make up link on the fly
+			page_link = "[" + show_name + "](" + namespace + create_valid_filename(page_name) + ".html)"
+		else:
+			# if title does not exist in index then turn into bracketed span with class='broken'
+			page_link = "[" + page_name + "]{.broken}"
 
+	return page_link
 
 ###
 
@@ -242,7 +261,7 @@ regex_meta["keywords"] = re.compile(r"[K|k]eywords:(.*)[\r\n|\r|\n]")
 regex_meta["summary"] = re.compile(r"[S|s]ummary:(.*)[\r\n|\r|\n]")
 
 regex_link = {}
-regex_link["page"] = re.compile(r"\[\[[\w\s,|'-]*\]\]")
+regex_link["page"] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
 regex_link["tags"] = re.compile(r"\{\{[\w\s\*#+-]*\}\}")
 
 # set up indexes
