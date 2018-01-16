@@ -87,6 +87,7 @@ def create_indexes():
 
 			index["tags"][tag].add(title)
 
+
 ###
 
 def update_search_index(contents):
@@ -138,7 +139,11 @@ def convert_page_link(page):
 
 	if ":" in page_name:
 		namespace, page_name = page_name.rsplit(":", 1)
-		namespace = namespace.replace(":","/") + "/"
+
+		if args.namespace == "simple":
+			namespace = "../" + namespace.replace(":","/") + "/"
+		else:
+			namespace = namespace.replace(":","/") + "/"
 
 	# set show name if not already done
 	if not show_name:
@@ -160,9 +165,10 @@ def convert_page_link(page):
 			page_link = "[" + show_name + "](" + namespace + create_valid_filename(page_name) + ".html)"
 		else:
 			# if title does not exist in index then turn into bracketed span with class='broken'
-			page_link = "[" + page_name + "]{.broken}"
+			page_link = "[" + page_name + "]{." + args.broken + "}"
 
 	return page_link
+
 
 ###
 
@@ -187,11 +193,17 @@ def convert_tags_link(tags):
 			return "[" + "]{.tag}\n\n[".join(sorted(index["tags"].keys())) + "]{.tag}"
 
 		elif "#" in tag_name:
-			# if the first tag contains a "#" then return the count
+			# if the first tag contains a "#" then return the count of pages
 			if tag_name == "#":
+				# a single "#" returns total number of pages
 				return str(len(index["title"].keys()))
 			else:
-				return str(len(set(index["tags"][tag_name[1:]])))
+				# the string "#tag" returns number of pages with that tag
+				if tag_name[1:] in index["tags"]:
+					return str(len(set(index["tags"][tag_name[1:]])))
+				else:
+					# return empty string if tag not in index
+					return
 
 		else:
 			# otherwise return empty string
@@ -252,6 +264,8 @@ parser = argparse.ArgumentParser(description="Convert folder of Markdown files t
 parser.add_argument("source", help="Source directory")
 parser.add_argument("target", help="Target directory")
 parser.add_argument("-i", "--index", help="Produce search index", action="store_true")
+parser.add_argument("-n", "--namespace", choices=["simple", "full"], default="simple", help="Namespace complexity")
+parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links")
 args = parser.parse_args()
 
 # prepare regular expressions
