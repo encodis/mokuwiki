@@ -128,7 +128,10 @@ def update_search_index(contents):
 	terms = [word for word in terms if word not in stop_list]
 
 	# update search index, use unique terms only (set() removes duplicates)
-	search = { "file" : index["title"][title], "title" : title, "terms" : ' '.join(str(s) for s in set(terms)) }
+	search = { "file" : index["title"][title],
+			   "title" : title,
+			   "terms" : ' '.join(str(s) for s in set(terms)) }
+			   
 	index["search"].append(search)
 
 
