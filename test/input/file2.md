@@ -27,6 +27,10 @@ This is a link to [[..:ns2:Another Sibling Namespace]]
 
 This is a link to [[Child NS|ns3:ns4:Another Child Namespace]]
 
+List of files with spacey tags:
+
+{{spacey_tag}}
+
 A list of all tags:
 
 {{@}}

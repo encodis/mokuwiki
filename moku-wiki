@@ -26,7 +26,7 @@ Lists of pages can be created by combining tags in various ways:
 
 The files in the specified output folder are named according to their title (not their input file
 name). For example, a page with the "title" metadata of "A Page Title" will be converted to
-"a_page_title.md". Output files can then be processed using a Markdown processor (the assumptions
+"a_page_title.md". Output files can then be processed using a Markdown processor (the assumption
 is that pandoc is being used).
 
 Using the '--index' option will also output an "index.json" file that contains a JSON object
@@ -74,18 +74,21 @@ def create_indexes():
 		tags = parse_metadata("tags", contents)
 
 		if tags:
-			# if there are tags remove spaces and brackets then split into list
-			tags = tags.translate(None, ' []').split(",")
+			# if there are tags remove brackets and split into list
+			tags = tags[1:-1].split(",")
 		else:
 			continue
 
 		# add each tag to index, with titles as set
 		for tag in tags:
 
-			if tag not in index["tags"]:
-				index["tags"][tag] = set()
+			# strip end spaces and convert to lower case
+			tag_name = tag.strip().lower()
 
-			index["tags"][tag].add(title)
+			if tag_name not in index["tags"]:
+				index["tags"][tag_name] = set()
+
+			index["tags"][tag_name].add(title)
 
 
 ###
@@ -164,7 +167,7 @@ def convert_page_link(page):
 			# title not in index but namespace set, make up link on the fly
 			page_link = "[" + show_name + "](" + namespace + create_valid_filename(page_name) + ".html)"
 		else:
-			# if title does not exist in index then turn into bracketed span with class='broken'
+			# if title does not exist in index then turn into bracketed span with class='broken' (default)
 			page_link = "[" + page_name + "]{." + args.broken + "}"
 
 	return page_link
@@ -178,7 +181,7 @@ def convert_tags_link(tags):
 	page_set = set()
 
 	# get initial category
-	tag_name = tag_list[0]
+	tag_name = tag_list[0].replace("_"," ").lower()
 
 	# check that first tag value exists
 	if tag_name not in index["tags"]:
@@ -189,8 +192,9 @@ def convert_tags_link(tags):
 			page_set = set(index["title"].keys())
 
 		elif "@" in tag_name:
-			# if the first tag contains a "@" then list all tags as bracketed span with class='tag'
-			return "[" + "]{.tag}\n\n[".join(sorted(index["tags"].keys())) + "]{.tag}"
+			# if the first tag contains a "@" then list all tags as bracketed span with class='tag' (default)
+			tag_class = "]{." + args.tag + "}\n\n["
+			return "[" + tag_class.join(sorted(index["tags"].keys())) + "]{." + args.tag + "}"
 
 		elif "#" in tag_name:
 			# if the first tag contains a "#" then return the count of pages
@@ -211,7 +215,8 @@ def convert_tags_link(tags):
 
 	else:
 		# copy first tag set
-		page_set = set(index["tags"][tag_list[0]])
+		tag_name = tag_list[0].replace("_"," ").lower()
+		page_set = set(index["tags"][tag_name])
 
 		# add other categories
 		for __, tag in enumerate(tag_list[1:]):
@@ -220,6 +225,9 @@ def convert_tags_link(tags):
 				tag_name = tag[1:]
 			else:
 				tag_name = tag
+
+			# normalise tag name
+			tag_name = tag_name.replace("_"," ").lower()
 
 			if tag_name not in index["tags"]:
 				continue
@@ -264,8 +272,9 @@ parser = argparse.ArgumentParser(description="Convert folder of Markdown files t
 parser.add_argument("source", help="Source directory")
 parser.add_argument("target", help="Target directory")
 parser.add_argument("-i", "--index", help="Produce search index", action="store_true")
-parser.add_argument("-n", "--namespace", choices=["simple", "full"], default="simple", help="Namespace complexity")
-parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links")
+parser.add_argument("-n", "--namespace", choices=["simple", "full"], default="simple", help="Namespace complexity (default is 'simple')")
+parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links (default is 'broken')")
+parser.add_argument("-t", "--tag", default="tag", help="CSS class for tag links (default is 'tag')")
 args = parser.parse_args()
 
 # prepare regular expressions
@@ -331,7 +340,6 @@ for file in file_list:
 # write search index
 
 if args.index:
-
 	with open(os.path.join(args.target, "index.json"), "w") as json_file:
 		json.dump(index["search"], json_file, indent=4)
 

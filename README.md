@@ -69,11 +69,12 @@ Note that only the page and tag links are converted, everything else should be l
 2.  If a page does not have a "title" key in the metadata then processing is skipped.
 3.  The "title" cannot contain parentheses or brackets (basically just alpha-numeric characters and some punctuation).
 4.  The output filename of a file will be a "slugified" version of the title (which might completely unrelated to the *input* filename). So an input file with the name "file1.md" and a title of "A Page Title" will produce an output file named "a_page_title.md" in the output folder.
+    a. You can fool the system by having two documents with the same title but in different case. Don't do that...
 5.  You can define a "display" name using `[[Display Name|A Page Name]]` which will become `[Display Name](a_page_name.html)`. (Note: unlike the DokuWiki syntax you cannot specify an actual filename here.)
 6.  It assumes that the eventual output will be HTML, so the links end in ".html".
-7.  If an equivalent title cannot be found for a link then it outputs a bracketed span with the class "broken", e.g. `[No Such Page]{.broken}`. This can be used to style broken links.
-8.  Tags must be in a YAML list (i.e. enclosed in brackets).
-9.  Tags cannot contain spaces, brackets or punctuation (specify multi-word tags with underscores "like_this").
+7.  If an equivalent title cannot be found for a link then it outputs a bracketed span with the class "broken", e.g. `[No Such Page]{.broken}`. This can be used to style broken links. The class name can be changed using the `--broken` command line option.
+8.  Tags must be in a YAML list (i.e. enclosed in brackets, separated by commas), e.g. `tags: [foo, bar]`.
+9.  Tags cannot contain brackets or punctuation. When being defined in the YAML block tags can contain spaces, e.g. `tags: [Wordy Tag, Other Tag]`. However, when referencing tags with spaces use an underscore instead of a space, e.g. `{{wordy_tag +other_tag}}`. Tags are case-insensitive.
 10. Additional tags can be specified using various operators:
     a. "tag1 tag2" includes pages with tag1 *or* tag2
     b. "tag1 +tag2" includes pages with tag1 *and* tag2
@@ -81,8 +82,10 @@ Note that only the page and tag links are converted, everything else should be l
     d. "*" is a shortcut to include _all_ pages in the wiki that have a tag (pages do not have to have a tag, so leave them out if you don't want them in this "index" list)
     e. "#" is a shortcut for the number of pages that have a tag
     f. "#tag" returns the number of pages that have the tag 'tag'
-    g. "@" will return a list of all tags (but as a plain list of paragraphs, so a set of links)
-11. Page names can contain references to namespaces, e.g. `[[..:ns2;Page Four]]` refers to "page_four.html" in the folder "../ns2". Namespaces cannot contain spaces and map directly to folder structures (replacing ":" with "/").
+    g. "@" will return a list of all tags as a series of bracketed spans with the class name "tag". This can be used to style tag lists. The class name can be changed using the `--tag` command line option.
+11. Page names can contain references to namespaces, e.g. `[[ns2:Page Four]]`. Namespaces are assumed to refer to folders and so cannot contain spaces. How these are incorporated into the resulting link depends on the value of the `--namespace` command line option.
+    a. A value of "simple" (the default) assumes that there is a main folder, with a single level of child folders, e.g. "main/a", "main/b" and so on. A namespace reference in folder "main/a" is assumed to point to a page in "main/b". Therefore a page link like `[[b:A Page]]` in a document in "main/a" will convert to `[A Page](../b/a_page.html)`. 
+    b. A value of "full" will treat a namespace as a path of folders. The author is then responsible for specifying the correct path, e.g. `[[..:..:ns2:ns3:A Page]]` will become `[A Page](../../ns2/n3/a_page.html)`.
 
 The script does **NOT** convert the Markdown to HTML (or anything else). It simply converts the page/tag links in preparation for such conversion. As such it could be used in conjunction with the various static web site generators out there.
 

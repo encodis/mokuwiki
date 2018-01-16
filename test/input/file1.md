@@ -1,7 +1,7 @@
 ---
 title: The First Page
 author: Phil
-tags: [abc, def]
+tags: [abc, def, Spacey Tag]
 ...
 
 This is the first page. There may be more.
