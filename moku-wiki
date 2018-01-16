@@ -25,9 +25,9 @@ Lists of pages can be created by combining tags in various ways:
 	*  {{@}} a list of all tags (bracketed spans with a class of 'tag')
 
 The files in the specified output folder are named according to their title (not their input file
-name). For example, a page with the "title" metadata of "A Page Title" will be converted to
-"a_page_title.md". Output files can then be processed using a Markdown processor (the assumption
-is that pandoc is being used).
+name). For example, a page called "file1.md" with the "title" metadata equal to "A Page Title" will
+be converted to "a_page_title.md". Output files can then be processed using a Markdown processor
+(the assumption is that pandoc is being used).
 
 Using the '--index' option will also output an "index.json" file that contains a JSON object
 suitable for use in a webpage.
@@ -98,24 +98,28 @@ def update_search_index(contents):
 	terms = parse_metadata("title", contents)
 
 	alias = parse_metadata("alias", contents)
+
 	if alias:
 		terms += " " + alias
 
 	summary = parse_metadata("summary", contents)
+
 	if summary:
 		terms += " " + summary
 
 	tags = parse_metadata("tags", contents)
+
 	if tags:
-		terms += " " + tags
+		terms += " " + tags[1:-1]
 
 	keywords = parse_metadata("keywords", contents)
+
 	if keywords:
-		terms += " " + keywords
+		terms += " " + keywords[1:-1]
 
 	# remove punctuation etc from YAML values, make lower case
-	table = string.maketrans(",_", "  ")
-	terms = terms.translate(table, '[]').lower().split()
+	table = string.maketrans(",;_", "   ")
+	terms = terms.translate(table).lower().split()
 
 	# remove stop words
 	terms = [word for word in terms if word not in stop_list]
@@ -143,10 +147,10 @@ def convert_page_link(page):
 	if ":" in page_name:
 		namespace, page_name = page_name.rsplit(":", 1)
 
+		namespace = namespace.replace(":","/") + "/"
+
 		if args.namespace == "simple":
-			namespace = "../" + namespace.replace(":","/") + "/"
-		else:
-			namespace = namespace.replace(":","/") + "/"
+			namespace = "../" + namespace
 
 	# set show name if not already done
 	if not show_name:
@@ -178,10 +182,10 @@ def convert_page_link(page):
 def convert_tags_link(tags):
 	tag_list = str(tags.group())[2:-2]
 	tag_list = tag_list.split()
-	page_set = set()
 
 	# get initial category
 	tag_name = tag_list[0].replace("_"," ").lower()
+	tags_link = ""
 
 	# check that first tag value exists
 	if tag_name not in index["tags"]:
@@ -189,33 +193,26 @@ def convert_tags_link(tags):
 		# check for special characters
 		if "*" in tag_name:
 			# if the first tag contains a "*" then list all pages
-			page_set = set(index["title"].keys())
+			tags_link = "[[" + "]]\n\n[[".join(sorted(index["title"].keys())) + "]]\n\n"
 
 		elif "@" in tag_name:
 			# if the first tag contains a "@" then list all tags as bracketed span with class='tag' (default)
 			tag_class = "]{." + args.tag + "}\n\n["
-			return "[" + tag_class.join(sorted(index["tags"].keys())) + "]{." + args.tag + "}"
+			tags_link = "[" + tag_class.join(sorted(index["tags"].keys())) + "]{." + args.tag + "}"
 
 		elif "#" in tag_name:
+
 			# if the first tag contains a "#" then return the count of pages
 			if tag_name == "#":
 				# a single "#" returns total number of pages
-				return str(len(index["title"].keys()))
+				tags_link = str(len(index["title"].keys()))
 			else:
 				# the string "#tag" returns number of pages with that tag
 				if tag_name[1:] in index["tags"]:
-					return str(len(set(index["tags"][tag_name[1:]])))
-				else:
-					# return empty string if tag not in index
-					return
-
-		else:
-			# otherwise return empty string
-			return
+					tags_link = str(len(index["tags"][tag_name[1:]]))
 
 	else:
 		# copy first tag set
-		tag_name = tag_list[0].replace("_"," ").lower()
 		page_set = set(index["tags"][tag_name])
 
 		# add other categories
@@ -239,8 +236,11 @@ def convert_tags_link(tags):
 			else:
 				page_set = page_set | index["tags"][tag_name]
 
-	# format the set into a string of page links, sorted alphabetically
-	return "[[" + "]]\n\n[[".join(sorted(list(page_set))) + "]]\n\n"
+		# format the set into a string of page links, sorted alphabetically
+		tags_link = "[[" + "]]\n\n[[".join(sorted(page_set)) + "]]\n\n"
+
+	# return list of tag links
+	return tags_link
 
 
 ###

@@ -31,6 +31,10 @@ List of files with spacey tags:
 
 {{spacey_tag}}
 
+No such tag:
+
+{{xxx}}
+
 A list of all tags:
 
 {{@}}
