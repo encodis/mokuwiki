@@ -91,7 +91,6 @@ def create_indexes():
 
 			index["tags"][tag_name].add(title)
 
-
 ###
 
 def update_search_index(contents):
@@ -131,7 +130,7 @@ def update_search_index(contents):
 	search = { "file" : index["title"][title],
 			   "title" : title,
 			   "terms" : ' '.join(str(s) for s in set(terms)) }
-			   
+
 	index["search"].append(search)
 
 
@@ -301,7 +300,7 @@ regex_meta["summary"] = re.compile(r"[S|s]ummary:(.*)[\r\n|\r|\n]")
 
 regex_link = {}
 regex_link["page"] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
-regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@+-]*\}\}")
+regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
 
 # set up indexes
 
