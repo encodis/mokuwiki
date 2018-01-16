@@ -43,6 +43,7 @@ import argparse
 ###
 
 def create_indexes():
+	# create all indexes
 
 	for file in file_list:
 
@@ -94,6 +95,8 @@ def create_indexes():
 ###
 
 def update_search_index(contents):
+	# update the search index with strings extracted from metadata
+
 	# at this point must have a title
 	terms = parse_metadata("title", contents)
 
@@ -132,8 +135,10 @@ def update_search_index(contents):
 ###
 
 def convert_page_link(page):
-	# format is [[Page name]] or [[Show name|Page name]]
-	# with namespaces [[namespace:Page name]] or [[Show name|namespace:Page name]]
+	# return a page link constructed from the given page title
+
+	# usual format is [[Page name]] or [[Show name|Page name]]
+	# with namespaces format is [[ns:Page name]] or [[Show name|ns:Page name]]
 
 	page_name = str(page.group())[2:-2]
 	show_name = ""
@@ -180,12 +185,14 @@ def convert_page_link(page):
 ###
 
 def convert_tags_link(tags):
+	# return a string containing a list of page links derived from a tag specification
+
 	tag_list = str(tags.group())[2:-2]
 	tag_list = tag_list.split()
 
 	# get initial category
 	tag_name = tag_list[0].replace("_"," ").lower()
-	tags_link = ""
+	tag_links = ""
 
 	# check that first tag value exists
 	if tag_name not in index["tags"]:
@@ -193,23 +200,23 @@ def convert_tags_link(tags):
 		# check for special characters
 		if "*" in tag_name:
 			# if the first tag contains a "*" then list all pages
-			tags_link = "[[" + "]]\n\n[[".join(sorted(index["title"].keys())) + "]]\n\n"
+			tag_links = "[[" + "]]\n\n[[".join(sorted(index["title"].keys())) + "]]\n\n"
 
 		elif "@" in tag_name:
 			# if the first tag contains a "@" then list all tags as bracketed span with class='tag' (default)
 			tag_class = "]{." + args.tag + "}\n\n["
-			tags_link = "[" + tag_class.join(sorted(index["tags"].keys())) + "]{." + args.tag + "}"
+			tag_links = "[" + tag_class.join(sorted(index["tags"].keys())) + "]{." + args.tag + "}"
 
 		elif "#" in tag_name:
-
 			# if the first tag contains a "#" then return the count of pages
+
 			if tag_name == "#":
 				# a single "#" returns total number of pages
-				tags_link = str(len(index["title"].keys()))
+				tag_links = str(len(index["title"].keys()))
 			else:
 				# the string "#tag" returns number of pages with that tag
 				if tag_name[1:] in index["tags"]:
-					tags_link = str(len(index["tags"][tag_name[1:]]))
+					tag_links = str(len(index["tags"][tag_name[1:]]))
 
 	else:
 		# copy first tag set
@@ -237,24 +244,27 @@ def convert_tags_link(tags):
 				page_set = page_set | index["tags"][tag_name]
 
 		# format the set into a string of page links, sorted alphabetically
-		tags_link = "[[" + "]]\n\n[[".join(sorted(page_set)) + "]]\n\n"
+		tag_links = "[[" + "]]\n\n[[".join(sorted(page_set)) + "]]\n\n"
 
 	# return list of tag links
-	return tags_link
+	return tag_links
 
 
 ###
 
-def create_valid_filename(s):
-	# see also https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
-	# re: Django comment about removing unicode chars
-	s = str(s).strip().replace(' ', '_').lower()
-	return re.sub(r'(?u)[^-\w.]', '', s)
+def create_valid_filename(name):
+	# return a valid filename from the given name
+
+	# see also https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename and Django comment about removing unicode chars
+	name = str(name).strip().replace(' ', '_').lower()
+	return re.sub(r'(?u)[^-\w.]', '', name)
 
 
 ###
 
 def parse_metadata(metadata, contents):
+	# return the contents for the given metadata string, using the global regex's
+
 	if metadata not in regex_meta:
 		return None
 
@@ -323,7 +333,7 @@ for file in file_list:
 		print "moku-wiki: skipping '" + file + "', no title found"
 		continue
 
-	# replace tags links first (this may create page links)
+	# replace tag links first (this may create page links, so do this first)
 	contents = regex_link["tags"].sub(convert_tags_link, contents)
 
 	# replace page links
