@@ -1,8 +1,8 @@
 # Introduction
 
-For a while I've been running the excellent [dokuwiki](https://www.dokuwiki.org) on my Mac using OS X's bundled Apache server. The problem is that every time Apple update the OS they futz with the Apache config, so I have to work out how to get it going again. Then I have to update `dokuwiki` itself, as I don't do that nearly as often as I should. Etc, etc.
+For a while I've been running the excellent [DokuWiki](https://www.dokuwiki.org) on my Mac using OS X's bundled Apache server. The problem is that every time Apple update the OS they futz with the Apache config, so I have to work out how to get it going again. Then I have to update `DokuWiki` itself, as I don't do that nearly as often as I should. Etc, etc.
 
-However, it struck me that I don't really need a wiki as such---all I really need are inter-page links and the ability to tag pages and gets lists of pages that match a given set of tags. (This is basically DokuWiki's double bracket syntax: `[[A Page Title]] ` and the [tag](https://www.dokuwiki.org/plugin:tag) plugin.) I don't actually need the "wiki" bit, as I can easily edit the files locally and deploy as needed. I've also got used to using Markdown rather than DokuWiki's markup (although there is a Markdown plugin for that).
+However, it struck me that I don't really need a wiki as such---all I really need or my purposes are inter-page links and the ability to tag pages and gets lists of pages that match a given set of tags. (This is basically DokuWiki's double bracket syntax for links to another page: `[[A Page Title]] ` and the [tag](https://www.dokuwiki.org/plugin:tag) plugin.) I don't actually need the "wiki" bit, as I can easily edit the files locally and deploy as needed. I've also got used to using Markdown rather than DokuWiki's markup (although there is a Markdown plugin for that).
 
 So this project hosts a Python script (`moku-wiki`) that takes an input folder of Markdown documents and processes them according to the following rules, putting the results in an output folder:
 
@@ -63,28 +63,28 @@ This is the first page. There may be more. Here is a link to [Another Page](anot
 
 ```
 
-Note that only the page and tag links are converted, everything else should be left the same. Also note that:
+Note that only the page and tag links are converted, everything else should be left the same by `moku-wiki`. Also note that:
 
 1.  The YAML metadata format must be used (and the end of the block must indicated with `...` not `---`).
 2.  If a page does not have a "title" key in the metadata then processing is skipped.
 3.  The "title" cannot contain parentheses or brackets (basically just alpha-numeric characters and some punctuation).
 4.  The output filename of a file will be a "slugified" version of the title (which might completely unrelated to the *input* filename). So an input file with the name "file1.md" and a title of "A Page Title" will produce an output file named "a_page_title.md" in the output folder.
     a. You can fool the system by having two documents with the same title but in different case. Don't do that...
-5.  You can define a "display" name using `[[Display Name|A Page Name]]` which will become `[Display Name](a_page_name.html)`. (Note: unlike the DokuWiki syntax you cannot specify an actual filename here.)
+5.  You can define a "display" name using the syntax `[[Display Name|A Page Name]]` which will become `[Display Name](a_page_name.html)`. (Note: unlike the DokuWiki syntax you cannot specify an actual filename here.)
 6.  It assumes that the eventual output will be HTML, so the links end in ".html".
 7.  If an equivalent title cannot be found for a link then it outputs a bracketed span with the class "broken", e.g. `[No Such Page]{.broken}`. This can be used to style broken links. The class name can be changed using the `--broken` command line option.
 8.  Tags must be in a YAML list (i.e. enclosed in brackets, separated by commas), e.g. `tags: [foo, bar]`.
-9.  Tags cannot contain brackets or punctuation. When being defined in the YAML block tags can contain spaces, e.g. `tags: [Wordy Tag, Other Tag]`. However, when referencing tags with spaces use an underscore instead of a space, e.g. `{{wordy_tag +other_tag}}`. Tags are case-insensitive.
+9.  Tags cannot contain brackets or punctuation. When being defined in the YAML block tags can contain spaces, e.g. `tags: [Wordy Tag, Other Tag]`. However, when referencing tags with spaces use an underscore instead of a space, e.g. `{{Wordy_Tag +other_tag}}`. Tags are case-insensitive.
 10. Additional tags can be specified using various operators:
-    a. "tag1 tag2" includes pages with tag1 *or* tag2
-    b. "tag1 +tag2" includes pages with tag1 *and* tag2
-    c. "tag1 -tag2" includes pages with tag1 that do *not* have tag2
-    d. "*" is a shortcut to include _all_ pages in the wiki that have a tag (pages do not have to have a tag, so leave them out if you don't want them in this "index" list)
-    e. "#" is a shortcut for the number of pages that have a tag
-    f. "#tag" returns the number of pages that have the tag 'tag'
-    g. "@" will return a list of all tags as a series of bracketed spans with the class name "tag". This can be used to style tag lists. The class name can be changed using the `--tag` command line option.
+    a. "{{tag1 tag2}}" includes pages with tag1 *or* tag2
+    b. "{{tag1 +tag2}}" includes pages with tag1 *and* tag2
+    c. "{{tag1 -tag2}}" includes pages with tag1 that do *not* have tag2
+    d. "{{*}}" is a shortcut to include _all_ pages in the wiki that have a tag (pages do not have to have a tag, so leave them out if you don't want them in this "index" list)
+    e. "{{#}}" is a shortcut for the number of pages that have a tag
+    f. "{{#tag}}" returns the number of pages that have the tag 'tag'
+    g. "{{@}}" will return a list of all tags as a series of bracketed spans with the class name "tag". This can be used to style tag lists. The class name can be changed using the `--tag` command line option.
 11. Page names can contain references to namespaces, e.g. `[[ns2:Page Four]]`. Namespaces are assumed to refer to folders and so cannot contain spaces. How these are incorporated into the resulting link depends on the value of the `--namespace` command line option.
-    a. A value of "simple" (the default) assumes that there is a main folder, with a single level of child folders, e.g. "main/a", "main/b" and so on. A namespace reference in folder "main/a" is assumed to point to a page in "main/b". Therefore a page link like `[[b:A Page]]` in a document in "main/a" will convert to `[A Page](../b/a_page.html)`.
+    a. A value of "simple" (the default) assumes that there is a main folder, with a single level of child folders, e.g. "main/a", "main/b" and so on. A namespace reference in a page in folder "main/a" is assumed to point to a page in "main/b". Therefore an inter-page link like `[[b:A Page]]` in a document in "main/a" will convert to `[A Page](../b/a_page.html)`.
     b. A value of "full" will treat a namespace as a path of folders. The author is then responsible for specifying the correct path, e.g. `[[..:..:ns2:ns3:A Page]]` will become `[A Page](../../ns2/n3/a_page.html)`.
 
 The script does **NOT** convert the Markdown to HTML (or anything else). It simply converts the page/tag links in preparation for such conversion. As such it could be used in conjunction with the various static web site generators out there.
@@ -116,6 +116,8 @@ Copy the `moku-wiki` file to somewhere in your path (e.g. `/usr/local/bin` on a 
 $ moku-wiki input-dir output-dir
 ```
 
+Run `moku-wiki --help` for all options.
+
 # Assumptions
 
 1.  [pandoc](pandoc.org) is being used as the Markdown processor (or at least, some converter that supports the `pandoc` Markdown syntax). The processor will need YAML metadata support.
@@ -124,14 +126,14 @@ $ moku-wiki input-dir output-dir
 
 1.  This is my first Python project (yay!), so it's been cobbled together from Stack Overflow answers. As a result it's probably not the best Python code out there but it does at least work... more or less.
 2.  Error checking/handling is minimal/woefully inadequate.
-3.  There are lots of things you can't do (spaces in tag names, brackets in titles etc) that could probably be addressed by better regular expressions or a more complete model of what's going on.
+3.  There are some things you can't do (brackets in titles etc) that could probably be addressed by better regular expressions or a more complete model of what's going on.
 4.  `moku-wiki` only converts the page link and tag list markup---anything else will have to be done by say, a `pandoc` template or similar mechanism.
-5.  You cannot have two pages with the same title (which kind of makes sense, for a wiki)
+5.  You cannot have two pages with the same title (which kind of makes sense, for a wiki).
 
 # To Do
 
 1.  Better error handling.
-2.  Better indexing. Currently each file is read once to create the index, then they are all read again so that the tag links can be resolved. There may be a more efficient way to do this using a database, or some other new-fangled doohickey, but in tests the time taken for the script to run is negligable compared to the "conversion to HTML" step.
+2.  More efficient file I/O. Currently each file is read once to create the index, then they are all read again so that the tag links can be resolved. There may be a more efficient way to do this using a database, or some other new-fangled doohickey, but in tests the time taken for the script to run is negligable compared to the "conversion to HTML" step.
 3.  Replace the complex namespace/show name/page name logic with a suitable regular expression.
 4.  Replace the complex logic that handles special tag characters with something more elegant
 

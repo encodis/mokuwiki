@@ -73,8 +73,6 @@
         name="pandoc"
         description="Run pandoc with parameters">
 
-        <!-- NOTE is this really 'convert markdown to something like HTML' or can we keep generality? -->
-
         <attribute
             name="input"
             description="Input file"/>
@@ -112,10 +110,6 @@
 
             <!-- check if pandoc executable is available -->
             <find-pandoc-exe/>
-
-            <!-- TODO convert comma sep list of filters into -luafilter=f1 -luafilter=f2 -->
-            <!-- TODO convert comma sep list of options, e.g. self-contained,standalone etc -->
-            <!-- TODO how to do input format like markdown+smart, @format@extensions -->
 
             <!-- convert markdown -->
             <exec
