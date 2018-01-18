@@ -120,7 +120,7 @@ def update_search_index(contents):
 		terms += " " + keywords[1:-1]
 
 	# remove punctuation etc from YAML values, make lower case
-	table = string.maketrans(",;_", "   ")
+	table = string.maketrans(",;_()", "     ")
 	terms = terms.translate(table).lower().split()
 
 	# remove stop words
