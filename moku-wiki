@@ -254,6 +254,22 @@ def convert_tags_link(tags):
 
 ###
 
+def convert_file_link(file):
+	# insert contents of file
+
+	file_name = str(file.group())[2:-2]
+
+	with open(os.path.join(args.source, file_name), "r") as include_file:
+		file_contents = include_file.read()
+
+	# remove any YAML block
+	file_contents = regex_meta["yaml"].sub("", file_contents)
+
+	return file_contents
+
+
+###
+
 def create_valid_filename(name):
 	# return a valid filename from the given name
 
@@ -297,10 +313,12 @@ regex_meta["alias"] = re.compile(r"[A|a]lias:(.*)[\r\n|\r|\n]")
 regex_meta["tags"] = re.compile(r"[T|t]ags:(.*)[\r\n|\r|\n]")
 regex_meta["keywords"] = re.compile(r"[K|k]eywords:(.*)[\r\n|\r|\n]")
 regex_meta["summary"] = re.compile(r"[S|s]ummary:(.*)[\r\n|\r|\n]")
+regex_meta["yaml"] = re.compile(r"---[\r\n|\r|\n].*[\r\n|\r|\n]\.\.\.", re.DOTALL)
 
 regex_link = {}
 regex_link["page"] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
 regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
+regex_link["file"] = re.compile(r"<<[\w.-]*>>")
 
 # set up indexes
 
@@ -335,7 +353,10 @@ for file in file_list:
 		print "moku-wiki: skipping '" + file + "', no title found"
 		continue
 
-	# replace tag links first (this may create page links, so do this first)
+	# replace file transclusion first (may include tag and page links)
+	contents = regex_link["file"].sub(convert_file_link, contents)
+
+	# replace tag links next (this may create page links, so do this before page links)
 	contents = regex_link["tags"].sub(convert_tags_link, contents)
 
 	# replace page links

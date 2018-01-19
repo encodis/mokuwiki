@@ -15,3 +15,9 @@ A link to [[P2|Page Two]]
 ### List of all pages in wiki
 
 {{*}}
+
+## Included file tests
+
+<<.fake.md>>
+
+Stop test 
