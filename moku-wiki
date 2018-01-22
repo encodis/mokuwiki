@@ -24,6 +24,10 @@ Lists of pages can be created by combining tags in various ways:
 	*  {{#tag}} the total number of pages with 'tag'
 	*  {{@}} a list of all tags (bracketed spans with a class of 'tag')
 
+*  Files can be included in other files using the following syntax: '<<include_me.md>>'. Multiple
+file specifications are also supported, e.g. '<<include*X.dat>>'. YAML metadata blocks are removed
+on inclusion.
+
 The files in the specified output folder are named according to their title (not their input file
 name). For example, a page called "file1.md" with the "title" metadata equal to "A Page Title" will
 be converted to "a_page_title.md". Output files can then be processed using a Markdown processor
@@ -358,7 +362,7 @@ create_indexes()
 for file in file_list:
 
 	with open(file, "r") as input_file:
-			contents = input_file.read()
+		contents = input_file.read()
 
 	title = parse_metadata("title", contents)
 

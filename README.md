@@ -10,6 +10,7 @@ So this project hosts a Python script (`moku-wiki`) that takes an input folder o
 *   The YAML metadata can also have an "alias" field which can be used to link to that page instead of the title. This can be useful if the actual title that is to be displayed (the "formal" title, if you will) is long but has a common shorter form. Aliases must be unique and not the same as any
 title.
 *  Tags can be specified in the YAML. Tags can be referenced in a page using the following syntax: `{{tag1}}`. This will produce a list of page links that have the "tag1" tag.
+*  Include one file in another using the following markup: `<<include_me.md>>`. Any YAML data blocks will be removed from the included file. This pattern actually supported globbing, so you can do `<<include_X*Y.dat>>` and so on. Blank lines will be inserted between each file. 
 
 As an example, here is a typical input file:
 
@@ -123,9 +124,9 @@ Run `moku-wiki --help` for all options.
 # Caveats
 
 1.  This is my first Python project (yay!), so it's been cobbled together from Stack Overflow answers. As a result it's probably not the best Python code out there but it does at least work... more or less.
-2.  Error checking/handling is minimal/woefully inadequate.
+2.  Error checking/handling is minimal/probably woefully inadequate.
 3.  There are some things you can't do (brackets in titles etc) that could probably be addressed by better regular expressions or a more complete model of what's going on.
-4.  `moku-wiki` only converts the page link and tag list markup---anything else will have to be done by say, a `pandoc` template or similar mechanism.
+4.  `moku-wiki` only converts the page link, tag list and file include markup---anything else will have to be done by say, a `pandoc` template or similar mechanism.
 5.  You cannot have two pages with the same title (which kind of makes sense, for a wiki).
 
 # To Do
