@@ -261,15 +261,22 @@ def convert_tags_link(tags):
 def convert_file_link(file):
 	# insert contents of file
 
-	file_name = str(file.group())[2:-2]
+	incl_list = str(file.group())[2:-2]
 
-	with open(os.path.join(args.source, file_name), "r") as include_file:
-		file_contents = include_file.read()
+	incl_list = sorted(glob.glob(args.source + "/" + incl_list))
 
-	# remove any YAML block
-	file_contents = regex_meta["yaml"].sub("", file_contents)
+	incl_contents = ""
 
-	return file_contents
+	for file in incl_list:
+		with open(file, "r") as incl_file:
+			file_contents = incl_file.read()
+
+		# remove any YAML block
+		file_contents = regex_meta["yaml"].sub("", file_contents)
+
+		incl_contents = incl_contents + file_contents + "\n\n"
+
+	return incl_contents
 
 
 ###
@@ -323,7 +330,7 @@ regex_meta["yaml"] = re.compile(r"---[\r\n|\r|\n].*[\r\n|\r|\n]\.\.\.", re.DOTAL
 regex_link = {}
 regex_link["page"] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
 regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
-regex_link["file"] = re.compile(r"<<[\w.-]*>>")
+regex_link["file"] = re.compile(r"<<[\w.*?-]*>>")
 
 # set up indexes
 
