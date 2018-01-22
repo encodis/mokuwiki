@@ -37,6 +37,7 @@ suitable for use in a webpage.
 import os
 import re
 import json
+import glob
 import string
 import argparse
 
@@ -47,7 +48,7 @@ def create_indexes():
 
 	for file in file_list:
 
-		with open(os.path.join(args.source, file), "r") as input_file:
+		with open(file, "r") as input_file:
 			contents = input_file.read()
 
 		# get title
@@ -339,7 +340,7 @@ stop_list = ['a', 'an', 'and', 'be', 'by', 'i', 'it', 'is', 'the']
 
 # get list of Markdown files
 
-file_list = [file for file in os.listdir(args.source) if re.match(r"[\w]+.*\.md", file)]
+file_list = glob.glob(args.source + "/*.md")
 
 # create indexes
 
@@ -349,8 +350,8 @@ create_indexes()
 
 for file in file_list:
 
-	with open(os.path.join(args.source, file), "r") as input_file:
-		contents = input_file.read()
+	with open(file, "r") as input_file:
+			contents = input_file.read()
 
 	title = parse_metadata("title", contents)
 
@@ -375,9 +376,10 @@ for file in file_list:
 	if args.index:
 		update_search_index(contents)
 
-	# show list of broken links
-	if args.list:
-		print '\n'.join(sorted(index["broken"]))
+# show list of broken links
+
+if args.list:
+	print '\n'.join(sorted(index["broken"]))
 
 # write search index
 
