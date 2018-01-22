@@ -11,11 +11,11 @@ keywords: [foo, bar]
 
 This is also a page link to [[The 1st Page|The First Page]].
 
-This link does not exist [[The Third Page]].
+This link does not exist [[The Fourth Page]].
 
 Some text. Some text. Some text. Some text. Some text. Some text.
 
-Another link that does not exist [[The Third Page]], unfortunately
+Another link that does not exist [[The Fifth Page]], unfortunately
 
 This wiki has {{#}} pages.
 
