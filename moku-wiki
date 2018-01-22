@@ -283,7 +283,7 @@ def convert_file_link(file):
 
 		incl_contents += file_contents + "\n\n"
 
-
+	# return contents of all matched files 
 	return incl_contents
 
 
