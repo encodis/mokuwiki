@@ -18,6 +18,6 @@ A link to [[P2|Page Two]]
 
 ## Included file tests
 
-<<.fake.md>>
+<<.fa*.md>>
 
-Stop test 
+Stop test

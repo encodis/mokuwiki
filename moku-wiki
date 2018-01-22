@@ -271,14 +271,19 @@ def convert_file_link(file):
 
 	incl_contents = ""
 
-	for file in incl_list:
+	for i, file in enumerate(incl_list):
+
 		with open(file, "r") as incl_file:
 			file_contents = incl_file.read()
 
 		# remove any YAML block
 		file_contents = regex_meta["yaml"].sub("", file_contents)
 
+		if i < len(incl_list) - 1:
+			file_contents = file_contents + "\n\n" + args.separator
+
 		incl_contents = incl_contents + file_contents + "\n\n"
+
 
 	return incl_contents
 
@@ -315,10 +320,11 @@ parser = argparse.ArgumentParser(description="Convert folder of Markdown files t
 parser.add_argument("source", help="Source directory")
 parser.add_argument("target", help="Target directory")
 parser.add_argument("-i", "--index", help="Produce search index", action="store_true")
+parser.add_argument("-l", "--list", help="List broken links", action="store_true")
 parser.add_argument("-n", "--namespace", choices=["simple", "full"], default="simple", help="Namespace complexity (default is 'simple')")
 parser.add_argument("-b", "--broken", default="broken", metavar="broken_class", help="CSS class for broken links (default is 'broken')")
 parser.add_argument("-t", "--tag", default="tag", metavar="tag_class", help="CSS class for tag links (default is 'tag')")
-parser.add_argument("-l", "--list", help="List broken links", action="store_true")
+parser.add_argument("-s", "--separator", default="", help="Separator to insert between transcluded files (default is empty)")
 args = parser.parse_args()
 
 # prepare regular expressions
