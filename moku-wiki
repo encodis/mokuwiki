@@ -186,8 +186,7 @@ def convert_page_link(page):
 			# if title does not exist in index then turn into bracketed span with class='broken' (default)
 			page_link = "[" + page_name + "]{." + args.broken + "}"
 
-			if page_name not in index["broken"]:
-				index["broken"].append(page_name)
+			index["broken"].add(page_name)
 
 	return page_link
 
@@ -349,7 +348,7 @@ index["tags"] = {}		# index of tags, containing set of titles with that tag
 index["title"] = {}		# index of titles, containing associated base file name
 index["alias"] = {}		# index of title aliases (one per page only, must be unique and not in a title)
 index["search"] = []	# index for JSON search terms
-index["broken"] = []	# index of broken links (page names that are not in index)
+index["broken"] = set()	# index of broken links (page names that are not in index)
 
 # list of stop words for search indexing
 
