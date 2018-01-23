@@ -415,7 +415,9 @@ if args.list:
 	print '\n'.join(sorted(index["broken"]))
 
 # write search index
-
+## prepend
+#var MW = MW || {};
+#MW.index = 
 if args.index:
 	with open(os.path.join(args.target, "index.json"), "w") as json_file:
 		json.dump(index["search"], json_file, indent=4)
