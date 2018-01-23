@@ -8,6 +8,8 @@ This is the first page. There may be more.
 
 A link to [[P2|Page Two]]
 
+!!A Pretty Picture!!
+
 ## List of things in tag
 
 {{xyz}}

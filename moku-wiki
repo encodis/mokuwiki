@@ -125,7 +125,7 @@ def update_search_index(contents):
 		terms += " " + keywords[1:-1]
 
 	# remove punctuation etc from YAML values, make lower case
-	table = string.maketrans(",;_()", "     ")
+	table = string.maketrans(";_()", "    ")
 	terms = terms.translate(table).lower().split()
 
 	# remove stop words
@@ -283,8 +283,20 @@ def convert_file_link(file):
 
 		incl_contents += file_contents + "\n\n"
 
-	# return contents of all matched files 
+	# return contents of all matched files
 	return incl_contents
+
+
+###
+
+def convert_image_link(image):
+	# return a string containing an image link
+
+	image_name = str(image.group())[2:-2]
+
+	image_link = "![" + image_name + "](" + args.media + "/" + create_valid_filename(image_name) + ".jpg)"
+
+	return image_link
 
 
 ###
@@ -323,6 +335,7 @@ parser.add_argument("-l", "--list", help="List broken links", action="store_true
 parser.add_argument("-f", "--fullpath", help="Use full paths for namespaces", action="store_true")
 parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links (default is 'broken')")
 parser.add_argument("-t", "--tag", default="tag", help="CSS class for tag links (default is 'tag')")
+parser.add_argument("-m", "--media", default="images", help="Path to media files (default is 'images')")
 parser.add_argument("-s", "--separator", default="", help="Separator to insert between transcluded files (default is empty)")
 args = parser.parse_args()
 
@@ -340,6 +353,7 @@ regex_link = {}
 regex_link["page"] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
 regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
 regex_link["file"] = re.compile(r"<<[\w.*?-]*>>")
+regex_link["image"] = re.compile(r"!![\w\s,.:|'-]*!!")
 
 # set up indexes
 
@@ -383,6 +397,9 @@ for file in file_list:
 
 	# replace page links
 	contents = regex_link["page"].sub(convert_page_link, contents)
+
+	# replace image links
+	contents = regex_link["image"].sub(convert_image_link, contents)
 
 	# get output file name by adding ".md" to title's file name
 	with open(os.path.join(args.target, index["title"][title] + ".md"), "w") as output_file:
