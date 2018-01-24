@@ -10,7 +10,8 @@ So this project hosts a Python script (`moku-wiki`) that takes an input folder o
 *   The YAML metadata can also have an "alias" field which can be used to link to that page instead of the title. This can be useful if the actual title that is to be displayed (the "formal" title, if you will) is long but has a common shorter form. Aliases must be unique and not the same as any
 title.
 *  Tags can be specified in the YAML. Tags can be referenced in a page using the following syntax: `{{tag1}}`. This will produce a list of page links that have the "tag1" tag.
-*  Include one file in another using the following markup: `<<include_me.md>>`. Any YAML data blocks will be removed from the included file. This pattern actually supported globbing, so you can do `<<include_X*Y.dat>>` and so on. Blank lines will be inserted between each file. 
+*  Include one file in another using the following markup: `<<include_me.md>>`. Any YAML data blocks will be removed from the included file. This pattern actually supported globbing, so you can do `<<include_X*Y.dat>>` and so on. Blank lines will be inserted between each file.
+*  You can also insert image links using a shortcut, although this assumes that the images are named after their caption: `!!A Nice Image!!` will be converted to `![A Nice Image](images/a_nice_image.jpg)`. Note that it is assumed that images live in an "images" folder (this can be changed using the "--media" command line option) and that they are JPGs.
 
 As an example, here is a typical input file:
 
@@ -64,7 +65,7 @@ This is the first page. There may be more. Here is a link to [Another Page](anot
 
 Note that only the page and tag links are converted, everything else should be left the same by `moku-wiki`. Also note that:
 
-1.  The YAML metadata format must be used (and the end of the block must indicated with `...` not `---`).
+1.  The YAML metadata format must be used (and the end of the block must indicated with `...`, not with `---`).
 2.  If a page does not have a "title" key in the metadata then processing is skipped.
 3.  The "title" cannot contain parentheses or brackets (basically just alpha-numeric characters and some punctuation).
 4.  The output filename of a file will be a "slugified" version of the title (which might completely unrelated to the *input* filename). So an input file with the name "file1.md" and a title of "A Page Title" will produce an output file named "a_page_title.md" in the output folder.
@@ -91,7 +92,8 @@ The script does **NOT** convert the Markdown to HTML (or anything else). It simp
 The optional command line option "--index" will output a JSON file (called "index.json") which contains an index of titles, file names and terms contained in each page. This can be used to create a simplistic search function in the "wiki". This has the format:
 
 ```
-[
+var MW = MW || {};
+MW.searchIndex =[
     {
       "file" : "file_name",
       "title" : "The Title",
@@ -101,9 +103,11 @@ The optional command line option "--index" will output a JSON file (called "inde
 ]
 ```
 
+Some assumptions are made here, namely that this file will be included using a `<script>` statement so to be accessible it needs to be in a variable. In a primitive attempt to encapsulate things I've assumed that there is an "MW" object used to store any MokuWiki related data.
+
 The string in "terms" is a list of all words that occur in the following metadata elements of the file: "title", "alias", "tags", "keywords" and "summary". Punctuation and duplicate words are removed
 
-> NOTE: Originally the project was referred to as "fake wiki". This brought to mind "mock wiki", and in a fit of alliterative humour I changed it to "moku-wiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software.
+> NOTE: Originally the project was referred to as "fake wiki". This brought to mind "mock wiki", and in a fit of alliterative humour I changed it to "moku-wiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software---use that, not this!
 
 # Installation
 
@@ -123,16 +127,18 @@ Run `moku-wiki --help` for all options.
 
 # Caveats
 
-1.  This is my first Python project (yay!), so it's been cobbled together from Stack Overflow answers. As a result it's probably not the best Python code out there but it does at least work... more or less.
+1.  This is my first Python project (yay!), so it's mostly been cobbled together from Stack Overflow answers, mostly. As a result it's probably not what you'd call Pythonic but it do what it's supposed to do.
 2.  Error checking/handling is minimal/probably woefully inadequate.
-3.  There are some things you can't do (brackets in titles etc) that could probably be addressed by better regular expressions or a more complete model of what's going on.
-4.  `moku-wiki` only converts the page link, tag list and file include markup---anything else will have to be done by say, a `pandoc` template or similar mechanism.
-5.  You cannot have two pages with the same title (which kind of makes sense, for a wiki).
+3.  There are some things you can't do (brackets in titles etc) that could probably be addressed by better regular expressions or a more complete model of what I think it should be doing.
+4.  `moku-wiki` only converts the page link, tag list, file include and image link markup---anything else will have to be done by say, a `pandoc` template or similar mechanism.
+5.  You cannot have two pages with the same title/alias (which kind of makes sense, for a wiki).
+6.  The image link markup... to be honest this was just because it was easy to do! I'm not sure if it really worth it but you can always ignore it and put images in normally.
 
 # To Do
 
 1.  Better error handling.
 2.  More efficient file I/O. Currently each file is read once to create the index, then they are all read again so that the tag links can be resolved. There may be a more efficient way to do this using a database, or some other new-fangled doohickey, but in tests the time taken for the script to run is negligable compared to the "conversion to HTML" step.
 3.  Replace the complex namespace/show name/page name logic with a suitable regular expression.
-4.  Replace the complex logic that handles special tag characters with something more elegant
-
+4.  Replace the complex logic that handles special tag characters with something more elegant.
+5.  The search index is not really optimised for search---if anything it's optimised for the size of the file. But again, in tests on 250 pages, there is no noticeable delay in displaying the results.
+6.  Convert to a module?

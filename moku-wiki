@@ -26,7 +26,12 @@ Lists of pages can be created by combining tags in various ways:
 
 *  Files can be included in other files using the following syntax: '<<include_me.md>>'. Multiple
 file specifications are also supported, e.g. '<<include*X.dat>>'. YAML metadata blocks are removed
-on inclusion.
+on inclusion and separator text can be defined to be inserted after each file (except the last).
+
+*  Image links can be inserted with the following syntax: '!!Image Name!!'. This will produce an
+image link like: '![Image Name](images/image_name.jpg)', that is, the file name is based on the
+caption. Images are assumed to live in a local "images" folder but this can be changed with the
+'--media' command line option. They are also assumed to be JPGs.
 
 The files in the specified output folder are named according to their title (not their input file
 name). For example, a page called "file1.md" with the "title" metadata equal to "A Page Title" will
@@ -34,7 +39,7 @@ be converted to "a_page_title.md". Output files can then be processed using a Ma
 (the assumption is that pandoc is being used).
 
 Using the '--index' option will also output an "index.json" file that contains a JSON object
-suitable for use in a webpage.
+suitable for use by a search function in a webpage.
 
 """
 
@@ -415,10 +420,10 @@ if args.list:
 	print '\n'.join(sorted(index["broken"]))
 
 # write search index
-## prepend
-#var MW = MW || {};
-#MW.index = 
+
 if args.index:
+	search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(index["search"], indent=4)
+
 	with open(os.path.join(args.target, "index.json"), "w") as json_file:
-		json.dump(index["search"], json_file, indent=4)
+		json_file.write(search_index)
 
