@@ -101,6 +101,7 @@ def create_indexes():
 
 			index["tags"][tag_name].add(title)
 
+
 ###
 
 def update_search_index(contents):
@@ -122,16 +123,18 @@ def update_search_index(contents):
 	tags = parse_metadata("tags", contents)
 
 	if tags:
-		terms += " " + tags[1:-1]
+		# ensure tags are space separated
+		terms += " " + tags[1:-1].replace(",", " ")
 
 	keywords = parse_metadata("keywords", contents)
 
 	if keywords:
-		terms += " " + keywords[1:-1]
+		# ensure keywords are space separated
+		terms += " " + keywords[1:-1].replace(",", " ")
 
-	# remove punctuation etc from YAML values, make lower case
+	# remove punctuation etc from YAML values, make lower case, remove commas (e.g. from numbers in summary)
 	table = string.maketrans(";_()", "    ")
-	terms = terms.translate(table).lower().split()
+	terms = terms.translate(table).replace(",","").lower().split()
 
 	# remove stop words
 	terms = [word for word in terms if word not in stop_list]
