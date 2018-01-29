@@ -52,6 +52,63 @@ import argparse
 
 ###
 
+def process_files(source, target, search=None, list=None, fullpath=None, broken="broken", tag="tag", media="images", separator=None):
+
+	# get list of Markdown files
+
+	file_list = glob.glob(source + "/*.md")
+
+	create_indexes()
+
+	# process files
+
+	for file in file_list:
+
+		with open(file, "r") as input_file:
+			contents = input_file.read()
+
+		title = parse_metadata("title", contents)
+
+		if not title:
+			print "moku-wiki: skipping '" + file + "', no title found"
+			continue
+
+		# replace file transclusion first (may include tag and page links)
+		contents = regex_link["file"].sub(convert_file_link, contents)
+
+		# replace tag links next (this may create page links, so do this before page links)
+		contents = regex_link["tags"].sub(convert_tags_link, contents)
+
+		# replace page links
+		contents = regex_link["page"].sub(convert_page_link, contents)
+
+		# replace image links
+		contents = regex_link["image"].sub(convert_image_link, contents)
+
+		# get output file name by adding ".md" to title's file name
+		with open(os.path.join(target, index["title"][title] + ".md"), "w") as output_file:
+			output_file.write(contents)
+
+		# add terms to search index
+		if search:
+			update_search_index(contents)
+
+	# show list of broken links
+
+	if list:
+		print '\n'.join(sorted(index["broken"]))
+
+	# write search index
+
+	if search:
+		search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(index["search"], indent=4)
+
+		with open(os.path.join(target, "index.json"), "w") as json_file:
+			json_file.write(search_index)
+
+
+###
+
 def create_indexes():
 	# create all indexes
 
@@ -335,18 +392,6 @@ def parse_metadata(metadata, contents):
 
 ### MAIN ###
 
-parser = argparse.ArgumentParser(description="Convert folder of Markdown files to support interpage linking and tags")
-parser.add_argument("source", help="Source directory")
-parser.add_argument("target", help="Target directory")
-parser.add_argument("-i", "--index", help="Produce search index", action="store_true")
-parser.add_argument("-l", "--list", help="List broken links", action="store_true")
-parser.add_argument("-f", "--fullpath", help="Use full paths for namespaces", action="store_true")
-parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links (default is 'broken')")
-parser.add_argument("-t", "--tag", default="tag", help="CSS class for tag links (default is 'tag')")
-parser.add_argument("-m", "--media", default="images", help="Path to media files (default is 'images')")
-parser.add_argument("-s", "--separator", default="", help="Separator to insert between transcluded files (default is empty)")
-args = parser.parse_args()
-
 # prepare regular expressions
 
 regex_meta = {}
@@ -376,57 +421,19 @@ index["broken"] = set()	# index of broken links (page names that are not in inde
 
 stop_list = ['a', 'an', 'and', 'be', 'by', 'i', 'it', 'is', 'the']
 
-# get list of Markdown files
+# execute if main
 
-file_list = glob.glob(args.source + "/*.md")
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser(description="Convert folder of Markdown files to support interpage linking and tags")
+	parser.add_argument("source", help="Source directory")
+	parser.add_argument("target", help="Target directory")
+	parser.add_argument("-s", "--search", help="Produce search index", action="store_true")
+	parser.add_argument("-l", "--list", help="List broken links", action="store_true")
+	parser.add_argument("-f", "--fullpath", help="Use full paths for namespaces", action="store_true")
+	parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links (default is 'broken')")
+	parser.add_argument("-t", "--tag", default="tag", help="CSS class for tag links (default is 'tag')")
+	parser.add_argument("-m", "--media", default="images", help="Path to media files (default is 'images')")
+	parser.add_argument("-S", "--separator", default="", help="Separator to insert between transcluded files (default is empty)")
+	args = parser.parse_args()
 
-# create indexes
-
-create_indexes()
-
-# process files
-
-for file in file_list:
-
-	with open(file, "r") as input_file:
-		contents = input_file.read()
-
-	title = parse_metadata("title", contents)
-
-	if not title:
-		print "moku-wiki: skipping '" + file + "', no title found"
-		continue
-
-	# replace file transclusion first (may include tag and page links)
-	contents = regex_link["file"].sub(convert_file_link, contents)
-
-	# replace tag links next (this may create page links, so do this before page links)
-	contents = regex_link["tags"].sub(convert_tags_link, contents)
-
-	# replace page links
-	contents = regex_link["page"].sub(convert_page_link, contents)
-
-	# replace image links
-	contents = regex_link["image"].sub(convert_image_link, contents)
-
-	# get output file name by adding ".md" to title's file name
-	with open(os.path.join(args.target, index["title"][title] + ".md"), "w") as output_file:
-		output_file.write(contents)
-
-	# add terms to search index
-	if args.index:
-		update_search_index(contents)
-
-# show list of broken links
-
-if args.list:
-	print '\n'.join(sorted(index["broken"]))
-
-# write search index
-
-if args.index:
-	search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(index["search"], indent=4)
-
-	with open(os.path.join(args.target, "index.json"), "w") as json_file:
-		json_file.write(search_index)
-
+	process_files(args.source, args.target, args.search, args.list, args.fullpath, args.broken, args.tag, args.media, args.separator)
