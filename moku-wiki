@@ -52,10 +52,10 @@ import argparse
 
 ###
 
-def process_files(source, target, search=None, list=None, fullpath=None, broken="broken", tag="tag", media="images", separator=None):
+def process_files(source, target, index=None, list=None, fullpath=None, broken="broken", tag="tag", media="images", separator=None):
 
 	# get list of Markdown files
-
+	global file_list
 	file_list = glob.glob(source + "/*.md")
 
 	create_indexes()
@@ -86,22 +86,22 @@ def process_files(source, target, search=None, list=None, fullpath=None, broken=
 		contents = regex_link["image"].sub(convert_image_link, contents)
 
 		# get output file name by adding ".md" to title's file name
-		with open(os.path.join(target, index["title"][title] + ".md"), "w") as output_file:
+		with open(os.path.join(target, page_index["title"][title] + ".md"), "w") as output_file:
 			output_file.write(contents)
 
 		# add terms to search index
-		if search:
-			update_search_index(contents)
+		if index:
+			update_search_index(contents, title)
 
 	# show list of broken links
 
 	if list:
-		print '\n'.join(sorted(index["broken"]))
+		print '\n'.join(sorted(page_index["broken"]))
 
 	# write search index
 
-	if search:
-		search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(index["search"], indent=4)
+	if index:
+		search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(page_index["search"], indent=4)
 
 		with open(os.path.join(target, "index.json"), "w") as json_file:
 			json_file.write(search_index)
@@ -123,8 +123,8 @@ def create_indexes():
 		if not title:
 			continue
 
-		if title not in index["title"]:
-			index["title"][title] = create_valid_filename(title)
+		if title not in page_index["title"]:
+			page_index["title"][title] = create_valid_filename(title)
 		else:
 			print "moku-wiki: skipping '" + file + "', duplicate title '" + title + "'"
 			continue
@@ -133,8 +133,8 @@ def create_indexes():
 		alias = parse_metadata("alias", contents)
 
 		if alias:
-			if alias not in index["alias"] and alias not in index["title"]:
-				index["alias"][alias] = title
+			if alias not in page_index["alias"] and alias not in page_index["title"]:
+				page_index["alias"][alias] = title
 			else:
 				print "moku-wiki: duplicate alias '" + alias + "' in file '" + file + "'"
 
@@ -153,15 +153,15 @@ def create_indexes():
 			# strip end spaces and convert to lower case
 			tag_name = tag.strip().lower()
 
-			if tag_name not in index["tags"]:
-				index["tags"][tag_name] = set()
+			if tag_name not in page_index["tags"]:
+				page_index["tags"][tag_name] = set()
 
-			index["tags"][tag_name].add(title)
+			page_index["tags"][tag_name].add(title)
 
 
 ###
 
-def update_search_index(contents):
+def update_search_index(contents, title):
 	# update the search index with strings extracted from metadata
 
 	# at this point must have a title
@@ -197,11 +197,11 @@ def update_search_index(contents):
 	terms = [word for word in terms if word not in stop_list]
 
 	# update search index, use unique terms only (set() removes duplicates)
-	search = { "file" : index["title"][title],
+	search = { "file" : page_index["title"][title],
 			   "title" : title,
 			   "terms" : ' '.join(str(s) for s in set(terms)) }
 
-	index["search"].append(search)
+	page_index["search"].append(search)
 
 
 ###
@@ -234,14 +234,14 @@ def convert_page_link(page):
 		show_name = page_name
 
 	# resolve any alias for the title
-	if page_name in index["alias"]:
-		page_name = index["alias"][page_name]
+	if page_name in page_index["alias"]:
+		page_name = page_index["alias"][page_name]
 
 	page_link = ""
 
-	if page_name in index["title"]:
+	if page_name in page_index["title"]:
 		# if title exists in index make into a link
-		page_link = "[" + show_name + "](" + index["title"][page_name] + ".html)"
+		page_link = "[" + show_name + "](" + page_index["title"][page_name] + ".html)"
 
 	else:
 		if namespace:
@@ -251,7 +251,7 @@ def convert_page_link(page):
 			# if title does not exist in index then turn into bracketed span with class='broken' (default)
 			page_link = "[" + page_name + "]{." + args.broken + "}"
 
-			index["broken"].add(page_name)
+			page_index["broken"].add(page_name)
 
 	return page_link
 
@@ -269,32 +269,32 @@ def convert_tags_link(tags):
 	tag_links = ""
 
 	# check that first tag value exists
-	if tag_name not in index["tags"]:
+	if tag_name not in page_index["tags"]:
 
 		# check for special characters
 		if "*" in tag_name:
 			# if the first tag contains a "*" then list all pages
-			tag_links = "[[" + "]]\n\n[[".join(sorted(index["title"].keys())) + "]]\n\n"
+			tag_links = "[[" + "]]\n\n[[".join(sorted(page_index["title"].keys())) + "]]\n\n"
 
 		elif "@" in tag_name:
 			# if the first tag contains a "@" then list all tags as bracketed span with class='tag' (default)
 			tag_class = "]{." + args.tag + "}\n\n["
-			tag_links = "[" + tag_class.join(sorted(index["tags"].keys())) + "]{." + args.tag + "}"
+			tag_links = "[" + tag_class.join(sorted(page_index["tags"].keys())) + "]{." + args.tag + "}"
 
 		elif "#" in tag_name:
 			# if the first tag contains a "#" then return the count of pages
 
 			if tag_name == "#":
 				# a single "#" returns total number of pages
-				tag_links = str(len(index["title"].keys()))
+				tag_links = str(len(page_index["title"].keys()))
 			else:
 				# the string "#tag" returns number of pages with that tag
-				if tag_name[1:] in index["tags"]:
-					tag_links = str(len(index["tags"][tag_name[1:]]))
+				if tag_name[1:] in page_index["tags"]:
+					tag_links = str(len(page_index["tags"][tag_name[1:]]))
 
 	else:
 		# copy first tag set
-		page_set = set(index["tags"][tag_name])
+		page_set = set(page_index["tags"][tag_name])
 
 		# add other categories
 		for __, tag in enumerate(tag_list[1:]):
@@ -307,15 +307,15 @@ def convert_tags_link(tags):
 			# normalise tag name
 			tag_name = tag_name.replace("_"," ").lower()
 
-			if tag_name not in index["tags"]:
+			if tag_name not in page_index["tags"]:
 				continue
 
 			if tag[0] == '+':
-				page_set &= index["tags"][tag_name]
+				page_set &= page_index["tags"][tag_name]
 			elif tag[0] == '-':
-				page_set -= index["tags"][tag_name]
+				page_set -= page_index["tags"][tag_name]
 			else:
-				page_set |= index["tags"][tag_name]
+				page_set |= page_index["tags"][tag_name]
 
 		# format the set into a string of page links, sorted alphabetically
 		tag_links = "[[" + "]]\n\n[[".join(sorted(page_set)) + "]]\n\n"
@@ -410,12 +410,12 @@ regex_link["image"] = re.compile(r"!![\w\s,.:|'-]*!!")
 
 # set up indexes
 
-index = {}
-index["tags"] = {}		# index of tags, containing set of titles with that tag
-index["title"] = {}		# index of titles, containing associated base file name
-index["alias"] = {}		# index of title aliases (one per page only, must be unique and not in a title)
-index["search"] = []	# index for JSON search terms
-index["broken"] = set()	# index of broken links (page names that are not in index)
+page_index = {}
+page_index["tags"] = {}		# index of tags, containing set of titles with that tag
+page_index["title"] = {}		# index of titles, containing associated base file name
+page_index["alias"] = {}		# index of title aliases (one per page only, must be unique and not in a title)
+page_index["search"] = []	# index for JSON search terms
+page_index["broken"] = set()	# index of broken links (page names that are not in index)
 
 # list of stop words for search indexing
 
@@ -427,13 +427,13 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Convert folder of Markdown files to support interpage linking and tags")
 	parser.add_argument("source", help="Source directory")
 	parser.add_argument("target", help="Target directory")
-	parser.add_argument("-s", "--search", help="Produce search index", action="store_true")
+	parser.add_argument("-i", "--index", help="Produce JSON search index", action="store_true")
 	parser.add_argument("-l", "--list", help="List broken links", action="store_true")
 	parser.add_argument("-f", "--fullpath", help="Use full paths for namespaces", action="store_true")
 	parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links (default is 'broken')")
 	parser.add_argument("-t", "--tag", default="tag", help="CSS class for tag links (default is 'tag')")
 	parser.add_argument("-m", "--media", default="images", help="Path to media files (default is 'images')")
-	parser.add_argument("-S", "--separator", default="", help="Separator to insert between transcluded files (default is empty)")
+	parser.add_argument("-s", "--separator", default="", help="Separator to insert between transcluded files (default is empty)")
 	args = parser.parse_args()
 
-	process_files(args.source, args.target, args.search, args.list, args.fullpath, args.broken, args.tag, args.media, args.separator)
+	process_files(args.source, args.target, args.index, args.list, args.fullpath, args.broken, args.tag, args.media, args.separator)
