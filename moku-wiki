@@ -55,13 +55,12 @@ import argparse
 def process_files(source, target, index=None, list=None, fullpath=None, broken="broken", tag="tag", media="images", separator=None):
 
 	# get list of Markdown files
-	global file_list
 	file_list = glob.glob(source + "/*.md")
 
-	create_indexes()
+	# create indexes
+	create_indexes(file_list)
 
 	# process files
-
 	for file in file_list:
 
 		with open(file, "r") as input_file:
@@ -109,7 +108,7 @@ def process_files(source, target, index=None, list=None, fullpath=None, broken="
 
 ###
 
-def create_indexes():
+def create_indexes(file_list):
 	# create all indexes
 
 	for file in file_list:
