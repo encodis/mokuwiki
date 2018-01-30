@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-""" moku-wiki
+""" mokuwiki
 
 Converts a folder of Markdown files, applying the following transforms:
 
@@ -26,7 +26,8 @@ Lists of pages can be created by combining tags in various ways:
 
 *  Files can be included in other files using the following syntax: '<<include_me.md>>'. Multiple
 file specifications are also supported, e.g. '<<include*X.dat>>'. YAML metadata blocks are removed
-on inclusion and separator text can be defined to be inserted after each file (except the last).
+on inclusion and separator text can be defined to be inserted after each file (except the last) by
+using the '--separator' command line argument.
 
 *  Image links can be inserted with the following syntax: '!!Image Name!!'. This will produce an
 image link like: '![Image Name](images/image_name.jpg)', that is, the file name is based on the
@@ -38,7 +39,7 @@ name). For example, a page called "file1.md" with the "title" metadata equal to 
 be converted to "a_page_title.md". Output files can then be processed using a Markdown processor
 (the assumption is that pandoc is being used).
 
-Using the '--index' option will also output an "index.json" file that contains a JSON object
+Using the '--index' option will also output an "_index.json" file that contains a JSON object
 suitable for use by a search function in a webpage.
 
 """
@@ -52,10 +53,21 @@ import argparse
 
 ###
 
-def process_files(source, target, index=None, list=None, fullpath=None, broken="broken", tag="tag", media="images", separator=None):
+def process_files(source, target, index=False, list=False, fullpath=False, broken="broken", tag="tag", media="images", separator=""):
+
+	# configure
+	config.source = source
+	config.target = target
+	config.index = index
+	config.list = list
+	config.fullpath = fullpath
+	config.broken = broken
+	config.tag = tag
+	config.media = media
+	config.separator = separator
 
 	# get list of Markdown files
-	file_list = glob.glob(source + "/*.md")
+	file_list = glob.glob(config.source + "/*.md")
 
 	# create indexes
 	create_indexes(file_list)
@@ -69,7 +81,7 @@ def process_files(source, target, index=None, list=None, fullpath=None, broken="
 		title = parse_metadata("title", contents)
 
 		if not title:
-			print "moku-wiki: skipping '" + file + "', no title found"
+			print "mokuwiki: skipping '" + file + "', no title found"
 			continue
 
 		# replace file transclusion first (may include tag and page links)
@@ -85,24 +97,24 @@ def process_files(source, target, index=None, list=None, fullpath=None, broken="
 		contents = regex_link["image"].sub(convert_image_link, contents)
 
 		# get output file name by adding ".md" to title's file name
-		with open(os.path.join(target, page_index["title"][title] + ".md"), "w") as output_file:
+		with open(os.path.join(config.target, page_index["title"][title] + ".md"), "w") as output_file:
 			output_file.write(contents)
 
 		# add terms to search index
-		if index:
+		if config.index:
 			update_search_index(contents, title)
 
 	# show list of broken links
 
-	if list:
+	if config.list:
 		print '\n'.join(sorted(page_index["broken"]))
 
 	# write search index
 
-	if index:
+	if config.index:
 		search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(page_index["search"], indent=4)
 
-		with open(os.path.join(target, "index.json"), "w") as json_file:
+		with open(os.path.join(config.target, "_index.json"), "w") as json_file:
 			json_file.write(search_index)
 
 
@@ -125,7 +137,7 @@ def create_indexes(file_list):
 		if title not in page_index["title"]:
 			page_index["title"][title] = create_valid_filename(title)
 		else:
-			print "moku-wiki: skipping '" + file + "', duplicate title '" + title + "'"
+			print "mokuwiki: skipping '" + file + "', duplicate title '" + title + "'"
 			continue
 
 		# get alias (if any)
@@ -135,7 +147,7 @@ def create_indexes(file_list):
 			if alias not in page_index["alias"] and alias not in page_index["title"]:
 				page_index["alias"][alias] = title
 			else:
-				print "moku-wiki: duplicate alias '" + alias + "' in file '" + file + "'"
+				print "mokuwiki: duplicate alias '" + alias + "' in file '" + file + "'"
 
 		# get tags (if any)
 		tags = parse_metadata("tags", contents)
@@ -225,7 +237,7 @@ def convert_page_link(page):
 
 		namespace = namespace.replace(":","/") + "/"
 
-		if not args.fullpath:
+		if not config.fullpath:
 			namespace = "../" + namespace
 
 	# set show name if not already done
@@ -248,7 +260,7 @@ def convert_page_link(page):
 			page_link = "[" + show_name + "](" + namespace + create_valid_filename(page_name) + ".html)"
 		else:
 			# if title does not exist in index then turn into bracketed span with class='broken' (default)
-			page_link = "[" + page_name + "]{." + args.broken + "}"
+			page_link = "[" + page_name + "]{." + config.broken + "}"
 
 			page_index["broken"].add(page_name)
 
@@ -277,8 +289,8 @@ def convert_tags_link(tags):
 
 		elif "@" in tag_name:
 			# if the first tag contains a "@" then list all tags as bracketed span with class='tag' (default)
-			tag_class = "]{." + args.tag + "}\n\n["
-			tag_links = "[" + tag_class.join(sorted(page_index["tags"].keys())) + "]{." + args.tag + "}"
+			tag_class = "]{." + config.tag + "}\n\n["
+			tag_links = "[" + tag_class.join(sorted(page_index["tags"].keys())) + "]{." + config.tag + "}"
 
 		elif "#" in tag_name:
 			# if the first tag contains a "#" then return the count of pages
@@ -330,7 +342,7 @@ def convert_file_link(file):
 
 	incl_list = str(file.group())[2:-2]
 
-	incl_list = sorted(glob.glob(args.source + "/" + incl_list))
+	incl_list = sorted(glob.glob(config.source + "/" + incl_list))
 
 	incl_contents = ""
 
@@ -343,7 +355,7 @@ def convert_file_link(file):
 		file_contents = regex_meta["yaml"].sub("", file_contents)
 
 		if i < len(incl_list) - 1:
-			file_contents += "\n\n" + args.separator
+			file_contents += "\n\n" + config.separator
 
 		incl_contents += file_contents + "\n\n"
 
@@ -358,7 +370,7 @@ def convert_image_link(image):
 
 	image_name = str(image.group())[2:-2]
 
-	image_link = "![" + image_name + "](" + args.media + "/" + create_valid_filename(image_name) + ".jpg)"
+	image_link = "![" + image_name + "](" + config.media + "/" + create_valid_filename(image_name) + ".jpg)"
 
 	return image_link
 
@@ -422,6 +434,23 @@ page_index["broken"] = set()	# index of broken links (page names that are not in
 
 stop_list = ['a', 'an', 'and', 'be', 'by', 'i', 'it', 'is', 'the']
 
+# configuration object
+
+class Config(object):
+	pass
+
+config = Config()
+
+# set defaults
+
+config.index = False
+config.list = False
+config.fullpath = False
+config.broken = "broken"
+config.tag = "tag"
+config.media = "images"
+config.separator = ""
+
 # execute if main
 
 if __name__ == "__main__":
@@ -435,6 +464,6 @@ if __name__ == "__main__":
 	parser.add_argument("-t", "--tag", default="tag", help="CSS class for tag links (default is 'tag')")
 	parser.add_argument("-m", "--media", default="images", help="Path to media files (default is 'images')")
 	parser.add_argument("-s", "--separator", default="", help="Separator to insert between transcluded files (default is empty)")
-	args = parser.parse_args()
+	parser.parse_args(namespace=config)
 
-	process_files(args.source, args.target, args.index, args.list, args.fullpath, args.broken, args.tag, args.media, args.separator)
+	process_files(config.source, config.target, config.index, config.list, config.fullpath, config.broken, config.tag, config.media, config.separator)
