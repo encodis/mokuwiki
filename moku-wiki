@@ -391,7 +391,7 @@ def parse_metadata(metadata, contents):
 
 ### MAIN ###
 
-# prepare regular expressions
+# regular expressions to locate YAML metadata
 
 regex_meta = {}
 regex_meta["title"] = re.compile(r"[T|t]itle:(.*)[\r\n|\r|\n]")
@@ -400,6 +400,8 @@ regex_meta["tags"] = re.compile(r"[T|t]ags:(.*)[\r\n|\r|\n]")
 regex_meta["keywords"] = re.compile(r"[K|k]eywords:(.*)[\r\n|\r|\n]")
 regex_meta["summary"] = re.compile(r"[S|s]ummary:(.*)[\r\n|\r|\n]")
 regex_meta["yaml"] = re.compile(r"---[\r\n|\r|\n].*[\r\n|\r|\n]\.\.\.", re.DOTALL)
+
+# regular expressions to locate page, tag, file and image links
 
 regex_link = {}
 regex_link["page"] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
@@ -410,10 +412,10 @@ regex_link["image"] = re.compile(r"!![\w\s,.:|'-]*!!")
 # set up indexes
 
 page_index = {}
-page_index["tags"] = {}		# index of tags, containing set of titles with that tag
+page_index["tags"] = {}			# index of tags, containing set of titles with that tag
 page_index["title"] = {}		# index of titles, containing associated base file name
 page_index["alias"] = {}		# index of title aliases (one per page only, must be unique and not in a title)
-page_index["search"] = []	# index for JSON search terms
+page_index["search"] = []		# index for JSON search terms
 page_index["broken"] = set()	# index of broken links (page names that are not in index)
 
 # list of stop words for search indexing
