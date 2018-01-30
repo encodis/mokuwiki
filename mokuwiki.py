@@ -427,12 +427,12 @@ page_index = {}
 page_index["tags"] = {}			# index of tags, containing set of titles with that tag
 page_index["title"] = {}		# index of titles, containing associated base file name
 page_index["alias"] = {}		# index of title aliases (one per page only, must be unique and not in a title)
-page_index["search"] = []		# index for JSON search terms
+page_index["search"] = []		# index of search terms (for JSON search index)
 page_index["broken"] = set()	# index of broken links (page names that are not in index)
 
 # list of stop words for search indexing
 
-stop_list = ['a', 'an', 'and', 'be', 'by', 'i', 'it', 'is', 'the']
+stop_list = ['a', 'an', 'and', 'be', 'but', 'by', 'i', 'it', 'is', 'of', 'on', 'the']
 
 # configuration object
 
