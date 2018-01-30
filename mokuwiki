@@ -53,14 +53,14 @@ import argparse
 
 ###
 
-def process_files(source, target, index=False, list=False, fullpath=False, broken="broken", tag="tag", media="images", separator=""):
+def process_files(source, target, index=False, list=False, fullns=False, broken="broken", tag="tag", media="images", separator=""):
 
 	# configure
 	config.source = source
 	config.target = target
 	config.index = index
 	config.list = list
-	config.fullpath = fullpath
+	config.fullns = fullns
 	config.broken = broken
 	config.tag = tag
 	config.media = media
@@ -237,7 +237,7 @@ def convert_page_link(page):
 
 		namespace = namespace.replace(":","/") + "/"
 
-		if not config.fullpath:
+		if not config.fullns:
 			namespace = "../" + namespace
 
 	# set show name if not already done
@@ -445,7 +445,7 @@ config = Config()
 
 config.index = False
 config.list = False
-config.fullpath = False
+config.fullns = False
 config.broken = "broken"
 config.tag = "tag"
 config.media = "images"
@@ -459,11 +459,11 @@ if __name__ == "__main__":
 	parser.add_argument("target", help="Target directory")
 	parser.add_argument("-i", "--index", help="Produce JSON search index", action="store_true")
 	parser.add_argument("-l", "--list", help="List broken links", action="store_true")
-	parser.add_argument("-f", "--fullpath", help="Use full paths for namespaces", action="store_true")
+	parser.add_argument("-f", "--fullns", help="Use full paths for namespaces", action="store_true")
 	parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links (default is 'broken')")
 	parser.add_argument("-t", "--tag", default="tag", help="CSS class for tag links (default is 'tag')")
 	parser.add_argument("-m", "--media", default="images", help="Path to media files (default is 'images')")
 	parser.add_argument("-s", "--separator", default="", help="Separator to insert between transcluded files (default is empty)")
 	parser.parse_args(namespace=config)
 
-	process_files(config.source, config.target, config.index, config.list, config.fullpath, config.broken, config.tag, config.media, config.separator)
+	process_files(config.source, config.target, config.index, config.list, config.fullns, config.broken, config.tag, config.media, config.separator)

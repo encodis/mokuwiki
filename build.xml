@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <project
-    name="moku-wiki"
+    name="mokuwiki"
     xmlns:if="ant:if"
     xmlns:unless="ant:unless">
 
@@ -12,7 +12,9 @@
     <property environment="env"/>
 
     <!-- set up local properties -->
-    <property name="moku-wiki.exe" value="moku-wiki"/>
+    <property name="python.bin" value="python"/>
+    <property name="mokuwiki.bin" value="mokuwiki"/>
+    <property name="mokuwiki.py" value="mokuwiki.py"/>
     <property name="deploy.dir" value="/usr/local/bin"/>
     <property name="build.dir" value="build"/>
     <property name="test.dir" value="test"/>
@@ -31,10 +33,10 @@
         <mkdir dir="${build.dir}"/>
 
         <exec
-            executable="${moku-wiki.exe}"
-            searchpath="false"
-            resolveexecutable="true"
+            executable="${python.bin}"
+            searchpath="true"
             dir=".">
+            <arg value="./${mokuwiki.py}"/>
             <arg value="--index"/>
             <arg value="${input.dir}"/>
             <arg value="${output.dir}"/>
@@ -60,11 +62,11 @@
 
     <target
         name="deploy"
-        description="Deploy moku-wiki">
+        description="Deploy mokuwiki">
 
         <copy
-            file="${moku-wiki.exe}"
-            todir="${deploy.dir}"/>
+            file="${mokuwiki.py}"
+            tofile="${deploy.dir}/${mokuwiki.bin}"/>
 
     </target>
 
