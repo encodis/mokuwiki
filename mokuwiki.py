@@ -152,10 +152,7 @@ def create_indexes(file_list):
 		# get tags (if any)
 		tags = parse_metadata("tags", contents)
 
-		if tags:
-			# if there are tags remove brackets and split into list
-			tags = tags[1:-1].split(",")
-		else:
+		if not tags:
 			continue
 
 		# add each tag to index, with titles as set
@@ -191,14 +188,14 @@ def update_search_index(contents, title):
 	tags = parse_metadata("tags", contents)
 
 	if tags:
-		# ensure tags are space separated
-		terms += " " + tags[1:-1].replace(",", " ")
+		# convert tags list to string
+		terms += " " + " ".join(tags)
 
 	keywords = parse_metadata("keywords", contents)
 
 	if keywords:
-		# ensure keywords are space separated
-		terms += " " + keywords[1:-1].replace(",", " ")
+		# convert keywords list to string
+		terms += " " + " ".join(keywords)
 
 	# remove punctuation etc from YAML values, make lower case, remove commas (e.g. from numbers in summary)
 	table = string.maketrans(";_()", "    ")
@@ -389,14 +386,22 @@ def create_valid_filename(name):
 
 def parse_metadata(metadata, contents):
 	# return the contents for the given metadata string, using the global regex's
+	# return type is string for simple fields, list for lists
 
 	if metadata not in regex_meta:
 		return None
 
 	value = regex_meta[metadata].search(contents)
 
-	if value:
-		value = value.group(1).strip()
+	if not value:
+		return None
+
+	# get raw string value
+	value = value.group(1).strip()
+
+	# convert to list if required
+	if value.startswith("[") and value.endswith("]"):
+		value = value[1:-1].split(",")
 
 	return value
 
@@ -466,4 +471,6 @@ if __name__ == "__main__":
 	parser.add_argument("-s", "--separator", default="", help="Separator to insert between transcluded files (default is empty)")
 	parser.parse_args(namespace=config)
 
-	process_files(config.source, config.target, config.index, config.list, config.fullns, config.broken, config.tag, config.media, config.separator)
+	process_files(config.source, config.target,
+				  index=config.index, list=config.list, fullns=config.fullns, broken=config.broken,
+				  tag=config.tag, media=config.media, separator=config.separator)
