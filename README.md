@@ -4,7 +4,7 @@ For a while I've been running the excellent [DokuWiki](https://www.dokuwiki.org)
 
 However, it struck me that I don't really need a wiki as such---all I really need or my purposes are inter-page links and the ability to tag pages and gets lists of pages that match a given set of tags. (This is basically DokuWiki's double bracket syntax for links to another page: `[[A Page Title]] ` and the [tag](https://www.dokuwiki.org/plugin:tag) plugin.) I don't actually need the "wiki" bit, as I can easily edit the files locally and deploy as needed. I've also got used to using Markdown rather than DokuWiki's markup (although there is a Markdown plugin for that).
 
-So this project hosts a Python script (`moku-wiki`) that takes an input folder of Markdown documents and processes them according to the following rules, putting the results in an output folder:
+So this project hosts a Python script (`mokuwiki.py`) that takes an input folder of Markdown documents and processes them according to the following rules, putting the results in an output folder:
 
 *  Inter-page links can be specified using the target page's title, e.g. `[[A Page Title]]`. This is converted to a standard Markdown link to the HTML version of that page: `[A Page Title](a_page_title.html)`.
 *   The YAML metadata can also have an "alias" field which can be used to link to that page instead of the title. This can be useful if the actual title that is to be displayed (the "formal" title, if you will) is long but has a common shorter form. Aliases must be unique and not the same as any
@@ -63,7 +63,7 @@ This is the first page. There may be more. Here is a link to [Another Page](anot
 
 ```
 
-Note that only the page and tag links are converted, everything else should be left the same by `moku-wiki`. Also note that:
+Note that only the page and tag links are converted, everything else should be left the same by `mokuwiki`. Also note that:
 
 1.  The YAML metadata format must be used (and the end of the block must indicated with `...`, not with `---`).
 2.  If a page does not have a "title" key in the metadata then processing is skipped.
@@ -79,15 +79,17 @@ Note that only the page and tag links are converted, everything else should be l
     a. "{{tag1 tag2}}" includes pages with tag1 *or* tag2
     b. "{{tag1 +tag2}}" includes pages with tag1 *and* tag2
     c. "{{tag1 -tag2}}" includes pages with tag1 that do *not* have tag2
-    d. "{{*}}" is a shortcut to include _all_ pages in the wiki that have a tag (pages do not have to have a tag, so leave them out if you don't want them in this "index" list)
+    d. "{{*}}" is a shortcut to include *all* pages in the wiki that have a tag (pages do not have to have a tag, so leave them out if you don't want them in this "index" list)
     e. "{{#}}" is a shortcut for the number of pages that have a tag
     f. "{{#tag}}" returns the number of pages that have the tag 'tag'
     g. "{{@}}" will return a list of all tags as a series of bracketed spans with the class name "tag". This can be used to style tag lists. The class name can be changed using the `--tag` command line option.
-11. Page names can contain references to namespaces, e.g. `[[ns2:Page Four]]`. Namespaces are assumed to refer to folders and so cannot contain spaces. How these are incorporated into the resulting link depends on the value of the `--namespace` command line option.
-    a. A value of "simple" (the default) assumes that there is a main folder, with a single level of child folders, e.g. "main/a", "main/b" and so on. A namespace reference in a page in folder "main/a" is assumed to point to a page in "main/b". Therefore an inter-page link like `[[b:A Page]]` in a document in "main/a" will convert to `[A Page](../b/a_page.html)`.
-    b. A value of "full" will treat a namespace as a path of folders. The author is then responsible for specifying the correct path, e.g. `[[..:..:ns2:ns3:A Page]]` will become `[A Page](../../ns2/n3/a_page.html)`.
+11. Page names can contain references to namespaces, e.g. `[[ns2:Page Four]]`. Namespaces are assumed to refer to folders and so cannot contain spaces. How these are incorporated into the resulting link depends on whether the `--fullns` command line option is set:
+    a. A value of "false" (the default) assumes that there is a main folder, with a single level of child folders, e.g. "main/a", "main/b" and so on. A namespace reference in a page in the folder "main/a" is assumed to point to a page in "main/b". Therefore an inter-page link like `[[b:A Page]]` in a document in "main/a" will convert to `[A Page](../b/a_page.html)`.
+    b. A value of "true" will treat a namespace as a path of folders. The author is then responsible for specifying the correct path, e.g. `[[..:..:ns2:ns3:A Page]]` will become `[A Page](../../ns2/n3/a_page.html)`.
 
 The script does **NOT** convert the Markdown to HTML (or anything else). It simply converts the page/tag links in preparation for such conversion. As such it could be used in conjunction with the various static web site generators out there.
+
+Use the "--list" option to output a list of page links that do not exist.
 
 The optional command line option "--index" will output a JSON file (called "index.json") which contains an index of titles, file names and terms contained in each page. This can be used to create a simplistic search function in the "wiki". This has the format:
 
@@ -107,19 +109,29 @@ Some assumptions are made here, namely that this file will be included using a `
 
 The string in "terms" is a list of all words that occur in the following metadata elements of the file: "title", "alias", "tags", "keywords" and "summary". Punctuation and duplicate words are removed
 
-> NOTE: Originally the project was referred to as "fake wiki". This brought to mind "mock wiki", and in a fit of alliterative humour I changed it to "moku-wiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software---use that, not this!
+> NOTE: Originally the project was referred to as "fake wiki". Then I though it was more like a  "mock wiki", and in a fit of alliterative humour I changed the project to "mokuwiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software---use that, not this!
 
 # Installation
 
-Copy the `moku-wiki` file to somewhere in your path (e.g. `/usr/local/bin` on a Unix based system). The `deploy` task of the supplied `ant` build.xml does this.
+Copy the `mokuwiki.py` file to somewhere in your path (e.g. `/usr/local/bin/mokuwiki` on a Unix based system). The `deploy` task of the supplied `ant` build.xml does this.
 
 # Usage
 
+If installed as above then just run "mokuwiki" as a command line tool:
+
 ```
-$ moku-wiki input-dir output-dir
+$ mokuwiki input-dir output-dir
 ```
 
-Run `moku-wiki --help` for all options.
+Run in a Python interpreter using the "process_files()" function:
+
+```
+$ python
+>>> import mokuwiki
+>>> mokuwiki.process_files(input_dir, output_dir)
+```
+
+Run `mokuwiki --help` for all options.
 
 # Assumptions
 
@@ -130,8 +142,8 @@ Run `moku-wiki --help` for all options.
 1.  This is my first Python project (yay!), so it's mostly been cobbled together from Stack Overflow answers, mostly. As a result it's probably not what you'd call Pythonic but it do what it's supposed to do.
 2.  Error checking/handling is minimal/probably woefully inadequate.
 3.  There are some things you can't do (brackets in titles etc) that could probably be addressed by better regular expressions or a more complete model of what I think it should be doing.
-4.  `moku-wiki` only converts the page link, tag list, file include and image link markup---anything else will have to be done by say, a `pandoc` template or similar mechanism.
-5.  You cannot have two pages with the same title/alias (which kind of makes sense, for a wiki).
+4.  `mokuwiki` only converts the page link, tag list, file include and image link markup---anything else will have to be done by say, a `pandoc` template or similar mechanism.
+5.  You cannot have two pages with the same title/alias (which actually kind of makes sense, for a wiki).
 6.  The image link markup... to be honest this was just because it was easy to do! I'm not sure if it really worth it but you can always ignore it and put images in normally.
 
 # To Do
@@ -141,4 +153,3 @@ Run `moku-wiki --help` for all options.
 3.  Replace the complex namespace/show name/page name logic with a suitable regular expression.
 4.  Replace the complex logic that handles special tag characters with something more elegant.
 5.  The search index is not really optimised for search---if anything it's optimised for the size of the file. But again, in tests on 250 pages, there is no noticeable delay in displaying the results.
-6.  Convert to a module?

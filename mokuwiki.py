@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-""" mokuwiki
+""" mokuwiki.py
 
 Converts a folder of Markdown files, applying the following transforms:
 
@@ -39,7 +39,7 @@ name). For example, a page called "file1.md" with the "title" metadata equal to 
 be converted to "a_page_title.md". Output files can then be processed using a Markdown processor
 (the assumption is that pandoc is being used).
 
-Using the '--index' option will also output an "_index.json" file that contains a JSON object
+Using the '--index' option will also output a "_index.json" file that contains a JSON object
 suitable for use by a search function in a webpage.
 
 """
@@ -149,7 +149,7 @@ def create_indexes(file_list):
 			else:
 				print "mokuwiki: duplicate alias '" + alias + "' in file '" + file + "'"
 
-		# get tags (if any)
+		# get list of tags (if any)
 		tags = parse_metadata("tags", contents)
 
 		if not tags:
