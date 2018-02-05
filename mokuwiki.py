@@ -404,7 +404,12 @@ def convert_image_link(image):
 
 	image_name = str(image.group())[2:-2]
 
-	image_link = "![" + image_name + "](" + config.media + os.sep + create_valid_filename(image_name) + ".jpg)"
+	file_ext = "jpg"
+
+	if "|" in image_name:
+		image_name, file_ext = image_name.split("|")
+
+	image_link = "![" + image_name + "](" + config.media + os.sep + create_valid_filename(image_name) + "." + file_ext + ")"
 
 	return image_link
 

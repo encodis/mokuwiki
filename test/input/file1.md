@@ -10,6 +10,8 @@ A link to [[P2|Page Two]]
 
 !!A Pretty Picture!!
 
+!!Another Picture|png!!
+
 ## List of things in tag
 
 {{xyz}}
