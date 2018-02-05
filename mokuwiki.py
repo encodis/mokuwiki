@@ -53,7 +53,7 @@ import argparse
 
 ###
 
-def process_files(source, target, index=False, list=False, fullns=False, broken="broken", tag="tag", media="images", separator=""):
+def mokuwiki(source, target, index=False, list=False, fullns=False, broken="broken", tag="tag", media="images", separator=""):
 
 	# configure
 	config.source = source
@@ -67,7 +67,7 @@ def process_files(source, target, index=False, list=False, fullns=False, broken=
 	config.separator = separator
 
 	# get list of Markdown files
-	file_list = glob.glob(config.source + "/*.md")
+	file_list = glob.glob(os.path.normpath(os.path.join(config.source, "*.md")))
 
 	# create indexes
 	create_indexes(file_list)
@@ -232,10 +232,11 @@ def convert_page_link(page):
 	if ":" in page_name:
 		namespace, page_name = page_name.rsplit(":", 1)
 
-		namespace = namespace.replace(":","/") + "/"
+		namespace = namespace.replace(":", os.sep) + os.sep
 
 		if not config.fullns:
-			namespace = "../" + namespace
+			# usually assume sibling namespaces
+			namespace = os.pardir + os.sep + namespace
 
 	# set show name if not already done
 	if not show_name:
@@ -337,16 +338,33 @@ def convert_tags_link(tags):
 def convert_file_link(file):
 	# insert contents of file
 
-	incl_list = str(file.group())[2:-2]
+	incl_file = str(file.group())[2:-2]
 
-	incl_list = sorted(glob.glob(config.source + "/" + incl_list))
+	if not any(elem in r"*?/." for elem in incl_file):
+		# not a regular file spec
+
+		namespace = ""
+
+		if ":" in incl_file:
+			# namespace detected
+
+			namespace, incl_file = incl_file.rsplit(":", 1)
+
+			namespace = namespace.replace(":", os.sep)
+
+			if not config.fullns:
+				namespace = os.pardir + os.sep + namespace
+
+		incl_file = os.path.normpath(os.path.join(namespace, create_valid_filename(incl_file) + ".md"))
+
+	incl_list = sorted(glob.glob(os.path.normpath(os.path.join(config.source, incl_file))))
 
 	incl_contents = ""
 
 	for i, file in enumerate(incl_list):
 
-		with open(file, "r") as incl_file:
-			file_contents = incl_file.read()
+		with open(file, "r") as input_file:
+			file_contents = input_file.read()
 
 		# remove any YAML block
 		file_contents = regex_meta["yaml"].sub("", file_contents)
@@ -367,7 +385,7 @@ def convert_image_link(image):
 
 	image_name = str(image.group())[2:-2]
 
-	image_link = "![" + image_name + "](" + config.media + "/" + create_valid_filename(image_name) + ".jpg)"
+	image_link = "![" + image_name + "](" + config.media + os.sep + create_valid_filename(image_name) + ".jpg)"
 
 	return image_link
 
@@ -423,7 +441,7 @@ regex_meta["yaml"] = re.compile(r"---[\r\n|\r|\n].*[\r\n|\r|\n]\.\.\.", re.DOTAL
 regex_link = {}
 regex_link["page"] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
 regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
-regex_link["file"] = re.compile(r"<<[\w.*?-]*>>")
+regex_link["file"] = re.compile(r"<<[\w\s,.:'*?-]*>>")
 regex_link["image"] = re.compile(r"!![\w\s,.:|'-]*!!")
 
 # set up indexes
@@ -471,6 +489,6 @@ if __name__ == "__main__":
 	parser.add_argument("-s", "--separator", default="", help="Separator to insert between transcluded files (default is empty)")
 	parser.parse_args(namespace=config)
 
-	process_files(config.source, config.target,
-				  index=config.index, list=config.list, fullns=config.fullns, broken=config.broken,
-				  tag=config.tag, media=config.media, separator=config.separator)
+	mokuwiki(config.source, config.target,
+			index=config.index, list=config.list, fullns=config.fullns, broken=config.broken,
+			tag=config.tag, media=config.media, separator=config.separator)
