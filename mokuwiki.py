@@ -55,6 +55,21 @@ import argparse
 
 def mokuwiki(source, target, index=False, list=False, fullns=False, broken="broken", tag="tag", media="images", separator=""):
 
+	# default file spec
+	file_spec = "*.md"
+
+	if not os.path.isdir(source):
+		# not a dir, so assume file spec also given
+		source, file_spec = source.rsplit("/", 1)
+
+	if not os.path.isdir(source):
+		print "mokuwiki: source folder '" + source + "' does not exist or is not a folder"
+		exit()
+
+	if not os.path.isdir(target):
+		print "mokuwiki: target folder '" + target + "' does not exist or is not a folder"
+		exit()
+
 	# configure
 	config.source = source
 	config.target = target
@@ -67,7 +82,7 @@ def mokuwiki(source, target, index=False, list=False, fullns=False, broken="brok
 	config.separator = separator
 
 	# get list of Markdown files
-	file_list = glob.glob(os.path.normpath(os.path.join(config.source, "*.md")))
+	file_list = glob.glob(os.path.normpath(os.path.join(config.source, file_spec)))
 
 	# create indexes
 	create_indexes(file_list)
@@ -347,7 +362,6 @@ def convert_file_link(file):
 
 		if ":" in incl_file:
 			# namespace detected
-
 			namespace, incl_file = incl_file.rsplit(":", 1)
 
 			namespace = namespace.replace(":", os.sep)

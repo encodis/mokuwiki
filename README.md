@@ -86,6 +86,7 @@ Note that only the page and tag links are converted, everything else should be l
 11. Page names can contain references to namespaces, e.g. `[[ns2:Page Four]]`. Namespaces are assumed to refer to folders and so cannot contain spaces. How these are incorporated into the resulting link depends on whether the `--fullns` command line option is set:
     a. A value of "false" (the default) assumes that there is a main folder, with a single level of child folders, e.g. "main/a", "main/b" and so on. A namespace reference in a page in the folder "main/a" is assumed to point to a page in "main/b". Therefore an inter-page link like `[[b:A Page]]` in a document in "main/a" will convert to `[A Page](../b/a_page.html)`.
     b. A value of "true" will treat a namespace as a path of folders. The author is then responsible for specifying the correct path, e.g. `[[..:..:ns2:ns3:A Page]]` will become `[A Page](../../ns2/n3/a_page.html)`.
+12. On the command line the source directory can actually be a path specification, e.g. `pages/file*.md` which will process only those files. Be sure to escape any wild cards from the shell, i.e. `pages/file\*.md`.
 
 The script does **NOT** convert the Markdown to HTML (or anything else). It simply converts the page/tag links in preparation for such conversion. As such it could be used in conjunction with the various static web site generators out there.
 
