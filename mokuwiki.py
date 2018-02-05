@@ -22,7 +22,7 @@ Lists of pages can be created by combining tags in various ways:
 	*  {{*}} list all pages that have any tag at all
 	*  {{#}} the total number of pages
 	*  {{#tag}} the total number of pages with 'tag'
-	*  {{@}} a list of all tags (bracketed spans with a class of 'tag')
+	*  {{@}} a list of all tags (output as bracketed spans with a class of 'tag')
 
 *  Files can be included in other files using the following syntax: '<<include_me.md>>'. Multiple
 file specifications are also supported, e.g. '<<include*X.dat>>'. YAML metadata blocks are removed
@@ -33,15 +33,17 @@ using the syntax '<<include*X.dat|* * *>>'.
 image link like: '![Image Name](images/image_name.jpg)', that is, the file name is based on the
 caption. Images are assumed to live in a local "images" folder but this can be changed with the
 '--media' command line option. They are also assumed to be JPGs unless the syntax
-'!!Image Name|png!!' is used. 
+'!!Image Name|png!!' is used.
 
-The files in the specified output folder are named according to their title (not their input file
+Output files can then be processed using a Markdown processor (the assumption is that 'pandoc' is
+being used).
+
+NOTE: The files in the specified output folder are named according to their title (not their input file
 name). For example, a page called "file1.md" with the "title" metadata equal to "A Page Title" will
-be converted to "a_page_title.md". Output files can then be processed using a Markdown processor
-(the assumption is that pandoc is being used).
+be converted to "a_page_title.md".
 
-Using the '--index' option will also output a "_index.json" file that contains a JSON object
-suitable for use by a search function in a webpage.
+NOTE: Using the '--index' option will also output a "_index.json" file that contains a JSON object that 
+might be useful for use by a search function in a webpage.
 
 """
 
