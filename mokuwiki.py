@@ -27,12 +27,13 @@ Lists of pages can be created by combining tags in various ways:
 *  Files can be included in other files using the following syntax: '<<include_me.md>>'. Multiple
 file specifications are also supported, e.g. '<<include*X.dat>>'. YAML metadata blocks are removed
 on inclusion and separator text can be defined to be inserted after each file (except the last) by
-using the '--separator' command line argument.
+using the syntax '<<include*X.dat|* * *>>'.
 
 *  Image links can be inserted with the following syntax: '!!Image Name!!'. This will produce an
 image link like: '![Image Name](images/image_name.jpg)', that is, the file name is based on the
 caption. Images are assumed to live in a local "images" folder but this can be changed with the
-'--media' command line option. They are also assumed to be JPGs.
+'--media' command line option. They are also assumed to be JPGs unless the syntax
+'!!Image Name|png!!' is used. 
 
 The files in the specified output folder are named according to their title (not their input file
 name). For example, a page called "file1.md" with the "title" metadata equal to "A Page Title" will
@@ -53,7 +54,7 @@ import argparse
 
 ###
 
-def mokuwiki(source, target, index=False, list=False, fullns=False, broken="broken", tag="tag", media="images", separator=""):
+def mokuwiki(source, target, index=False, list=False, fullns=False, broken="broken", tag="tag", media="images"):
 
 	# default file spec
 	file_spec = "*.md"
@@ -79,7 +80,6 @@ def mokuwiki(source, target, index=False, list=False, fullns=False, broken="brok
 	config.broken = broken
 	config.tag = tag
 	config.media = media
-	config.separator = separator
 
 	# get list of Markdown files
 	file_list = glob.glob(os.path.normpath(os.path.join(config.source, file_spec)))
@@ -355,7 +355,7 @@ def convert_file_link(file):
 
 	incl_file = str(file.group())[2:-2]
 
-	file_sep = config.separator
+	file_sep = ""
 
 	if "|" in incl_file:
 		incl_file, file_sep = incl_file.split("|")
@@ -496,7 +496,6 @@ config.fullns = False
 config.broken = "broken"
 config.tag = "tag"
 config.media = "images"
-config.separator = ""
 
 # execute if main
 
@@ -510,9 +509,9 @@ if __name__ == "__main__":
 	parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links (default is 'broken')")
 	parser.add_argument("-t", "--tag", default="tag", help="CSS class for tag links (default is 'tag')")
 	parser.add_argument("-m", "--media", default="images", help="Path to media files (default is 'images')")
-	parser.add_argument("-s", "--separator", default="", help="Separator to insert between transcluded files (default is empty)")
 	parser.parse_args(namespace=config)
 
 	mokuwiki(config.source, config.target,
-			index=config.index, list=config.list, fullns=config.fullns, broken=config.broken,
-			tag=config.tag, media=config.media, separator=config.separator)
+			index=config.index, list=config.list,
+			fullns=config.fullns, broken=config.broken,
+			tag=config.tag, media=config.media)
