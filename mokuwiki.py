@@ -457,11 +457,11 @@ __version__ = '1.0'
 # regular expressions to locate YAML metadata
 
 regex_meta = {}
-regex_meta["title"] = re.compile(r"[T|t]itle:(.*)[\r\n|\r|\n]")
-regex_meta["alias"] = re.compile(r"[A|a]lias:(.*)[\r\n|\r|\n]")
-regex_meta["tags"] = re.compile(r"[T|t]ags:(.*)[\r\n|\r|\n]")
-regex_meta["keywords"] = re.compile(r"[K|k]eywords:(.*)[\r\n|\r|\n]")
-regex_meta["summary"] = re.compile(r"[S|s]ummary:(.*)[\r\n|\r|\n]")
+regex_meta["title"] = re.compile(r"title:(.*)[\r\n|\r|\n]", re.IGNORECASE)
+regex_meta["alias"] = re.compile(r"alias:(.*)[\r\n|\r|\n]", re.IGNORECASE)
+regex_meta["tags"] = re.compile(r"tags:(.*)[\r\n|\r|\n]", re.IGNORECASE)
+regex_meta["keywords"] = re.compile(r"keywords:(.*)[\r\n|\r|\n]", re.IGNORECASE)
+regex_meta["summary"] = re.compile(r"summary:(.*)[\r\n|\r|\n]", re.IGNORECASE)
 regex_meta["yaml"] = re.compile(r"---[\r\n|\r|\n].*[\r\n|\r|\n]\.\.\.", re.DOTALL)
 
 # regular expressions to locate page, tag, file and image links
