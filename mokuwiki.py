@@ -42,7 +42,7 @@ NOTE: The files in the specified output folder are named according to their titl
 name). For example, a page called "file1.md" with the "title" metadata equal to "A Page Title" will
 be converted to "a_page_title.md".
 
-NOTE: Using the '--index' option will also output a "_index.json" file that contains a JSON object that 
+NOTE: Using the '--index' option will also output a "_index.json" file that contains a JSON object that
 might be useful for use by a search function in a webpage.
 
 """
@@ -451,6 +451,8 @@ def parse_metadata(metadata, contents):
 
 
 ### MAIN ###
+
+__version__ = '1.0'
 
 # regular expressions to locate YAML metadata
 

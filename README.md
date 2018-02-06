@@ -114,14 +114,16 @@ The string in "terms" is a list of all words that occur in the following metadat
 
 # Installation
 
-Copy the `mokuwiki.py` file to somewhere in your path (e.g. `/usr/local/bin/mokuwiki` on a Unix based system). The `deploy` task of the supplied `ant` build.xml does this.
+Download and unzip the `dist/mokuwiki-1.0.zip` file. Change to the "mokuwiki-1.0" folder and run:
+
+`$ python setup.py install`.
 
 # Usage
 
-If installed as above then just run "mokuwiki" as a command line tool:
+Once installed as above then just run "mokuwiki" as a module from the command line:
 
 ```
-$ mokuwiki input-dir output-dir
+$ python -m mokuwiki input-dir output-dir
 ```
 
 Run in a Python interpreter using the "mokuwiki()" function:

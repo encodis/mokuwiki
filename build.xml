@@ -12,11 +12,10 @@
     <property environment="env"/>
 
     <!-- set up local properties -->
-    <property name="python.bin" value="python"/>
-    <property name="mokuwiki.bin" value="mokuwiki"/>
+    <property name="python.exe" value="python"/>
     <property name="mokuwiki.py" value="mokuwiki.py"/>
-    <property name="deploy.dir" value="/usr/local/bin"/>
     <property name="build.dir" value="build"/>
+    <property name="dist.dir" value="dist"/>
     <property name="test.dir" value="test"/>
     <property name="input.dir" value="${test.dir}/input"/>
     <property name="output.dir" value="${test.dir}/output"/>
@@ -25,22 +24,20 @@
 
     <target
         name="test"
-        description="Run local moku-wiki on test files">
+        description="Run local mokuwiki script on test files">
 
         <delete dir="${output.dir}"/>
         <mkdir dir="${output.dir}"/>
         <delete dir="${build.dir}"/>
         <mkdir dir="${build.dir}"/>
 
-        <exec
-            executable="${python.bin}"
-            searchpath="true"
-            dir=".">
-            <arg value="./${mokuwiki.py}"/>
-            <arg value="--index"/>
-            <arg value="${input.dir}"/>
-            <arg value="${output.dir}"/>
-        </exec>
+        <python script="./${mokuwiki.py}">
+            <args>
+                <arg value="--index"/>
+                <arg value="${input.dir}"/>
+                <arg value="${output.dir}"/>
+            </args>
+        </python>
 
         <for param="file">
             <sequential>
@@ -61,15 +58,82 @@
     </target>
 
     <target
-        name="deploy"
-        description="Deploy mokuwiki">
+        name="dist"
+        description="Make distribution">
 
-        <copy
-            file="${mokuwiki.py}"
-            tofile="${deploy.dir}/${mokuwiki.bin}"/>
-
+        <python script="setup.py">
+            <args>
+                <arg value="sdist"/>
+            </args>
+        </python>
     </target>
 
+    <target
+        name="deploy"
+        description="Deploy mokuwiki"
+        depends="dist">
+
+        <!-- unzip to build -->
+        <unzip src="${dist.dir}/mokuwiki-1.0.zip" dest="${build.dir}"/>
+
+        <!-- run python setup.py install in build/mokuwiki-1.0.zip -->
+        <python script="setup.py" dir="${build.dir}/mokuwiki-1.0">
+            <args>
+                <arg value="install"/>
+            </args>
+        </python>
+    </target>
+
+    <!-- macrodefs -->
+
+    <macrodef
+        name="python"
+        description="Run python modules or scripts">
+
+        <attribute
+            name="module"
+            default=""
+            description="Python module name"/>
+
+        <attribute
+            name="script"
+            default=""
+            description="Python script path"/>
+
+        <attribute
+            name="dir"
+            default="."
+            description="Directory to run command in"/>
+
+        <element
+            name="args"
+            optional="true"
+            description="Remaining command line arguments"/>
+
+        <sequential>
+
+            <fail message="[python] cannot specify 'module' and 'script' attributes together">
+                <condition>
+                    <and>
+                        <not><equals arg1="@{module}" arg2=""/></not>
+                        <not><equals arg1="@{script}" arg2=""/></not>
+                    </and>
+                </condition>
+            </fail>
+
+            <!-- check python.exe exists -->
+            <find-exe property="python.exe" unless:set="python.exe"/>
+
+            <exec
+                executable="${python.exe}"
+                searchpath="true"
+                dir="@{dir}">
+                <arg line="-m @{module}" unless:blank="@{module}"/>
+                <arg line="@{script}" unless:blank="@{script}"/>
+                <args/>
+            </exec>
+        </sequential>
+    </macrodef>
 
     <macrodef
         name="pandoc"
@@ -111,7 +175,7 @@
         <sequential>
 
             <!-- check if pandoc executable is available -->
-            <find-pandoc-exe/>
+            <find-exe property="pandoc.exe" windows="pan-doc.exe" unless:set="pandoc.exe"/>
 
             <!-- convert markdown -->
             <exec
@@ -133,33 +197,66 @@
     </macrodef>
 
     <macrodef
-        name="find-pandoc-exe"
-        description="Find and set the path to the pandoc executable">
+        name="find-exe"
+        description="Find the name of the executable">
+
+        <attribute
+            name="property"
+            description="Property to set with the executable name"/>
+
+        <attribute
+            name="windows"
+            default=""
+            description="Name of the Windows executable (if different from 'property')"/>
+
+        <attribute
+            name="unix"
+            default=""
+            description="Name of the Unix executable (if different from 'property')"/>
 
         <sequential>
 
-            <local name="pandoc.exe.already.set"/>
-            <property name="pandoc.exe.already.set" value="true" if:set="pandoc.exe"/>
+            <local name="property.name"/>
+            <propertyregex
+                property="property.name"
+                input="@{property}"
+                regexp="(\w+).\w+"
+                replace="\1"/>
 
-            <!-- set pandoc.exe property, can be overridden -->
-            <condition property="pandoc.exe" value="pandoc.exe">
+            <local name="property.ext"/>
+            <propertyregex
+                property="property.ext"
+                input="@{property}"
+                regexp="\w+.(\w+)"
+                replace="\1"/>
+
+            <local name="windows.name"/>
+            <property name="windows.name" value="@{windows}" unless:blank="@{windows}"/>
+            <property name="windows.name" value="${property.name}.${property.ext}" if:blank="@{windows}"/>
+
+            <local name="unix.name"/>
+            <property name="unix.name" value="@{unix}" unless:blank="@{unix}"/>
+            <property name="unix.name" value="${property.name}" if:blank="@{unix}"/>
+
+            <!-- set property -->
+            <condition property="@{property}" value="${windows.name}">
               <os family="windows"/>
             </condition>
 
-            <condition property="pandoc.exe" value="pandoc">
+            <condition property="@{property}" value="${unix.name}">
               <not><os family="windows"/></not>
             </condition>
 
             <!-- check that executable is in the PATH -->
-            <fail message="[find-pandoc-exe] A 'pandoc' executable file cannot be found on the path">
+            <fail message="[find-exe] An executable file for '@{property}' cannot be found on the path">
               <condition>
                   <not>
-                      <available file="${pandoc.exe}" filepath="${env.PATH}" />
+                      <available file="${@{property}}" filepath="${env.PATH}" />
                   </not>
               </condition>
             </fail>
 
-            <echo message="[find-pandoc-exe] ${pandoc.exe}" unless:set="pandoc.exe.already.set"/>
+            <echo message="[find-exe] @{property}=${@{property}}" if:true="${macro.debug}"/>
 
         </sequential>
     </macrodef>
