@@ -58,8 +58,35 @@
     </target>
 
     <target
+        name="version"
+        description="Update version number from source">
+
+        <!-- get version number from mokuwiki.py -->
+        <loadfile srcFile="${mokuwiki.py}" property="version.number">
+            <filterchain>
+                <tokenfilter>
+                    <containsregex
+                        pattern="__version__ = '(.*)'"
+                        replace="\1"/>
+                </tokenfilter>
+                <striplinebreaks/>
+            </filterchain>
+        </loadfile>
+
+        <echo message="Updating '${mokuwiki.py}' to version ${version.number}"/>
+
+        <!-- insert version number into setup.py -->
+        <replaceregexp file="setup.py"
+                       match="version='[0-9\.]*'"
+                       replace="version='${version.number}'"
+                       byline="true"/>
+
+    </target>
+
+    <target
         name="dist"
-        description="Make distribution">
+        description="Make distribution"
+        depends="version">
 
         <python script="setup.py">
             <args>
@@ -69,15 +96,15 @@
     </target>
 
     <target
-        name="deploy"
-        description="Deploy mokuwiki"
+        name="install"
+        description="Install mokuwiki"
         depends="dist">
 
         <!-- unzip to build -->
-        <unzip src="${dist.dir}/mokuwiki-1.0.zip" dest="${build.dir}"/>
+        <unzip src="${dist.dir}/mokuwiki-${version.number}.zip" dest="${build.dir}"/>
 
         <!-- run python setup.py install in build/mokuwiki-1.0.zip -->
-        <python script="setup.py" dir="${build.dir}/mokuwiki-1.0">
+        <python script="setup.py" dir="${build.dir}/mokuwiki-${version.number}">
             <args>
                 <arg value="install"/>
             </args>
@@ -124,6 +151,16 @@
             <!-- check python.exe exists -->
             <find-exe property="python.exe" unless:set="python.exe"/>
 
+            <!-- check script exists -->
+            <fail message="[python] script '@{script}' does not exist" unless:blank="@{script}">
+                <condition>
+                    <not>
+                        <available file="@{script}" type="file"/>
+                    </not>
+                </condition>
+            </fail>
+
+            <!-- run module or script -->
             <exec
                 executable="${python.exe}"
                 searchpath="true"
@@ -251,7 +288,7 @@
             <fail message="[find-exe] An executable file for '@{property}' cannot be found on the path">
               <condition>
                   <not>
-                      <available file="${@{property}}" filepath="${env.PATH}" />
+                      <available file="${@{property}}" filepath="${env.PATH}"/>
                   </not>
               </condition>
             </fail>
