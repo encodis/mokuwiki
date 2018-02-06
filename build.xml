@@ -91,6 +91,7 @@
         <python script="setup.py">
             <args>
                 <arg value="sdist"/>
+                <arg value="--formats=zip"/>
             </args>
         </python>
     </target>
