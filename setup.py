@@ -4,6 +4,6 @@ setup(name='mokuwiki',
       description='Convert a folder of Markdown documents, replacing inter-page links and tag references',
       author='Philip Hodder',
       author_email='philip.hodder@encodis.com',
-      url='https://github.com/philip-hodder/moku-wiki',
+      url='https://github.com/philip-hodder/mokuwiki',
       py_modules=['mokuwiki'],
       )
