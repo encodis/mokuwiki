@@ -56,7 +56,7 @@ import argparse
 
 ###
 
-def mokuwiki(source, target, index=False, list=False, fullns=False, broken="broken", tag="tag", media="images"):
+def mokuwiki(source, target, index=False, report=False, fullns=False, broken="broken", tag="tag", media="images"):
 
 	# default file spec
 	file_spec = "*.md"
@@ -77,7 +77,7 @@ def mokuwiki(source, target, index=False, list=False, fullns=False, broken="brok
 	config.source = source
 	config.target = target
 	config.index = index
-	config.list = list
+	config.report = report
 	config.fullns = fullns
 	config.broken = broken
 	config.tag = tag
@@ -123,7 +123,7 @@ def mokuwiki(source, target, index=False, list=False, fullns=False, broken="brok
 
 	# show list of broken links
 
-	if config.list:
+	if config.report:
 		print '\n'.join(sorted(page_index["broken"]))
 
 	# write search index
@@ -495,7 +495,7 @@ config = Config()
 # set defaults
 
 config.index = False
-config.list = False
+config.report = False
 config.fullns = False
 config.broken = "broken"
 config.tag = "tag"
@@ -508,7 +508,7 @@ if __name__ == "__main__":
 	parser.add_argument("source", help="Source directory")
 	parser.add_argument("target", help="Target directory")
 	parser.add_argument("-i", "--index", help="Produce JSON search index", action="store_true")
-	parser.add_argument("-l", "--list", help="List broken links", action="store_true")
+	parser.add_argument("-r", "--report", help="Report broken links", action="store_true")
 	parser.add_argument("-f", "--fullns", help="Use full paths for namespaces", action="store_true")
 	parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links (default is 'broken')")
 	parser.add_argument("-t", "--tag", default="tag", help="CSS class for tag links (default is 'tag')")
@@ -516,6 +516,6 @@ if __name__ == "__main__":
 	parser.parse_args(namespace=config)
 
 	mokuwiki(config.source, config.target,
-			index=config.index, list=config.list,
+			index=config.index, report=config.report,
 			fullns=config.fullns, broken=config.broken,
 			tag=config.tag, media=config.media)
