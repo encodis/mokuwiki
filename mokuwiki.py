@@ -119,15 +119,16 @@ def mokuwiki(source, target, index=False, report=False, fullns=False, broken="br
 
 		# add terms to search index
 		if config.index:
-			update_search_index(contents, title)
+			noindex = parse_metadata("noindex", contents)
+
+			if noindex != "true":
+				update_search_index(contents, title)
 
 	# show list of broken links
-
 	if config.report:
 		print '\n'.join(sorted(page_index["broken"]))
 
-	# write search index
-
+	# write out search index
 	if config.index:
 		search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(page_index["search"], indent=4)
 
@@ -462,6 +463,7 @@ regex_meta["alias"] = re.compile(r"alias:(.*)[\r\n|\r|\n]", re.IGNORECASE)
 regex_meta["tags"] = re.compile(r"tags:(.*)[\r\n|\r|\n]", re.IGNORECASE)
 regex_meta["keywords"] = re.compile(r"keywords:(.*)[\r\n|\r|\n]", re.IGNORECASE)
 regex_meta["summary"] = re.compile(r"summary:(.*)[\r\n|\r|\n]", re.IGNORECASE)
+regex_meta["noindex"] = re.compile(r"noindex:(.*)[\r\n|\r|\n]", re.IGNORECASE)
 regex_meta["yaml"] = re.compile(r"---[\r\n|\r|\n].*[\r\n|\r|\n]\.\.\.", re.DOTALL)
 
 # regular expressions to locate page, tag, file and image links
