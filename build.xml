@@ -5,11 +5,7 @@
     xmlns:if="ant:if"
     xmlns:unless="ant:unless">
 
-    <!-- include antcontrib -->
-    <taskdef resource="net/sf/antcontrib/antlib.xml"/>
-
-    <!-- set up environment variables -->
-    <property environment="env"/>
+    <include file="/usr/local/lib/xpants/xpants.xml"/>
 
     <!-- set up local properties -->
     <property name="module.py" value="${ant.project.name}.py"/>
@@ -45,7 +41,7 @@
                 <basename property="output.file" file="@{file}" suffix=".md"/>
 
                 <pandoc
-                    input="@{file}"
+                    file="@{file}"
                     output="${build.dir}/${output.file}.html"/>
 
             </sequential>
@@ -60,26 +56,7 @@
         name="version"
         description="Update version number from source">
 
-        <!-- get version number from ${module.py} -->
-        <loadfile srcFile="${module.py}" property="version.number">
-            <filterchain>
-                <tokenfilter>
-                    <containsregex
-                        pattern="__version__ = '(.*)'"
-                        replace="\1"/>
-                </tokenfilter>
-                <striplinebreaks/>
-            </filterchain>
-        </loadfile>
-
-        <echo message="Updating '${module.py}' to version '${version.number}'"/>
-
-        <!-- insert version number into setup.py -->
-        <replaceregexp file="setup.py"
-                       match="version='[0-9\.]*'"
-                       replace="version='${version.number}'"
-                       byline="true"/>
-
+        <python-update-version module="mokuwiki.py"/>
     </target>
 
     <target
@@ -87,12 +64,7 @@
         description="Make distribution"
         depends="version">
 
-        <python script="setup.py">
-            <args>
-                <arg value="sdist"/>
-                <arg value="--formats=zip"/>
-            </args>
-        </python>
+        <python-build-distribution/>
     </target>
 
     <target
@@ -100,202 +72,7 @@
         description="Install module"
         depends="dist">
 
-        <!-- unzip to build -->
-        <unzip src="${dist.dir}/${ant.project.name}-${version.number}.zip" dest="${build.dir}"/>
-
-        <!-- run python setup.py install in build/module-1.0.zip -->
-        <python script="setup.py" dir="${build.dir}/${ant.project.name}-${version.number}">
-            <args>
-                <arg value="install"/>
-            </args>
-        </python>
+        <python-install-module module="mokuwiki" version="1.0.0"/>
     </target>
-
-    <!-- macrodefs -->
-
-    <macrodef
-        name="python"
-        description="Run python modules or scripts">
-
-        <attribute
-            name="module"
-            default=""
-            description="Python module name"/>
-
-        <attribute
-            name="script"
-            default=""
-            description="Python script path"/>
-
-        <attribute
-            name="dir"
-            default="."
-            description="Directory to run command in"/>
-
-        <element
-            name="args"
-            optional="true"
-            description="Remaining command line arguments"/>
-
-        <sequential>
-
-            <fail message="[python] cannot specify 'module' and 'script' attributes together">
-                <condition>
-                    <and>
-                        <not><equals arg1="@{module}" arg2=""/></not>
-                        <not><equals arg1="@{script}" arg2=""/></not>
-                    </and>
-                </condition>
-            </fail>
-
-            <!-- check python.exe exists -->
-            <find-exe property="python.exe" unless:set="python.exe"/>
-
-            <!-- check script exists -->
-            <fail message="[python] script '@{script}' does not exist" unless:blank="@{script}">
-                <condition>
-                    <not>
-                        <available file="@{script}" type="file"/>
-                    </not>
-                </condition>
-            </fail>
-
-            <!-- run module or script -->
-            <exec
-                executable="${python.exe}"
-                searchpath="true"
-                dir="@{dir}">
-                <arg line="-m @{module}" unless:blank="@{module}"/>
-                <arg line="@{script}" unless:blank="@{script}"/>
-                <args/>
-            </exec>
-        </sequential>
-    </macrodef>
-
-    <macrodef
-        name="pandoc"
-        description="Run pandoc with parameters">
-
-        <attribute
-            name="input"
-            description="Input file"/>
-
-        <attribute
-            name="output"
-            description="Output file"/>
-
-        <attribute
-            name="format"
-            default=""
-            description="Output format"/>
-
-        <attribute
-            name="options"
-            default=""
-            description="List of options"/>
-
-        <attribute
-            name="template"
-            default=""
-            description="Template file"/>
-
-        <attribute
-            name="style"
-            default=""
-            description="Style"/>
-
-        <attribute
-            name="lua-filters"
-            default=""
-            description="List of lua filters"/>
-
-        <sequential>
-
-            <!-- check if pandoc executable is available -->
-            <find-exe property="pandoc.exe" windows="pan-doc.exe" unless:set="pandoc.exe"/>
-
-            <!-- convert markdown -->
-            <exec
-                executable="${pandoc.exe}"
-                searchpath="true"
-                dir=".">
-                <arg value="--standalone"/>
-                <arg value="--self-contained"/>
-                <arg value="--from=markdown+smart"/>
-                <arg value="--to=html5"/>
-                <arg value="--template=@{template}" unless:blank="@{template}"/>
-                <arg value="--css=@{style}" unless:blank="@{style}"/>
-                <arg value="--output=@{output}"/>
-
-                <arg value="@{input}"/>
-            </exec>
-
-        </sequential>
-    </macrodef>
-
-    <macrodef
-        name="find-exe"
-        description="Find the name of the executable">
-
-        <attribute
-            name="property"
-            description="Property to set with the executable name"/>
-
-        <attribute
-            name="windows"
-            default=""
-            description="Name of the Windows executable (if different from 'property')"/>
-
-        <attribute
-            name="unix"
-            default=""
-            description="Name of the Unix executable (if different from 'property')"/>
-
-        <sequential>
-
-            <local name="property.name"/>
-            <propertyregex
-                property="property.name"
-                input="@{property}"
-                regexp="(\w+).\w+"
-                replace="\1"/>
-
-            <local name="property.ext"/>
-            <propertyregex
-                property="property.ext"
-                input="@{property}"
-                regexp="\w+.(\w+)"
-                replace="\1"/>
-
-            <local name="windows.name"/>
-            <property name="windows.name" value="@{windows}" unless:blank="@{windows}"/>
-            <property name="windows.name" value="${property.name}.${property.ext}" if:blank="@{windows}"/>
-
-            <local name="unix.name"/>
-            <property name="unix.name" value="@{unix}" unless:blank="@{unix}"/>
-            <property name="unix.name" value="${property.name}" if:blank="@{unix}"/>
-
-            <!-- set property -->
-            <condition property="@{property}" value="${windows.name}">
-              <os family="windows"/>
-            </condition>
-
-            <condition property="@{property}" value="${unix.name}">
-              <not><os family="windows"/></not>
-            </condition>
-
-            <!-- check that executable is in the PATH -->
-            <fail message="[find-exe] An executable file for '@{property}' cannot be found on the path">
-              <condition>
-                  <not>
-                      <available file="${@{property}}" filepath="${env.PATH}"/>
-                  </not>
-              </condition>
-            </fail>
-
-            <echo message="[find-exe] @{property}=${@{property}}" if:true="${macro.debug}"/>
-
-        </sequential>
-    </macrodef>
 
 </project>
