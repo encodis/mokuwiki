@@ -12,8 +12,7 @@
     <property environment="env"/>
 
     <!-- set up local properties -->
-    <property name="python.exe" value="python"/>
-    <property name="mokuwiki.py" value="mokuwiki.py"/>
+    <property name="module.py" value="${ant.project.name}.py"/>
     <property name="build.dir" value="build"/>
     <property name="dist.dir" value="dist"/>
     <property name="test.dir" value="test"/>
@@ -24,14 +23,14 @@
 
     <target
         name="test"
-        description="Run local mokuwiki script on test files">
+        description="Run local script on test files">
 
         <delete dir="${output.dir}"/>
         <mkdir dir="${output.dir}"/>
         <delete dir="${build.dir}"/>
         <mkdir dir="${build.dir}"/>
 
-        <python script="./${mokuwiki.py}">
+        <python script="./${module.py}">
             <args>
                 <arg value="--index"/>
                 <arg value="${input.dir}"/>
@@ -61,8 +60,8 @@
         name="version"
         description="Update version number from source">
 
-        <!-- get version number from mokuwiki.py -->
-        <loadfile srcFile="${mokuwiki.py}" property="version.number">
+        <!-- get version number from ${module.py} -->
+        <loadfile srcFile="${module.py}" property="version.number">
             <filterchain>
                 <tokenfilter>
                     <containsregex
@@ -73,7 +72,7 @@
             </filterchain>
         </loadfile>
 
-        <echo message="Updating '${mokuwiki.py}' to version ${version.number}"/>
+        <echo message="Updating '${module.py}' to version '${version.number}'"/>
 
         <!-- insert version number into setup.py -->
         <replaceregexp file="setup.py"
@@ -98,14 +97,14 @@
 
     <target
         name="install"
-        description="Install mokuwiki"
+        description="Install module"
         depends="dist">
 
         <!-- unzip to build -->
-        <unzip src="${dist.dir}/mokuwiki-${version.number}.zip" dest="${build.dir}"/>
+        <unzip src="${dist.dir}/${ant.project.name}-${version.number}.zip" dest="${build.dir}"/>
 
-        <!-- run python setup.py install in build/mokuwiki-1.0.zip -->
-        <python script="setup.py" dir="${build.dir}/mokuwiki-${version.number}">
+        <!-- run python setup.py install in build/module-1.0.zip -->
+        <python script="setup.py" dir="${build.dir}/${ant.project.name}-${version.number}">
             <args>
                 <arg value="install"/>
             </args>
