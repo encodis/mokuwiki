@@ -5,7 +5,7 @@
     xmlns:if="ant:if"
     xmlns:unless="ant:unless">
 
-    <taskdef resource="com/encodis/xpants/antlib.xml"/>
+    <taskdef resource="com/encodis/xpants/xpants.xml"/>
     <!-- <include file="/usr/local/lib/xpants/xpants.xml"/> -->
 
     <!-- set up local properties -->
