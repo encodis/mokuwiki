@@ -5,7 +5,8 @@
     xmlns:if="ant:if"
     xmlns:unless="ant:unless">
 
-    <include file="/usr/local/lib/xpants/xpants.xml"/>
+    <taskdef resource="com/encodis/xpants/antlib.xml"/>
+    <!-- <include file="/usr/local/lib/xpants/xpants.xml"/> -->
 
     <!-- set up local properties -->
     <property name="module.py" value="${ant.project.name}.py"/>
