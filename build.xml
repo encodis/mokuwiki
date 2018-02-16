@@ -5,7 +5,9 @@
     xmlns:if="ant:if"
     xmlns:unless="ant:unless">
 
+    <taskdef resource="net/sf/antcontrib/antlib.xml"/>
     <taskdef resource="com/encodis/xpants/xpants.xml"/>
+
     <!-- <include file="/usr/local/lib/xpants/xpants.xml"/> -->
 
     <!-- set up local properties -->
@@ -73,7 +75,7 @@
         description="Install module"
         depends="dist">
 
-        <python-install-module module="mokuwiki" version="1.0.0"/>
+        <python-install-module module="mokuwiki" version="${mokuwiki.py.version.number}"/>
     </target>
 
 </project>

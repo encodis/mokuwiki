@@ -1,9 +1,10 @@
 from distutils.core import setup
+
 setup(name='mokuwiki',
-      version='1.0',
-      description='Convert a folder of Markdown documents, replacing inter-page links and tag references',
+      version='${version.number}',
+      description='Convert a folder of Markdown documents, replacing inter-page link and tag markup with Markdown links and lists',
       author='Philip Hodder',
       author_email='philip.hodder@encodis.com',
-      url='https://github.com/philip-hodder/mokuwiki',
+      url='https://github.com/encodis/mokuwiki',
       py_modules=['mokuwiki'],
       )
