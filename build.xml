@@ -59,7 +59,7 @@
         name="version"
         description="Update version number from source">
 
-        <python-update-version module="mokuwiki.py"/>
+        <python-update-version script="mokuwiki.py"/>
     </target>
 
     <target
