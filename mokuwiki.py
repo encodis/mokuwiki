@@ -47,6 +47,8 @@ might be useful for use by a search function in a webpage.
 
 """
 
+from __future__ import print_function
+
 import os
 import re
 import json
@@ -66,11 +68,11 @@ def mokuwiki(source, target, index=False, report=False, fullns=False, broken="br
 		source, file_spec = source.rsplit("/", 1)
 
 	if not os.path.isdir(source):
-		print "mokuwiki: source folder '" + source + "' does not exist or is not a folder"
+		print("mokuwiki: source folder '", source, "' does not exist or is not a folder")
 		exit()
 
 	if not os.path.isdir(target):
-		print "mokuwiki: target folder '" + target + "' does not exist or is not a folder"
+		print("mokuwiki: target folder '", target, "' does not exist or is not a folder")
 		exit()
 
 	# configure
@@ -98,7 +100,7 @@ def mokuwiki(source, target, index=False, report=False, fullns=False, broken="br
 		title = parse_metadata("title", contents)
 
 		if not title:
-			print "mokuwiki: skipping '" + file + "', no title found"
+			print("mokuwiki: skipping '", file, "', no title found")
 			continue
 
 		# replace file transclusion first (may include tag and page links)
@@ -126,7 +128,7 @@ def mokuwiki(source, target, index=False, report=False, fullns=False, broken="br
 
 	# show list of broken links
 	if config.report:
-		print '\n'.join(sorted(page_index["broken"]))
+		print('\n'.join(sorted(page_index["broken"])))
 
 	# write out search index
 	if config.index:
@@ -155,7 +157,7 @@ def create_indexes(file_list):
 		if title not in page_index["title"]:
 			page_index["title"][title] = create_valid_filename(title)
 		else:
-			print "mokuwiki: skipping '" + file + "', duplicate title '" + title + "'"
+			print("mokuwiki: skipping '", file, "', duplicate title '", title, "'")
 			continue
 
 		# get alias (if any)
@@ -165,7 +167,7 @@ def create_indexes(file_list):
 			if alias not in page_index["alias"] and alias not in page_index["title"]:
 				page_index["alias"][alias] = title
 			else:
-				print "mokuwiki: duplicate alias '" + alias + "' in file '" + file + "'"
+				print("mokuwiki: duplicate alias '", alias, "' in file '", file, "'")
 
 		# get list of tags (if any)
 		tags = parse_metadata("tags", contents)

@@ -78,4 +78,7 @@
         <python-install-module module="mokuwiki" version="${mokuwiki.py.version.number}"/>
     </target>
 
+    <!-- TODO for submission to PiPy etc. need pandoc to convert readme to build/RST and CR/LF
+         so could do all this via build file -->
+
 </project>
