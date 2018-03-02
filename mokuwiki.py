@@ -452,7 +452,7 @@ def parse_metadata(metadata, contents):
 
 ### MAIN ###
 
-__version__ = '1.0'
+__version__ = '1.0.0'
 
 # regular expressions to locate YAML metadata
 
