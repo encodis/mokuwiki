@@ -35,3 +35,7 @@ A link to [[P2|Page Two]]
 <<ns1:File Name>>
 
 Stop test
+
+### include file path
+
+<<../input/.fake2.md>>

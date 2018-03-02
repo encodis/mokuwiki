@@ -362,7 +362,7 @@ def convert_file_link(file):
 	if "|" in incl_file:
 		incl_file, file_sep = incl_file.split("|")
 
-	if not any(elem in r"*?/." for elem in incl_file):
+	if not any(elem in r"*?/" for elem in incl_file):
 		# not a regular file spec
 
 		namespace = ""
@@ -469,7 +469,7 @@ regex_meta["yaml"] = re.compile(r"---[\r\n|\r|\n].*[\r\n|\r|\n]\.\.\.", re.DOTAL
 regex_link = {}
 regex_link["page"] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
 regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
-regex_link["file"] = re.compile(r"<<[\w\s,.:|'*?-]*>>")
+regex_link["file"] = re.compile(r"<<[\w\s,./:|'*?-]*>>")
 regex_link["image"] = re.compile(r"!![\w\s,.:|'-]*!!")
 
 # set up indexes

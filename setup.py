@@ -14,6 +14,6 @@ setup(name='mokuwiki',
         'Topic :: Text Processing :: Markup',
         'Topic :: Utilities'
       ],
-      keywords='markdown wiki converter'
+      keywords='markdown wiki converter',
       py_modules=['mokuwiki'],
       )
