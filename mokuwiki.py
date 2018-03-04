@@ -47,8 +47,6 @@ might be useful for use by a search function in a webpage.
 
 """
 
-from __future__ import print_function
-
 import os
 import re
 import json
@@ -94,7 +92,7 @@ def mokuwiki(source, target, index=False, report=False, fullns=False, broken="br
 	# process files
 	for file in file_list:
 
-		with open(file, "r") as input_file:
+		with open(file, "r", encoding="utf8") as input_file:
 			contents = input_file.read()
 
 		title = parse_metadata("title", contents)
@@ -116,7 +114,7 @@ def mokuwiki(source, target, index=False, report=False, fullns=False, broken="br
 		contents = regex_link["image"].sub(convert_image_link, contents)
 
 		# get output file name by adding ".md" to title's file name
-		with open(os.path.join(config.target, page_index["title"][title] + ".md"), "w") as output_file:
+		with open(os.path.join(config.target, page_index["title"][title] + ".md"), "w", encoding="utf8") as output_file:
 			output_file.write(contents)
 
 		# add terms to search index
@@ -131,7 +129,7 @@ def mokuwiki(source, target, index=False, report=False, fullns=False, broken="br
 	if config.index:
 		search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(page_index["search"], indent=4)
 
-		with open(os.path.join(config.target, "_index.json"), "w") as json_file:
+		with open(os.path.join(config.target, "_index.json"), "w", encoding="utf8") as json_file:
 			json_file.write(search_index)
 
 
@@ -142,7 +140,7 @@ def create_indexes(file_list):
 
 	for file in file_list:
 
-		with open(file, "r") as input_file:
+		with open(file, "r", encoding="utf8") as input_file:
 			contents = input_file.read()
 
 		# get title
@@ -215,7 +213,7 @@ def update_search_index(contents, title):
 		terms += " " + " ".join(keywords)
 
 	# remove punctuation etc from YAML values, make lower case, remove commas (e.g. from numbers in summary)
-	table = string.maketrans(";_()", "    ")
+	table = str.maketrans(";_()", "    ")
 	terms = terms.translate(table).replace(",","").lower().split()
 
 	# remove stop words
@@ -312,7 +310,7 @@ def convert_tags_link(tags):
 
 			if tag_name == "#":
 				# a single "#" returns total number of pages
-				tag_links = str(len(page_index["title"].keys()))
+				tag_links = str(len(list(page_index["title"].keys())))
 			else:
 				# the string "#tag" returns number of pages with that tag
 				if tag_name[1:] in page_index["tags"]:
@@ -384,7 +382,7 @@ def convert_file_link(file):
 
 	for i, file in enumerate(incl_list):
 
-		with open(file, "r") as input_file:
+		with open(file, "r", encoding="utf8") as input_file:
 			file_contents = input_file.read()
 
 		# remove any YAML block
