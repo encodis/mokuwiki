@@ -87,6 +87,7 @@ Note that only the MokuWiki specific "markup" is converted, everything else shou
     a. When not set (the default) it assumes that there is a main folder, with a single level of child folders, e.g. "main/a", "main/b" and so on. A namespace reference in a page in the folder "main/a" is assumed to point to a page in a sibling folder. Therefore an inter-page link like `[[b:A Page]]` in a document in "main/a" will convert to `[A Page](../b/a_page.html)`.
     b. When `--fullns` is set it will treat a namespace as a full path of folders. The author is then responsible for specifying the correct path, e.g. `[[..:..:ns2:ns3:A Page]]` will become `[A Page](../../ns2/n3/a_page.html)`.
 12. On the command line the source directory can actually be a path specification, e.g. `pages/file*.md` which will process only those files. Be sure to escape any wild cards from the shell, i.e. `pages/file\*.md`.
+13. Single file mode can be enabled with the `--single` option. Only a single input file is expected and the output file given on the command line is used 'as-is' for the output (i.e. is assumed to be the intended output file name). This is not very useful for page links and tags but can be very handy for including files in the specified input file. The search index option is disabled in single file mode. 
 
 The script does **NOT** convert the Markdown to HTML (or anything else). It simply converts the page/tag links in preparation for such conversion. As such it could be used in conjunction with the various static web site generators out there.
 

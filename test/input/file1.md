@@ -24,7 +24,7 @@ A link to [[P2|Page Two]]
 
 ### include file spec  
 
-<<.fa*.md|* * *>>
+<<./.fa*.md|* * *>>
 
 ### include file in same ns
 
