@@ -27,7 +27,7 @@ Lists of pages can be created by combining tags in various ways:
 *  Files can be included in other files using the following syntax: '<<include_me.md>>'. Multiple
 file specifications are also supported, e.g. '<<include*X.dat>>'. YAML metadata blocks are removed
 on inclusion and separator text can be defined to be inserted after each file (except the last) by
-using the syntax '<<include*X.dat|* * *>>'.
+using the syntax '<<../data/include*X.dat|* * *>>'.
 
 *  Image links can be inserted with the following syntax: '!!Image Name!!'. This will produce an
 image link like: '![Image Name](images/image_name.jpg)', that is, the file name is based on the
@@ -46,7 +46,7 @@ NOTE: Using the '--index' option will also output a "_index.json" file that cont
 that might be useful for use by a search function in a webpage.
 
 NOTE: The '--single' option will invoke single file mode. Only one input file can be specified, and
-the output target will be used for the output file 'as is'. Single file mode will turn off the 
+the output target will be used for the output file 'as is'. Single file mode will turn off the
 '--index' option, if enabled.
 
 """
@@ -382,25 +382,11 @@ def convert_file_link(file):
 
 	file_sep = ""
 
+	# get file separator, if any
 	if "|" in incl_file:
 		incl_file, file_sep = incl_file.split("|")
 
-	if not any(elem in r"*?/" for elem in incl_file):
-		# not a regular file spec
-
-		namespace = ""
-
-		if ":" in incl_file:
-			# namespace detected
-			namespace, incl_file = incl_file.rsplit(":", 1)
-
-			namespace = namespace.replace(":", os.sep)
-
-			if not config.fullns:
-				namespace = os.pardir + os.sep + namespace
-
-		incl_file = os.path.normpath(os.path.join(namespace, create_valid_filename(incl_file) + ".md"))
-
+	# create list of files
 	incl_list = sorted(glob.glob(os.path.normpath(os.path.join(config.source, incl_file))))
 
 	incl_contents = ""
@@ -434,7 +420,7 @@ def convert_image_link(image):
 	if "|" in image_name:
 		image_name, file_ext = image_name.split("|")
 
-	image_link = "![" + image_name + "](" + config.media + os.sep + create_valid_filename(image_name) + "." + file_ext + ")"
+	image_link = "![" + image_name + "](" + os.path.join(config.media, create_valid_filename(image_name)) + "." + file_ext + ")"
 
 	return image_link
 

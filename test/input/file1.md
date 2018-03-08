@@ -26,16 +26,6 @@ A link to [[P2|Page Two]]
 
 <<./.fa*.md|* * *>>
 
-### include file in same ns
-
-<<file3>>
-
-### include file in other ns
-
-<<ns1:File Name>>
-
-Stop test
-
 ### include file path
 
 <<../input/.fake2.md>>
