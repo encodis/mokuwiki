@@ -27,7 +27,7 @@ Lists of pages can be created by combining tags in various ways:
 *  Files can be included in other files using the following syntax: '<<include_me.md>>'. Multiple
 file specifications are also supported, e.g. '<<include*X.dat>>'. YAML metadata blocks are removed
 on inclusion and separator text can be defined to be inserted after each file (except the last) by
-using the syntax '<<include*X.dat|* * *>>'.
+using the syntax '<<../data/include*X.dat|* * *>>'.
 
 *  Image links can be inserted with the following syntax: '!!Image Name!!'. This will produce an
 image link like: '![Image Name](images/image_name.jpg)', that is, the file name is based on the
@@ -38,12 +38,16 @@ caption. Images are assumed to live in a local "images" folder but this can be c
 Output files can then be processed using a Markdown processor (the assumption is that 'pandoc' is
 being used).
 
-NOTE: The files in the specified output folder are named according to their title (not their input file
-name). For example, a page called "file1.md" with the "title" metadata equal to "A Page Title" will
-be converted to "a_page_title.md".
+NOTE: The files in the specified output folder are named according to their title (not their input
+file name). For example, a page called "file1.md" with the "title" metadata equal to "A Page Title"
+will be converted to "a_page_title.md".
 
-NOTE: Using the '--index' option will also output a "_index.json" file that contains a JSON object that
-might be useful for use by a search function in a webpage.
+NOTE: Using the '--index' option will also output a "_index.json" file that contains a JSON object
+that might be useful for use by a search function in a webpage.
+
+NOTE: The '--single' option will invoke single file mode. Only one input file can be specified, and
+the output target will be used for the output file 'as is'. Single file mode will turn off the
+'--index' option, if enabled.
 
 """
 
@@ -56,26 +60,13 @@ import argparse
 
 ###
 
-def mokuwiki(source, target, index=False, report=False, fullns=False, broken="broken", tag="tag", media="images"):
-
-	# default file spec
-	file_spec = "*.md"
-
-	if not os.path.isdir(source):
-		# not a dir, so assume file spec also given
-		source, file_spec = source.rsplit("/", 1)
-
-	if not os.path.isdir(source):
-		print("mokuwiki: source folder '", source, "' does not exist or is not a folder")
-		exit()
-
-	if not os.path.isdir(target):
-		print("mokuwiki: target folder '", target, "' does not exist or is not a folder")
-		exit()
+def mokuwiki(source, target, single=False, index=False, report=False, fullns=False, broken="broken", tag="tag", media="images"):
 
 	# configure
+	### TODO config object not available if this was imported
 	config.source = source
 	config.target = target
+	config.single = single
 	config.index = index
 	config.report = report
 	config.fullns = fullns
@@ -83,8 +74,37 @@ def mokuwiki(source, target, index=False, report=False, fullns=False, broken="br
 	config.tag = tag
 	config.media = media
 
-	# get list of Markdown files
+	# default file spec
+	file_spec = "*.md"
+
+	# check source folder
+	if not os.path.isdir(config.source):
+		# not a dir, so first assume a file spec also given
+		config.source, file_spec = config.source.rsplit("/", 1)
+
+		# now check again
+		if not os.path.isdir(config.source):
+			print("mokuwiki: source folder '", config.source, "' does not exist or is not a folder")
+			exit()
+
+	# get list of input files
 	file_list = glob.glob(os.path.normpath(os.path.join(config.source, file_spec)))
+
+	# check single file mode configuration
+	if config.single:
+
+		# cannot generate search index in single file mode
+		config.index = False
+
+		if len(file_list) > 1:
+			print("mokuwiki: single file mode specified but more than one input file found")
+			exit()
+
+	else:
+
+		if not os.path.isdir(config.target):
+			print("mokuwiki: target folder '", config.target, "' does not exist or is not a folder")
+			exit()
 
 	# create indexes
 	create_indexes(file_list)
@@ -114,7 +134,12 @@ def mokuwiki(source, target, index=False, report=False, fullns=False, broken="br
 		contents = regex_link["image"].sub(convert_image_link, contents)
 
 		# get output file name by adding ".md" to title's file name
-		with open(os.path.join(config.target, page_index["title"][title] + ".md"), "w", encoding="utf8") as output_file:
+		if config.single:
+			output_name = config.target
+		else:
+			output_name = os.path.join(config.target, page_index["title"][title] + ".md")
+
+		with open(output_name, "w", encoding="utf8") as output_file:
 			output_file.write(contents)
 
 		# add terms to search index
@@ -125,7 +150,7 @@ def mokuwiki(source, target, index=False, report=False, fullns=False, broken="br
 	if config.report:
 		print('\n'.join(sorted(page_index["broken"])))
 
-	# write out search index
+	# write out search index (unless in single file mode)
 	if config.index:
 		search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(page_index["search"], indent=4)
 
@@ -357,25 +382,11 @@ def convert_file_link(file):
 
 	file_sep = ""
 
+	# get file separator, if any
 	if "|" in incl_file:
 		incl_file, file_sep = incl_file.split("|")
 
-	if not any(elem in r"*?/" for elem in incl_file):
-		# not a regular file spec
-
-		namespace = ""
-
-		if ":" in incl_file:
-			# namespace detected
-			namespace, incl_file = incl_file.rsplit(":", 1)
-
-			namespace = namespace.replace(":", os.sep)
-
-			if not config.fullns:
-				namespace = os.pardir + os.sep + namespace
-
-		incl_file = os.path.normpath(os.path.join(namespace, create_valid_filename(incl_file) + ".md"))
-
+	# create list of files
 	incl_list = sorted(glob.glob(os.path.normpath(os.path.join(config.source, incl_file))))
 
 	incl_contents = ""
@@ -409,7 +420,7 @@ def convert_image_link(image):
 	if "|" in image_name:
 		image_name, file_ext = image_name.split("|")
 
-	image_link = "![" + image_name + "](" + config.media + os.sep + create_valid_filename(image_name) + "." + file_ext + ")"
+	image_link = "![" + image_name + "](" + os.path.join(config.media, create_valid_filename(image_name)) + "." + file_ext + ")"
 
 	return image_link
 
@@ -492,6 +503,7 @@ config = Config()
 
 # set defaults
 
+config.single = False
 config.index = False
 config.report = False
 config.fullns = False
@@ -505,6 +517,7 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser(description="Convert folder of Markdown files to support interpage linking and tags")
 	parser.add_argument("source", help="Source directory")
 	parser.add_argument("target", help="Target directory")
+	parser.add_argument("-s", "--single", help="Single file mode", action="store_true")
 	parser.add_argument("-i", "--index", help="Produce JSON search index", action="store_true")
 	parser.add_argument("-r", "--report", help="Report broken links", action="store_true")
 	parser.add_argument("-f", "--fullns", help="Use full paths for namespaces", action="store_true")
@@ -514,6 +527,5 @@ if __name__ == "__main__":
 	parser.parse_args(namespace=config)
 
 	mokuwiki(config.source, config.target,
-			index=config.index, report=config.report,
-			fullns=config.fullns, broken=config.broken,
-			tag=config.tag, media=config.media)
+			single=config.single, index=config.index, report=config.report,
+			fullns=config.fullns, broken=config.broken, tag=config.tag, media=config.media)

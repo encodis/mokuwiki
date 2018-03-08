@@ -55,6 +55,23 @@
         </for>
     </target>
 
+
+    <target
+        name="test-single"
+        description="Run local script on single test files">
+
+        <mkdir dir="${output.dir}"/>
+
+        <python script="./${module.py}">
+            <args>
+                <arg value="--single"/>
+                <arg value="${input.dir}/file1.md"/>
+                <arg value="${output.dir}/single.md"/>
+            </args>
+        </python>
+    </target>
+
+
     <target
         name="version"
         description="Update version number from source">
