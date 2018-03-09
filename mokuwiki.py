@@ -387,7 +387,7 @@ def convert_file_link(file):
 		incl_file, file_sep = incl_file.split("|")
 
 	# create list of files
-	incl_list = sorted(glob.glob(os.path.normpath(os.path.join(config.source, incl_file))))
+	incl_list = sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), incl_file))))
 
 	incl_contents = ""
 
