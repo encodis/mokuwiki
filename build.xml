@@ -82,7 +82,7 @@
 
     <target
         name="build-distribution"
-        description="Make distribution">
+        description="Make local distribution">
 
         <python-build-distribution dir="${build.dir}"/>
     </target>
@@ -90,10 +90,10 @@
 
     <target
         name="update-distribution"
-        description="Make distribution"
+        description="Make formal distribution"
         depends="version">
 
-        <python-build-distribution dir="${build.dir}"/>
+        <python-build-distribution/>
     </target>
 
 
