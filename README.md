@@ -97,7 +97,7 @@ The optional command line option "--index" will output a JSON file (called "_ind
 
 ```
 var MW = MW || {};
-MW.searchIndex =[
+MW.searchIndex = [
     {
       "file" : "file_name",
       "title" : "The Title",
@@ -111,7 +111,7 @@ Some assumptions are made here, namely that this file will be included using a `
 
 The string in "terms" is a list of all words that occur in the following metadata elements of the file: "title", "alias", "tags", "keywords" and "summary". Punctuation and duplicate words are removed, as are a short list of stop words. Basically if you want the page to be found using a word that isn't in the usual metadata, just create a list in the "keyword" metadata.
 
-> NOTE: Originally the project was referred to as "fake wiki". Then I though it was more like a  "mock wiki", and in a fit of alliterative humour I changed the project to "mokuwiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software---if you want a proper wiki use that, don't use this!
+> NOTE: Originally I referred to this project as "fake wiki". Then I though it was more like a  "mock wiki", and in a fit of alliterative humour I changed the project to "mokuwiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software---if you need a proper wiki use that, don't use this!
 
 # Installation
 

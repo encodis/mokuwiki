@@ -79,20 +79,30 @@
         <python-update-version script="mokuwiki.py"/>
     </target>
 
+
     <target
-        name="dist"
+        name="build-distribution"
+        description="Make distribution">
+
+        <python-build-distribution dir="${build.dir}"/>
+    </target>
+
+
+    <target
+        name="update-distribution"
         description="Make distribution"
         depends="version">
 
-        <python-build-distribution/>
+        <python-build-distribution dir="${build.dir}"/>
     </target>
 
-    <target
-        name="install"
-        description="Install module"
-        depends="dist">
 
-        <python-install-module module="mokuwiki" version="${mokuwiki.py.version.number}"/>
+    <target
+        name="local-install"
+        description="Install module"
+        depends="build-distribution">
+
+        <python-install-module dir="${build.dir}" module="mokuwiki" version="${mokuwiki.py.version.number}"/>
     </target>
 
     <!-- TODO for submission to PiPy etc. need pandoc to convert readme to build/RST and CR/LF
