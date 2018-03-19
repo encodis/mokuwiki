@@ -65,7 +65,7 @@ This is the first page. There may be more. Here is a link to [Another Page](anot
 
 Note that only the MokuWiki specific "markup" is converted, everything else should be left the same. Also note that:
 
-1.  The YAML metadata format must be used (and the end of the block must indicated with `...`, not with `---`).
+1.  The YAML metadata format must be used (and the end of the block must be indicated with `...`, not with `---`).
 2.  If a page does not have a "title" key in the metadata then processing of that file is skipped.
 3.  The "title" cannot contain parentheses or brackets (basically just alpha-numeric characters and some punctuation).
 4.  The output filename of a file will be a "slugified" version of the title (which might completely unrelated to the *input* filename). So an input file with the name "file1.md" and a title of "A Page Title" will produce an output file named "a_page_title.md" in the output folder.
