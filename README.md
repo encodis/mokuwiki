@@ -79,14 +79,14 @@ Note that only the MokuWiki specific "markup" is converted, everything else shou
     a. "{{tag1 tag2}}" includes pages with tag1 *or* tag2
     b. "{{tag1 +tag2}}" includes pages with tag1 *and* tag2
     c. "{{tag1 -tag2}}" includes pages with tag1 that do *not* have tag2
-    d. "{{*}}" is a shortcut to include *all* pages in the wiki that have a tag (pages do not have to have a tag, so leave them out if you don't want them in this "index" list)
-    e. "{{#}}" is a shortcut for the number of pages that have a tag
+    d. "{{*}}" is a shortcut to include *all* pages in the wiki that have any tag (pages do not have to have a tag, so leave them out if you don't want them in this "index" list)
+    e. "{{#}}" is a shortcut for the number of pages that have any tag
     f. "{{#tag1}}" returns the number of pages that have the tag 'tag1'
     g. "{{@}}" will return a list of all tags as a series of bracketed spans with the class name "tag". This can be used to style tag lists. The class name can be changed using the `--tag` command line option.
 11. Page names can contain references to namespaces, e.g. `[[ns2:Page Four]]`. Namespaces are assumed to refer to folders and so cannot contain spaces. How these are incorporated into the resulting link depends on whether the `--fullns` command line option is set:
-    a. When not set (the default) it assumes that there is a main folder, with a single level of child folders, e.g. "main/a", "main/b" and so on. A namespace reference in a page in the folder "main/a" is assumed to point to a page in a sibling folder. Therefore an inter-page link like `[[b:A Page]]` in a document in "main/a" will convert to `[A Page](../b/a_page.html)`.
-    b. When `--fullns` is set it will treat a namespace as a full path of folders. The author is then responsible for specifying the correct path, e.g. `[[..:..:ns2:ns3:A Page]]` will become `[A Page](../../ns2/n3/a_page.html)`.
-12. On the command line the source directory can actually be a path specification, e.g. `pages/file*.md` which will process only those files. Be sure to escape any wild cards from the shell, i.e. `pages/file\*.md`.
+    a. When not set (the default) it assumes that there is a main folder, with a single level of child folders, e.g. "main/a", "main/b" and so on. A namespace reference in a page in the folder "main/a" is assumed to point to a page in a sibling folder. Therefore an inter-page link like `[[b:Some Page]]` in a document in "main/a" will convert to `[Some Page](../b/some_page.html)`.
+    b. When `--fullns` is set it will treat a namespace as a full path of folders. The author is then responsible for specifying the correct path, e.g. `[[..:..:ns2:ns3:Some Page]]` will become `[Some Page](../../ns2/n3/some_page.html)`.
+12. The `source` argument can actually be a path specification, e.g. `pages/file*.md` which will process only those files. If running on the command line be sure to escape any wild cards from the shell, i.e. `pages/file\*.md`.
 13. Single file mode can be enabled with the `--single` option. Only a single input file is expected and the output file given on the command line is used 'as-is' for the output (i.e. is assumed to be the intended output file name). This is not very useful for page links and tags but can be very handy for including files in the specified input file. The search index option is disabled in single file mode.
 
 The script does **NOT** convert the Markdown to HTML (or anything else). It simply converts the page/tag links in preparation for such conversion. As such it could be used in conjunction with the various static web site generators out there.
