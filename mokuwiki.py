@@ -438,7 +438,10 @@ def convert_exec_link(command):
 
 	cmd_output = subprocess.run(cmd_name, stdout=subprocess.PIPE)
 
-	return cmd_output.stdout
+	if cmd_output.returncode == 0:
+		return cmd_output.stdout
+	else:
+		return ""
 
 
 ###
