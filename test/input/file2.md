@@ -42,3 +42,8 @@ No such tag:
 A list of all tags:
 
 {{@}}
+
+## List of files in input folder
+
+%%awk '/title:/ {print $2}' test/input/*.md%%
+

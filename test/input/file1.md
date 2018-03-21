@@ -29,3 +29,7 @@ A link to [[P2|Page Two]]
 ### include file path
 
 <<../input/.fake2.md>>
+
+## List of files in input folder
+
+%%ls -l test/input/*%%

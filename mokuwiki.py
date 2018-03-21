@@ -58,6 +58,7 @@ import glob
 import string
 import argparse
 import subprocess
+import shlex
 
 ###
 
@@ -436,12 +437,17 @@ def convert_exec_link(command):
 
 	cmd_name = str(command.group())[2:-2]
 
-	cmd_output = subprocess.run(cmd_name, stdout=subprocess.PIPE)
+	# shell=True for ls as that's not an executable
+	cmd_name = shlex.split(cmd_name)
 
-	if cmd_output.returncode == 0:
-		return cmd_output.stdout
-	else:
-		return ""
+	print(cmd_name)
+	cmd_output = subprocess.run(cmd_name, stdout=subprocess.PIPE, shell=True, universal_newlines=True)
+
+	print(str(cmd_output.stdout))
+#	if cmd_output.returncode == 0:
+	return str(cmd_output.stdout)
+#	else:
+#		return str("")
 
 
 ###
