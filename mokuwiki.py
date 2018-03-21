@@ -57,6 +57,7 @@ import json
 import glob
 import string
 import argparse
+import subprocess
 
 ###
 
@@ -123,6 +124,9 @@ def mokuwiki(source, target, single=False, index=False, report=False, fullns=Fal
 
 		# replace file transclusion first (may include tag and page links)
 		contents = regex_link["file"].sub(convert_file_link, contents)
+
+		# replace exec links next
+		contents = regex_link["exec"].sub(convert_exec_link, contents)
 
 		# replace tag links next (this may create page links, so do this before page links)
 		contents = regex_link["tags"].sub(convert_tags_link, contents)
@@ -427,6 +431,18 @@ def convert_image_link(image):
 
 ###
 
+def convert_exec_link(command):
+	# return a string containing results of a command
+
+	cmd_name = str(command.group())[2:-2]
+
+	cmd_output = subprocess.run(cmd_name, stdout=subprocess.PIPE)
+
+	return cmd_output.stdout
+
+
+###
+
 def create_valid_filename(name):
 	# return a valid filename from the given name
 
@@ -480,6 +496,7 @@ regex_link["page"] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
 regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
 regex_link["file"] = re.compile(r"<<[\w\s,./:|'*?-]*>>")
 regex_link["image"] = re.compile(r"!![\w\s,.:|'-]*!!")
+regex_link["exec"] = re.compile(r"%%.*%%") ### TODO disallow redirects? globbing?
 
 # set up indexes
 
