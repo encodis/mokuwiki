@@ -35,6 +35,9 @@ caption. Images are assumed to live in a local "images" folder but this can be c
 '--media' command line option. They are also assumed to be JPGs unless the syntax
 '!!Image Name|png!!' is used.
 
+*	The output of a command line executable can be inserted using '%%command%%'. File globbing is
+supported as long as it's at the end of the line, e.g. '%% ls -l test/*.md %%'.
+
 Output files can then be processed using a Markdown processor (the assumption is that 'pandoc' is
 being used).
 
@@ -437,19 +440,15 @@ def convert_exec_link(command):
 
 	cmd_name = str(command.group())[2:-2]
 
-	# shell=True for ls as that's not an executable
 	cmd_name = shlex.split(cmd_name)
 
-	# if last element of cmd_name contains * or ? glob it, add to list
+	# if last element of cmd_name contains * or ? then glob it and the result back to the cmd_name list
+	if any(c in "*?" for c in cmd_name[-1]):
+		cmd_name = cmd_name[:-1] + sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), cmd_name[-1]))))
 
-	print(cmd_name)
 	cmd_output = subprocess.run(cmd_name, stdout=subprocess.PIPE, shell=True, universal_newlines=True)
 
-	print(str(cmd_output.stdout))
-#	if cmd_output.returncode == 0:
 	return str(cmd_output.stdout)
-#	else:
-#		return str("")
 
 
 ###
@@ -507,7 +506,7 @@ regex_link["page"] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
 regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
 regex_link["file"] = re.compile(r"<<[\w\s,./:|'*?-]*>>")
 regex_link["image"] = re.compile(r"!![\w\s,.:|'-]*!!")
-regex_link["exec"] = re.compile(r"%%.*%%") ### TODO disallow redirects? globbing?
+regex_link["exec"] = re.compile(r"%%.*%%") ### TODO disallow redirects?
 
 # set up indexes
 

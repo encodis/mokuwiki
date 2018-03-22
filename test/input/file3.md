@@ -1,6 +1,6 @@
 ---
-title: The Third Page
-noindex: true 
+title: The Third Page 
+noindex: true
 ...
 
 Test include text

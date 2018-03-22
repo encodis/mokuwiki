@@ -45,5 +45,5 @@ A list of all tags:
 
 ## List of files in input folder
 
-%%awk '/title:/ {print $2}' test/input/*.md%%
+%% awk '/^title:/ {$1=""; gsub(/^[ \t]+/,"",$0); gsub(/[ \t]+$/,"",$0); print "["$0"]\n"}' test/input/*.md%%
 

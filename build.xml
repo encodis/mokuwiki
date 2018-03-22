@@ -38,6 +38,10 @@
         </python>
 
         <for param="file">
+            <fileset dir="${output.dir}">
+                <include name="*.md"/>
+            </fileset>
+
             <sequential>
 
                 <local name="output.file"/>
@@ -48,10 +52,6 @@
                     output="${build.dir}/${output.file}.html"/>
 
             </sequential>
-
-            <fileset dir="${output.dir}">
-                <include name="*.md"/>
-            </fileset>
         </for>
     </target>
 

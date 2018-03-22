@@ -7,11 +7,17 @@ However, it struck me that I don't really need a wiki as such---all I really nee
 So this project hosts a Python script (`mokuwiki.py`) that takes an input folder of Markdown documents and processes them according to the following rules, putting the results in an output folder:
 
 *  Inter-page links can be specified using the target page's title (as specified in the YAML metadata block), e.g. `[[A Page Title]]`. This is converted to a standard Markdown link to the HTML version of the page with that title: `[A Page Title](a_page_title.html)`.
+
 *   The YAML metadata can also have an "alias" field which can be used to link to that page instead of the title. This can be useful if the actual title that is to be displayed (the "formal" title, if you will) is long but has a common shorter form. Aliases must be unique and not the same as any
 title.
+
 *  Tags can be specified in the YAML. Tags can be referenced in a page using the following syntax: `{{tag1}}`. This will produce a list of page links that have the "tag1" tag.
+
 *  Include one file in another using the following markup: `<<include_me.md>>`. Any YAML data blocks will be removed from the included file. This pattern actually supports globbing, so you can do `<<include_X*Y.dat>>` and so on. Blank lines will be inserted between each file, and separators can be inserted between each one by using the syntax `<include_X*Y.dat|* * *>>`. (The default is no separator, but "* * *" is a useful one as it becomes a horizontal rule when processed by `pandoc`. Also the path is assumed to be relative to the directory that the module was invoked from.)
+
 *  You can also insert image links using a shortcut, although this assumes that the images are named after their caption: `!!A Nice Image!!` will be converted to `![A Nice Image](images/a_nice_image.jpg)`. Note that it is assumed that images live in an "images" folder (this can be changed using the "--media" command line option) and that they are JPGs. Change the extension using this syntax: `!!Another Picture|png!!`.
+
+*   Finally, the output of a command can be inserted into the document using the following syntax: `%% ls -l test/*.dat %%`. This assumes that the command is on the user's PATH and that any file specifications are the last element of the command line (as shown here). Note that the [standard security considerations](https://docs.python.org/3.6/library/subprocess.html#security-considerations) should be borne in mind when using this feature.
 
 As an example, here is a typical input file:
 
