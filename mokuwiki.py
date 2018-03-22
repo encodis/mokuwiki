@@ -440,6 +440,8 @@ def convert_exec_link(command):
 	# shell=True for ls as that's not an executable
 	cmd_name = shlex.split(cmd_name)
 
+	# if last element of cmd_name contains * or ? glob it, add to list
+
 	print(cmd_name)
 	cmd_output = subprocess.run(cmd_name, stdout=subprocess.PIPE, shell=True, universal_newlines=True)
 
