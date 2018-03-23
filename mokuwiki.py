@@ -446,7 +446,7 @@ def convert_exec_link(command):
 	if any(c in "*?" for c in cmd_name[-1]):
 		cmd_name = cmd_name[:-1] + sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), cmd_name[-1]))))
 
-	cmd_output = subprocess.run(cmd_name, stdout=subprocess.PIPE, shell=True, universal_newlines=True)
+	cmd_output = subprocess.run(cmd_name, stdout=subprocess.PIPE, shell=False, universal_newlines=True)
 
 	return str(cmd_output.stdout)
 

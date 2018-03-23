@@ -32,4 +32,4 @@ A link to [[P2|Page Two]]
 
 ## List of files in input folder
 
-%%ls -l test/input/*%%
+%% /bin/ls -l test/input/*%%

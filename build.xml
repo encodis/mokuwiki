@@ -82,7 +82,8 @@
 
     <target
         name="build-distribution"
-        description="Make local distribution">
+        description="Make local distribution"
+        depends="version">
 
         <python-build-distribution dir="${build.dir}"/>
     </target>
