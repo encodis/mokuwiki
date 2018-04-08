@@ -6,7 +6,7 @@
     xmlns:unless="ant:unless">
 
     <taskdef resource="net/sf/antcontrib/antlib.xml"/>
-    <taskdef resource="com/encodis/xpants/xpants.xml"/>
+    <taskdef resource="com/encodis/xpants/antlib.xml"/>
 
     <!-- <include file="/usr/local/lib/xpants/xpants.xml"/> -->
 
