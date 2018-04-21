@@ -519,7 +519,7 @@ page_index["broken"] = set()	# index of broken links (page names that are not in
 
 # list of stop words for search indexing
 
-stop_list = ['a', 'an', 'and', 'be', 'but', 'by', 'i', 'it', 'is', 'of', 'on', 'the']
+stop_list = ['a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for', 'if', 'i', 'in', 'into', 'is', 'it', 'no', 'not', 'of', 'on', 'or', 'such', 'that', 'the', 'their', 'then', 'there', 'these', 'they', 'this', 'to', 'was', 'will', 'with']
 
 # configuration object
 
