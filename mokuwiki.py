@@ -63,7 +63,7 @@ import shlex
 def mokuwiki(source, target, single=False, index=False, report=False, fullns=False, broken="broken", tag="tag", media="images"):
 
     # configure
-    # TODO config object not available if this was imported
+    # TODO config object not available if this was imported? but tests work OK?
     config.source = source
     config.target = target
     config.single = single
@@ -107,49 +107,11 @@ def mokuwiki(source, target, single=False, index=False, report=False, fullns=Fal
             print(f"mokuwiki: target folder '{config.target}' does not exist or is not a folder")
             exit()
 
-    # create indexes
+    # first pass - create indexes
     create_indexes(file_list)
 
-    # TODO this should be in a function line create_indexes, e.g. process_files(file_list)
-    # process files
-    for file in file_list:
-
-        with open(file, "r", encoding="utf8") as input_file:
-            contents = input_file.read()
-
-        title = parse_metadata("title", contents)
-
-        if not title:
-            print(f"mokuwiki: skipping '{file}', no title found")
-            continue
-
-        # replace file transclusion first (may include tag and page links)
-        contents = regex_link["file"].sub(convert_file_link, contents)
-
-        # replace exec links next
-        contents = regex_link["exec"].sub(convert_exec_link, contents)
-
-        # replace tag links next (this may create page links, so do this before page links)
-        contents = regex_link["tags"].sub(convert_tags_link, contents)
-
-        # replace page links
-        contents = regex_link["page"].sub(convert_page_link, contents)
-
-        # replace image links
-        contents = regex_link["image"].sub(convert_image_link, contents)
-
-        # get output file name by adding ".md" to title's file name
-        if config.single:
-            output_name = config.target
-        else:
-            output_name = os.path.join(config.target, page_index["title"][title] + ".md")
-
-        with open(output_name, "w", encoding="utf8") as output_file:
-            output_file.write(contents)
-
-        # add terms to search index
-        if config.index:
-            update_search_index(contents, title)
+    # second pass - process files
+    process_files(file_list)
 
     # show list of broken links
     if config.report:
@@ -157,7 +119,7 @@ def mokuwiki(source, target, single=False, index=False, report=False, fullns=Fal
 
     # write out search index (unless in single file mode)
     if config.index:
-        search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(page_index["search"], indent=4)
+        search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(page_index["search"], indent=2)
 
         with open(os.path.join(config.target, "_index.json"), "w", encoding="utf8") as json_file:
             json_file.write(search_index)
@@ -225,8 +187,53 @@ def create_indexes(file_list):
 
 ###
 
+def process_files(file_list):
+    for file in file_list:
+
+        with open(file, "r", encoding="utf8") as input_file:
+            contents = input_file.read()
+
+        title = parse_metadata("title", contents)
+
+        if not title:
+            print(f"mokuwiki: skipping '{file}', no title found")
+            continue
+
+        # replace file transclusion first (may include tag and page links)
+        contents = regex_link["file"].sub(convert_file_link, contents)
+
+        # replace exec links next
+        contents = regex_link["exec"].sub(convert_exec_link, contents)
+
+        # replace tag links next (this may create page links, so do this before page links)
+        contents = regex_link["tags"].sub(convert_tags_link, contents)
+
+        # replace page links
+        contents = regex_link["page"].sub(convert_page_link, contents)
+
+        # replace image links
+        contents = regex_link["image"].sub(convert_image_link, contents)
+
+        # get output file name by adding ".md" to title's file name
+        if config.single:
+            output_name = config.target
+        else:
+            output_name = os.path.join(config.target, page_index["title"][title] + ".md")
+
+        with open(output_name, "w", encoding="utf8") as output_file:
+            output_file.write(contents)
+
+        # add terms to search index
+        if config.index:
+            update_search_index(contents, title)
+
+
+###
+
 def update_search_index(contents, title):
-    """Update the search index with strings extracted from metadata for a Markdown file
+    """Update the search index with strings extracted from metadata for a Markdown file.
+    If the file's metadata contains the key 'noindex' with the value 'true' then the
+    file will not be indexed.
 
     Args:
         contents (str): the contents of a Markdown file
@@ -235,6 +242,12 @@ def update_search_index(contents, title):
     Returns:
         None
     """
+
+    # test for 'noindex' metadata
+    noindex = parse_metadata('noindex', contents)
+
+    if noindex == 'true':
+        return
 
     # at this point must have a title
     terms = parse_metadata("title", contents)
@@ -591,6 +604,7 @@ regex_meta["alias"] = re.compile(r"alias:(.*)[\r\n|\r|\n]", re.IGNORECASE)
 regex_meta["tags"] = re.compile(r"tags:(.*)[\r\n|\r|\n]", re.IGNORECASE)
 regex_meta["keywords"] = re.compile(r"keywords:(.*)[\r\n|\r|\n]", re.IGNORECASE)
 regex_meta["summary"] = re.compile(r"summary:(.*)[\r\n|\r|\n]", re.IGNORECASE)
+regex_meta["noindex"] = re.compile(r"noindex:(.*)[\r\n|\r|\n]", re.IGNORECASE)
 regex_meta["yaml"] = re.compile(r"---[\r\n|\r|\n].*[\r\n|\r|\n]\.\.\.", re.DOTALL)
 
 # regular expressions to locate page, tag, file and image links
