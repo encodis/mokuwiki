@@ -58,9 +58,12 @@ import argparse
 import subprocess
 import shlex
 
+
 ###
 
-def mokuwiki(source, target, single=False, index=False, report=False, fullns=False, broken="broken", tag="tag", media="images"):
+def mokuwiki(source, target,
+             single=False, index=False, report=False, fullns=False,
+             prefix='var MW = MW || {};\nMW.searchIndex = ', broken='broken', tag='tag', media='images'):
 
     # configure
     # TODO config object not available if this was imported? but tests work OK?
@@ -70,6 +73,7 @@ def mokuwiki(source, target, single=False, index=False, report=False, fullns=Fal
     config.index = index
     config.report = report
     config.fullns = fullns
+    config.prefix = prefix
     config.broken = broken
     config.tag = tag
     config.media = media
@@ -119,7 +123,7 @@ def mokuwiki(source, target, single=False, index=False, report=False, fullns=Fal
 
     # write out search index (unless in single file mode)
     if config.index:
-        search_index = "var MW = MW || {};\nMW.searchIndex = " + json.dumps(page_index["search"], indent=2)
+        search_index = config.prefix + json.dumps(page_index["search"], indent=2)
 
         with open(os.path.join(config.target, "_index.json"), "w", encoding="utf8") as json_file:
             json_file.write(search_index)
@@ -639,6 +643,7 @@ config.single = False
 config.index = False
 config.report = False
 config.fullns = False
+config.prefix = 'var MW = MW || {};\nMW.searchIndex = '
 config.broken = "broken"
 config.tag = "tag"
 config.media = "images"
@@ -651,6 +656,7 @@ if __name__ == "__main__":
     parser.add_argument("target", help="Target directory")
     parser.add_argument("-s", "--single", help="Single file mode", action="store_true")
     parser.add_argument("-i", "--index", help="Produce JSON search index", action="store_true")
+    parser.add_argument("-p", "--prefix", help="Prefix for JSON search index", action="store")
     parser.add_argument("-r", "--report", help="Report broken links", action="store_true")
     parser.add_argument("-f", "--fullns", help="Use full paths for namespaces", action="store_true")
     parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links (default: 'broken')")
@@ -660,4 +666,5 @@ if __name__ == "__main__":
 
     mokuwiki(config.source, config.target,
             single=config.single, index=config.index, report=config.report,
-            fullns=config.fullns, broken=config.broken, tag=config.tag, media=config.media)
+            fullns=config.fullns, prefix=config.prefix, broken=config.broken, tag=config.tag,
+            media=config.media)
