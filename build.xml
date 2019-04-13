@@ -21,58 +21,6 @@
     <!-- build targets -->
 
     <target
-        name="test"
-        description="Run local script on test files">
-
-        <delete dir="${output.dir}"/>
-        <mkdir dir="${output.dir}"/>
-        <delete dir="${build.dir}"/>
-        <mkdir dir="${build.dir}"/>
-
-        <python script="./${module.py}">
-            <args>
-                <arg value="--index"/>
-                <arg value="${input.dir}"/>
-                <arg value="${output.dir}"/>
-            </args>
-        </python>
-
-        <for param="file">
-            <fileset dir="${output.dir}">
-                <include name="*.md"/>
-            </fileset>
-
-            <sequential>
-
-                <local name="output.file"/>
-                <basename property="output.file" file="@{file}" suffix=".md"/>
-
-                <pandoc
-                    file="@{file}"
-                    output="${build.dir}/${output.file}.html"/>
-
-            </sequential>
-        </for>
-    </target>
-
-
-    <target
-        name="test-single"
-        description="Run local script on single test files">
-
-        <mkdir dir="${output.dir}"/>
-
-        <python script="./${module.py}">
-            <args>
-                <arg value="--single"/>
-                <arg value="${input.dir}/file1.md"/>
-                <arg value="${output.dir}/single.md"/>
-            </args>
-        </python>
-    </target>
-
-
-    <target
         name="version"
         description="Update version number from source">
 

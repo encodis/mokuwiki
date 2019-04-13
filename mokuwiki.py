@@ -80,8 +80,9 @@ def mokuwiki(source, target, single=False, index=False, report=False, fullns=Fal
     # check source folder
     if not os.path.isdir(config.source):
         # not a dir, so first assume a file spec also given
-        config.source, file_spec = config.source.rsplit("/", 1)
+        config.source, file_spec = config.source.rsplit(os.sep, 1)
 
+        # CHECK do we really want a filespec allowed outside of single file mode?
         # now check again
         if not os.path.isdir(config.source):
             print(f"mokuwiki: source folder '{config.source}' does not exist or is not a folder")
@@ -109,6 +110,7 @@ def mokuwiki(source, target, single=False, index=False, report=False, fullns=Fal
     # create indexes
     create_indexes(file_list)
 
+    # TODO this should be in a function line create_indexes, e.g. process_files(file_list)
     # process files
     for file in file_list:
 
@@ -269,7 +271,7 @@ def update_search_index(contents, title):
     # update search index, use unique terms only (set() removes duplicates)
     search = {"file": page_index["title"][title],
               "title": title,
-              "terms": ' '.join(str(s) for s in set(terms))}
+              "terms": list(set(terms))}
 
     page_index["search"].append(search)
 

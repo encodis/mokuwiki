@@ -1,5 +1,2 @@
 .build-tools.cson
-build/
 test/output/
-MANIFEST
-.DS_Store
