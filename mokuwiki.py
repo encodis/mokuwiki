@@ -62,7 +62,7 @@ import shlex
 ###
 
 def mokuwiki(source, target,
-             single=False, index=False, report=False, fullns=False,
+             single=False, index=False, invert=True, report=False, fullns=False,
              prefix='var MW = MW || {};\nMW.searchIndex = ', broken='broken', tag='tag', media='images'):
 
     # configure
@@ -71,6 +71,7 @@ def mokuwiki(source, target,
     config.target = target
     config.single = single
     config.index = index
+    config.invert = invert
     config.report = report
     config.fullns = fullns
     config.prefix = prefix
@@ -285,12 +286,21 @@ def update_search_index(contents, title):
     # remove stop words
     terms = [word for word in terms if word not in stop_list]
 
-    # update search index, use unique terms only (set() removes duplicates)
-    search = {"file": page_index["title"][title],
-              "title": title,
-              "terms": list(set(terms))}
+    if config.invert:
+        for term in list(set(terms)):
+            if term in page_index['search']:
+                # append/extend file and title to existing
+                page_index['search'][term].append((page_index['title'][title], title))
+            else:
+                page_index['search'][term] = []
+                page_index['search'][term].append((page_index['title'][title], title))
+    else:
+        # update search index, use unique terms only (set() removes duplicates)
+        search = {"file": page_index["title"][title],
+                  "title": title,
+                  "terms": list(set(terms))}
 
-    page_index["search"].append(search)
+        page_index["search"].append(search)
 
 
 ###
@@ -589,11 +599,14 @@ def parse_metadata(metadata, contents):
 def reset_page_index():
     global page_index
     page_index = {}
-    page_index["tags"] = {}       # index of tags, with set of titles with that tag
-    page_index["title"] = {}      # index of titles, with associated base file name
-    page_index["alias"] = {}      # index of title aliases
-    page_index["search"] = []     # index of search terms (for JSON search index)
-    page_index["broken"] = set()  # index of broken links (page names not in index)
+    page_index['tags'] = {}        # index of tags, with set of titles with that tag
+    page_index['title'] = {}       # index of titles, with associated base file name
+    page_index['alias'] = {}       # index of title aliases
+    if config.invert:
+        page_index['search'] = {}  # index of search terms (for inverted JSON search index)
+    else:
+        page_index['search'] = []  # index of search terms (for JSON search index)
+    page_index['broken'] = set()   # index of broken links (page names not in index)
 
 
 ### MAIN ###
@@ -643,6 +656,7 @@ config.single = False
 config.index = False
 config.report = False
 config.fullns = False
+config.invert = True
 config.prefix = 'var MW = MW || {};\nMW.searchIndex = '
 config.broken = "broken"
 config.tag = "tag"
@@ -656,6 +670,7 @@ if __name__ == "__main__":
     parser.add_argument("target", help="Target directory")
     parser.add_argument("-s", "--single", help="Single file mode", action="store_true")
     parser.add_argument("-i", "--index", help="Produce JSON search index", action="store_true")
+    parser.add_argument("-v", "--invert", help="Produce JSON search index", action="store_true")
     parser.add_argument("-p", "--prefix", help="Prefix for JSON search index", action="store")
     parser.add_argument("-r", "--report", help="Report broken links", action="store_true")
     parser.add_argument("-f", "--fullns", help="Use full paths for namespaces", action="store_true")
@@ -665,6 +680,6 @@ if __name__ == "__main__":
     parser.parse_args(namespace=config)
 
     mokuwiki(config.source, config.target,
-            single=config.single, index=config.index, report=config.report,
+            single=config.single, index=config.index, invert=config.invert, report=config.report,
             fullns=config.fullns, prefix=config.prefix, broken=config.broken, tag=config.tag,
             media=config.media)

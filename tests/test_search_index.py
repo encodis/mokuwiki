@@ -31,7 +31,7 @@ This is Page Two
 
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir, index=True)
+    mokuwiki(source_dir, target_dir, index=True, invert=False)
 
     # assert correct output files exist
     assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
@@ -86,7 +86,7 @@ This is Page Two
 
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir, index=True, prefix='')
+    mokuwiki(source_dir, target_dir, index=True, invert=False, prefix='')
 
     # assert correct output files exist
     assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
@@ -143,7 +143,7 @@ This is Page Two
 
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir, index=True)
+    mokuwiki(source_dir, target_dir, index=True, invert=False)
 
     # assert correct output files exist
     assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
@@ -162,6 +162,64 @@ This is Page Two
         index = fh.read()
 
     actual = json.loads('[' + index.split('[', 1)[1])
+
+    # use DeepDiff to compare structures
+    assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
+
+
+def test_search_index_invert(tmpdir):
+
+    source_dir = tmpdir.mkdir('source')
+
+    file1 = source_dir.join('file1.md')
+    file1.write('''---
+title: Page One
+author: Phil
+tags: [abc]
+...
+
+A link to [[Page Two]]
+''')
+
+    file2 = source_dir.join('file2.md')
+    file2.write('''---
+title: Page Two
+author: Phil
+tags: [abc]
+...
+
+This is Page Two
+''')
+
+    target_dir = tmpdir.mkdir('target')
+
+    mokuwiki(source_dir, target_dir, index=True, invert=True, prefix='')
+
+    # assert correct output files exist
+    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    assert os.path.exists(os.path.join(target_dir, '_index.json'))
+
+    expect = {
+        "page": [
+            ["page_one", "Page One"],
+            ["page_two", "Page Two"]
+        ],
+        "abc": [
+            ["page_one", "Page One"],
+            ["page_two", "Page Two"]
+        ],
+        "one": [
+            ["page_one", "Page One"]
+        ],
+        "two": [
+            ["page_two", "Page Two"]
+        ]
+    }
+
+    with open(os.path.join(target_dir, '_index.json'), 'r', encoding='utf8') as fh:
+        index = fh.read()
+
+    actual = json.loads(index)
 
     # use DeepDiff to compare structures
     assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
