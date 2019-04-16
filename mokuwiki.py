@@ -204,6 +204,9 @@ def process_files(file_list):
             print(f"mokuwiki: skipping '{file}', no title found")
             continue
 
+        # remove comments
+        contents = regex_link["comment"].sub("", contents)
+
         # replace file transclusion first (may include tag and page links)
         contents = regex_link["file"].sub(convert_file_link, contents)
 
@@ -288,12 +291,10 @@ def update_search_index(contents, title):
 
     if config.invert:
         for term in list(set(terms)):
-            if term in page_index['search']:
-                # append/extend file and title to existing
-                page_index['search'][term].append((page_index['title'][title], title))
-            else:
+            if term not in page_index['search']:
                 page_index['search'][term] = []
-                page_index['search'][term].append((page_index['title'][title], title))
+
+            page_index['search'][term].append((page_index['title'][title], title))
     else:
         # update search index, use unique terms only (set() removes duplicates)
         search = {"file": page_index["title"][title],
@@ -632,6 +633,7 @@ regex_link["tags"] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
 regex_link["file"] = re.compile(r"<<[\w\s,./:|'*?\>-]*>>")
 regex_link["image"] = re.compile(r"!![\w\s,.:|'-]*!!")
 regex_link["exec"] = re.compile(r"%%.*%%")  # TODO disallow redirects?
+regex_link["comment"] = re.compile(r"\/\/.*$", re.MULTILINE)
 
 # page index
 
