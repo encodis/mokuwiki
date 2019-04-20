@@ -2,51 +2,25 @@
 
 """mokuwiki.py
 
-note on what yaml metadata is assumed
+Process a source folder of Markdown files, applying certain directives and
+outputting converted files to a target folder. These target files can then be
+processed using a regular Markdown processor (*pandoc* is assumed). YAML
+metadata fields in the source files control determine the target file name
+and how directives are resolved.
 
-A module that copies a folder of Markdown files to another folder, applying the following transforms to each file based on text patterns found in the source files:
+Directives include:
 
-- `[[A Page Title]]`. A link to another page in the same namespace. This will be converted to `[A Page Title](a_page_title.html)`. Page titles are determined by the 'title' element of a page's YAML metadata block using the same algorithm as the link generator.
-
-- `{{tag...}}`. A series of paragraphs, each containing a link to a page (as above) that has a tag or tags that matches the tag specification. This can include:
-    -  `{{tag1}}` lists all pages with 'tag1'
-    -  `{{tag1 tag2}}` lists all pages with 'tag1' or 'tag2'
-    -  `{{tag1 +tag2}}` lists all pages with 'tag1' and 'tag2'
-    -  `{{tag1 -tag2}}` lists all pages with 'tag1' that do not have 'tag2'
-    -  `{{*}}` list all pages that have any tag at all
-    -  `{{#}}` the total number of pages
-    -  `{{#tag}}` the total number of pages with 'tag'
-    -  `{{@}}` a list of all tags (output as bracketed spans with a class of 'tag')
-
--  `<<file...>>`. Include the specified file(s) at that point in the current file. Any YAML metadata blocks are removed before inclusion. Wildcards are supported and a separator line can be added between each file (but not after the last file):
-    -  `<<include_file.md>>` includes the *include_file.md* file
-    -  `<<../data/xyz*.md>>` includes all Markdown files in the sibling *data* folder that start with *xyz*
-    -  `<<../data/xyz*.md|* * *>>` as above, but adds the line "* * *" between each one (which with Pandoc becomes a horizontal rule)
-    -  `<<../data/xyz*.md|* * *|> >>` as above, adding the line "* * *" between each one and prefacing each line with the characters *> * (i.e. the Markdown markup for "blockquote")
-    -  `<<../data/xyz*.md||NOTE:>>` includes the files with no separator between then, prefixing each line with "NOTE:"
-
-- `!!Image Name!!`. A link to an image. This will be converted to `![Image Name](images/image_name.jpg)`. Images are assumed to live in an **images** folder local to the namespace but this can be changed with the `--media` command line option. Other options include:
-    -  `!!Image Name|png!!` changes the extension to ".png"
-
--  `%%command...%%`. The output of the command specification is inserted into the file. File globbing is supported as long as it is at the end of the line, e.g. `%% ls -l test/*.md %%`, or `%% awk '/^title:/ {$1=""; gsub(/^[ \t]+/,"",$0); gsub(/[ \t]+$/,"",$0); print "["$0"]\n"}' sections/*.md %%`
-
-
-
-
-
-Output files can then be processed using a Markdown processor (the assumption is that 'pandoc' is
-being used).
-
-NOTE: The files in the specified output folder are named according to their title (not their input
-file name). For example, a page called "file1.md" with the "title" metadata equal to "A Page Title"
-will be converted to "a_page_title.md".
-
-NOTE: Using the '--index' option will also output a "_index.json" file that contains a JSON object
-that might be useful for use by a search function in a webpage.
-
-NOTE: The '--single' option will invoke single file mode. Only one input file can be specified, and
-the output target will be used for the output file 'as is'. Single file mode will turn off the
-'--index' option, if enabled.
+-   Link to another page in the same folder: `[[Page Two]]`,
+or `[[2nd Page|Page Two]]`
+-   List pages with a tag (or combination of tags): `{{tag1}}`,
+`{{tag1 +tag2}}` etc
+-   Include the contents of another file: `<<include_file.md>>`,
+or `<<include_file*.md>>`
+-   Link to an image in a standard folder: `!!Image Name!!`
+-   Include the output of an external command in the file:
+`%% ls -l test/*.md %%`
+-   Exclude lines from the corresponding target file by using comment
+syntax: `//A comment`
 
 """
 
@@ -63,7 +37,8 @@ import shlex
 
 def mokuwiki(source, target,
              single=False, index=False, invert=True, report=False, fullns=False,
-             prefix='var MW = MW || {};\nMW.searchIndex = ', broken='broken', tag='tag', media='images'):
+             prefix='var MW = MW || {};\nMW.searchIndex = ', broken='broken', tag='tag',
+             media='images'):
 
     # configure
     # TODO config object not available if this was imported? but tests work OK?
@@ -140,6 +115,7 @@ def create_indexes(file_list):
 
     Returns:
         None
+
     """
 
     # reset page indexes
@@ -193,6 +169,16 @@ def create_indexes(file_list):
 ###
 
 def process_files(file_list):
+    """Process all files, processing all directives
+
+    Args:
+        file_list (list): list of files to be processed
+
+    Returns:
+        None
+
+    """
+
     for file in file_list:
 
         with open(file, "r", encoding="utf8") as input_file:
@@ -249,6 +235,7 @@ def update_search_index(contents, title):
 
     Returns:
         None
+
     """
 
     # test for 'noindex' metadata
@@ -308,6 +295,9 @@ def update_search_index(contents, title):
 
 # TODO make these private?
 # TODO put the config stuff as optional args, so don't need global config object?
+
+### ARGS to these are actually match objects not string. so actually 'matahc object that 
+### matches this regex...'
 
 def convert_page_link(page):
     """Convert a page title into an intra-page link
@@ -460,13 +450,15 @@ def convert_tags_link(tags):
 ###
 
 def convert_file_link(file):
-    """Return the contents of a file
+    """Insert the contents of a file spec into the current file, optionally with
+    a prefix for each line and a separator between each file. Globbing is supported
+    for the file spec.
 
     Args:
-        file (str): the file path
+        file (str): the file specification
 
     Returns:
-        str: the contents of the file path, with any YAML metadata blocks removed
+        str: the concatentated contents of the file spec, with any YAML metadata blocks removed
 
     """
     # insert contents of file
@@ -519,6 +511,15 @@ def convert_file_link(file):
 ###
 
 def convert_image_link(image):
+    """Convert an image specification into an image link
+
+    Args:
+        image (str): 
+
+    Returns:
+        str: Markdown formatted link to the image
+
+    """
     # return a string containing an image link
 
     image_name = str(image.group())[2:-2]
@@ -670,10 +671,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Convert folder of Markdown files to support interpage linking and tags")
     parser.add_argument("source", help="Source directory")
     parser.add_argument("target", help="Target directory")
-    parser.add_argument("-s", "--single", help="Single file mode", action="store_true")
-    parser.add_argument("-i", "--index", help="Produce JSON search index", action="store_true")
-    parser.add_argument("-v", "--invert", help="Produce JSON search index", action="store_true")
-    parser.add_argument("-p", "--prefix", help="Prefix for JSON search index", action="store")
+    parser.add_argument("-s", "--single", help="Run in single file mode", action="store_true")
+    parser.add_argument("-i", "--index", help="Produce a search index (JSON)", action="store_true")
+    parser.add_argument("-v", "--invert", help="Produce an inverted search index (JSON)", action="store_true")
+    parser.add_argument("-p", "--prefix", help="Prefix string for search index", action="store")
     parser.add_argument("-r", "--report", help="Report broken links", action="store_true")
     parser.add_argument("-f", "--fullns", help="Use full paths for namespaces", action="store_true")
     parser.add_argument("-b", "--broken", default="broken", help="CSS class for broken links (default: 'broken')")
