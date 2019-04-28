@@ -4,14 +4,14 @@ For a while I've been running the excellent [DokuWiki](https://www.dokuwiki.org)
 
 However, it struck me that I don't really need a wiki as such---all I really need for my purposes are inter-page links (within pages in the same folder, usually) and the ability to tag pages and then get lists of pages that match a given set of tags. (This is basically DokuWiki's double bracket syntax for links to another page -- `[[A Page Title]] ` -- and its [tag](https://www.dokuwiki.org/plugin:tag) plugin.) I don't actually need the "wiki" bit, as I can easily edit the files locally and compile/deploy as needed. I've also got used to using Markdown rather than DokuWiki's markup (although there is a Markdown plugin for that but it's not Pandoc Markdown... and so on and so on).
 
-So this project hosts a Python script (`mokuwiki.py`) that takes a source folder of Markdown documents and processes them according to a number of directives, putting the results in a target  folder. The files in this target folder can then processed by Pandoc as usual. For my 'wikis' I usually use the 'single file' mode and Pandoc's standalone option on each file to produce the individual HTML pages, but you can also run MokuWiki on a single file to take advantage of useful directives like file includes or comments.
+So this project hosts a Python script (`mokuwiki.py`) that takes a source folder of Markdown documents (or a folder with a file specification) and processes them according to a number of directives, putting the results in a target  folder. The files in this target folder can then processed by Pandoc as usual. For my 'wikis' I usually use the 'single file' mode and Pandoc's standalone option on each file to produce the individual HTML pages, but you can also run MokuWiki on a single file to take advantage of useful directives like file includes or comments.
 
 > NOTE: Originally I referred to this project as "fake wiki". Then I though it was more like a  "mock wiki", and in a fit of alliterative humour I changed the project to "mokuwiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software---if you need a proper wiki use that, don't use this!
 
 MokuWiki makes two key assumptions about the files that it processes:
 
 1.   YAML metadata elements in each source file control how it is processed. Most importantly this includes the name of the resulting file in the target folder (the 'title' element, see below). 
-2.  Directives are processed once to yield Markdown files that are then processed by some other application (the assumption is Pandoc, or something that understands Pandoc flavoured Markdown as that is what MokuWiki emits).
+2.  Directives are processed once to yield Markdown files that will then bprocessed by some other application (the assumption is Pandoc, or something that understands Pandoc flavoured Markdown as that is what MokuWiki emits).
 
 ## Metadata
 
@@ -216,7 +216,7 @@ As MokuWiki is available on [PyPi](https://pypi.org) installation should be as s
 $ pip install mokuwiki
 ```
 
-There are no dependencies to install (although there are if you want to clone the repo and run the test files.
+There are no dependencies to install (although there are if you want to clone the repo and run the test files).
     
 # Usage
 
