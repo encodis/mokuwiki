@@ -54,7 +54,7 @@ This is Page Two
     with open(os.path.join(target_dir, '_index.json'), 'r', encoding='utf8') as fh:
         index = fh.read()
 
-    actual = json.loads('[' + index.split('[', 1)[1])
+    actual = json.loads(index)
 
     # use DeepDiff to compare structures
     assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
@@ -86,7 +86,7 @@ This is Page Two
 
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir, index=True, invert=False, prefix='')
+    mokuwiki(source_dir, target_dir, index=True, invert=False, prefix='var MW = MW || {};\nMW.searchIndex = ')
 
     # assert correct output files exist
     assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
@@ -109,8 +109,10 @@ This is Page Two
     with open(os.path.join(target_dir, '_index.json'), 'r', encoding='utf8') as fh:
         index = fh.read()
 
+    assert index.startswith('var MW = MW || {};\nMW.searchIndex = ')
+
     # with no prefix, just look at JSON
-    actual = json.loads(index)
+    actual = json.loads('[' + index.split('[', 1)[1])
 
     # use DeepDiff to compare structures
     assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
