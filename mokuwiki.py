@@ -31,13 +31,14 @@ import glob
 import argparse
 import subprocess
 import shlex
+import yaml
 
 
 ###
 
 def mokuwiki(source, target,
              single=False, index=False, invert=True, report=False, fullns=False,
-             prefix='var MW = MW || {};\nMW.searchIndex = ', broken='broken', tag='tag',
+             prefix='', broken='broken', tag='tag',
              media='images'):
 
     # configure global config object
@@ -126,11 +127,17 @@ def create_indexes(file_list):
         with open(file, 'r', encoding='utf8') as input_file:
             contents = input_file.read()
 
-        # get title
-        title = parse_metadata('title', contents)
+        # get YAML metadata
+        metadata, _ = split_doc(contents)
 
-        if not title:
+        if not metadata:
+            print(f"mokuwiki: skipping {file}, no front matter")
             continue
+
+        if 'title' not in metadata:
+            continue
+
+        title = metadata['title']
 
         if title not in page_index['title']:
             page_index['title'][title] = create_valid_filename(title)
@@ -139,30 +146,28 @@ def create_indexes(file_list):
             continue
 
         # get alias (if any)
-        alias = parse_metadata('alias', contents)
+        if 'alias' in metadata:
+            alias = metadata['alias']
 
-        if alias:
             if alias not in page_index['alias'] and alias not in page_index['title']:
                 page_index['alias'][alias] = title
             else:
                 print(f"mokuwiki: duplicate alias '{alias}', in file '{file}'")
 
         # get list of tags (if any)
-        tags = parse_metadata('tags', contents)
-
-        if not tags:
-            continue
-
-        # add each tag to index, with titles as set
-        for tag in tags:
+        if 'tags' in metadata:
+            tags = metadata['tags']
 
             # strip end spaces and convert to lower case
-            tag_name = tag.strip().lower()
+            tags = [tag.strip().lower() for tag in tags]
 
-            if tag_name not in page_index['tags']:
-                page_index['tags'][tag_name] = set()
+            # add each tag to index, with titles as set
+            for tag in tags:
 
-            page_index['tags'][tag_name].add(title)
+                if tag not in page_index['tags']:
+                    page_index['tags'][tag] = set()
+
+                page_index['tags'][tag].add(title)
 
 
 ###
@@ -179,34 +184,53 @@ def process_files(file_list):
 
     """
 
+    # regular expressions to identify directives
+
+    directives = {}
+    directives['page'] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
+    directives['tags'] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
+    directives['file'] = re.compile(r"<<[\w\s,./:|'*?\>-]*>>")
+    directives['image'] = re.compile(r"!![\w\s,.:|'-]*!!")
+    directives['exec'] = re.compile(r"%%.*%%")
+    directives['comment'] = re.compile(r"\/\/.*$", re.MULTILINE)
+
     for file in file_list:
 
         with open(file, 'r', encoding='utf8') as input_file:
             contents = input_file.read()
 
-        title = parse_metadata('title', contents)
+        # title = parse_metadata('title', contents)
 
-        if not title:
+        # get YAML metadata
+        metadata, _ = split_doc(contents)
+
+        if not metadata:
+            print(f"mokuwiki: skipping {file}, no front matter")
+            continue
+
+        if 'title' not in metadata:
             print(f"mokuwiki: skipping '{file}', no title found")
             continue
 
+        title = metadata['title']
+
         # remove comments
-        contents = regex_link['comment'].sub('', contents)
+        contents = directives['comment'].sub('', contents)
 
         # replace file transclusion first (may include tag and page links)
-        contents = regex_link['file'].sub(convert_file_link, contents)
+        contents = directives['file'].sub(convert_file_link, contents)
 
         # replace exec links next
-        contents = regex_link['exec'].sub(convert_exec_link, contents)
+        contents = directives['exec'].sub(convert_exec_link, contents)
 
         # replace tag links next (this may create page links, so do this before page links)
-        contents = regex_link['tags'].sub(convert_tags_link, contents)
+        contents = directives['tags'].sub(convert_tags_link, contents)
 
         # replace page links
-        contents = regex_link['page'].sub(convert_page_link, contents)
+        contents = directives['page'].sub(convert_page_link, contents)
 
         # replace image links
-        contents = regex_link['image'].sub(convert_image_link, contents)
+        contents = directives['image'].sub(convert_image_link, contents)
 
         # get output file name by adding ".md" to title's file name
         if config['single']:
@@ -244,46 +268,44 @@ def update_search_index(contents, title):
                   'or', 'such', 'that', 'the', 'their', 'then', 'there', 'these',
                   'they', 'this', 'to', 'was', 'will', 'with']
 
-    # test for 'noindex' metadata
-    noindex = parse_metadata('noindex', contents)
+    # get YAML metadata
+    metadata, _ = split_doc(contents)
 
-    if noindex == 'true':
+    if not metadata:
+        print(f"mokuwiki: skipping page {title}, no front matter")
+        return
+
+    # test for 'noindex' metadata
+    if 'noindex' in metadata and metadata['noindex']:
         return
 
     # at this point must have a title
-    terms = parse_metadata('title', contents)
+    terms = metadata['title']
 
-    alias = parse_metadata('alias', contents)
+    if 'alias' in metadata:
+        terms += ' ' + metadata['alias']
 
-    if alias:
-        terms += ' ' + alias
+    if 'summary' in metadata:
+        terms += ' ' + metadata['summary']
 
-    summary = parse_metadata('summary', contents)
-
-    if summary:
-        terms += ' ' + summary
-
-    tags = parse_metadata('tags', contents)
-
-    if tags:
+    if 'tags' in metadata:
         # convert tags list to string
-        terms += ' ' + ' '.join(tags)
+        terms += ' ' + ' '.join(metadata['tags'])
 
-    keywords = parse_metadata('keywords', contents)
-
-    if keywords:
+    if 'keywords' in metadata:
         # convert keywords list to string
-        terms += ' ' + ' '.join(keywords)
+        terms += ' ' + ' '.join(metadata['keywords'])
 
     # remove punctuation etc from YAML values, make lower case, remove commas (e.g. from numbers in summary)
     table = str.maketrans(';_()', '    ')
-    terms = terms.translate(table).replace(',', '').lower().split()
+    terms = terms.translate(table).replace(',', '').lower()
 
-    # remove stop words
-    terms = [word for word in terms if word not in stop_words]
+    # remove stop words, make unique
+    terms = [term for term in terms.split() if term not in stop_words]
+    terms = list(set(terms))
 
     if config['invert']:
-        for term in list(set(terms)):
+        for term in terms:
             if term not in page_index['search']:
                 page_index['search'][term] = []
 
@@ -292,7 +314,7 @@ def update_search_index(contents, title):
         # update search index, use unique terms only (set() removes duplicates)
         search = {'file': page_index['title'][title],
                   'title': title,
-                  'terms': list(set(terms))}
+                  'terms': terms}
 
         page_index['search'].append(search)
 
@@ -486,8 +508,8 @@ def convert_file_link(file):
 
         # TODO check contents for file include regex to do nested includes?
 
-        # remove any YAML block
-        file_contents = regex_meta['yaml'].sub('', file_contents)
+        # remove YAML header from file
+        _, file_contents = split_doc(file_contents)
 
         # add prefix if required
         if line_prefix:
@@ -576,35 +598,26 @@ def create_valid_filename(name):
 
 ###
 
-def parse_metadata(metadata, contents):
-    """
-    
+def split_doc(content):
+    """Split a document contents into the YAML metadata and the content
+    itself.
+
     Args:
-        metadata (str): the metadata element required
-        contents (str): the contents of the Markdown file
+        contents (str): A string starting with a YAML block (delimited
+        by '---' and '...')
 
-    Return:
-        str or list: the value of the metadata element as a list if the value
-        is a YAML list or as string otherwise. Returns None if the metadata is
-        not one of standard values or does not exist in the contents
+    Returns:
+        dict, str: A tuple consisting of the metadata (as a dictionary)
+        and the body of the content.
+
     """
 
-    if metadata not in regex_meta:
-        return None
+    # TODO better regex that matches FIRST set of three dots (in case of Ellipsis in doc!), or three dashes
+    # python-frontmatter insists on ending metadata with ---
+    match = re.match(r'(^---.*\.\.\.)(.*)', content, flags=re.DOTALL)
 
-    value = regex_meta[metadata].search(contents)
-
-    if not value:
-        return None
-
-    # get raw string value
-    value = value.group(1).strip()
-
-    # convert to list if required
-    if value.startswith('[') and value.endswith(']'):
-        value = value[1:-1].split(',')
-
-    return value
+    if match:
+        return yaml.safe_load(match[1]), match[2]
 
 
 ###
@@ -632,30 +645,9 @@ def reset_page_index():
     page_index['broken'] = set()   # index of broken links (page names not in index)
 
 
-### MAIN ###
+# MAIN #
 
 __version__ = '1.0.0'
-
-# regular expressions to locate YAML metadata
-
-regex_meta = {}
-regex_meta['title'] = re.compile(r'title:(.*)[\r\n|\r|\n]', re.IGNORECASE)
-regex_meta['alias'] = re.compile(r'alias:(.*)[\r\n|\r|\n]', re.IGNORECASE)
-regex_meta['tags'] = re.compile(r'tags:(.*)[\r\n|\r|\n]', re.IGNORECASE)
-regex_meta['keywords'] = re.compile(r'keywords:(.*)[\r\n|\r|\n]', re.IGNORECASE)
-regex_meta['summary'] = re.compile(r'summary:(.*)[\r\n|\r|\n]', re.IGNORECASE)
-regex_meta['noindex'] = re.compile(r'noindex:(.*)[\r\n|\r|\n]', re.IGNORECASE)
-regex_meta['yaml'] = re.compile(r'---[\r\n|\r|\n].*[\r\n|\r|\n]\.\.\.', re.DOTALL)
-
-# regular expressions to identify directives
-
-regex_link = {}
-regex_link['page'] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
-regex_link['tags'] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
-regex_link['file'] = re.compile(r"<<[\w\s,./:|'*?\>-]*>>")
-regex_link['image'] = re.compile(r"!![\w\s,.:|'-]*!!")
-regex_link['exec'] = re.compile(r"%%.*%%")
-regex_link['comment'] = re.compile(r"\/\/.*$", re.MULTILINE)
 
 # page index
 
@@ -675,7 +667,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--single', help='Run in single file mode', action='store_true', default=False)
     parser.add_argument('-i', '--index', help='Produce a search index (JSON)', action='store_true', default=False)
     parser.add_argument('-v', '--invert', help='Produce an inverted search index (JSON)', action='store_true', default=True)
-    parser.add_argument('-p', '--prefix', help='Prefix string for search index', action='store', default='var MW = MW || {};\nMW.searchIndex = ')
+    parser.add_argument('-p', '--prefix', help='Prefix string for search index', action='store', default='')
     parser.add_argument('-r', '--report', help='Report broken links', action='store_true', default=False)
     parser.add_argument('-f', '--fullns', help='Use full paths for namespaces', action='store_true', default=False)
     parser.add_argument('-b', '--broken', help='CSS class for broken links', default='broken')
