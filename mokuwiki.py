@@ -37,13 +37,14 @@ import yaml
 ###
 
 def mokuwiki(source, target,
-             single=False, index=False, invert=True, report=False, fullns=False,
+             verbose=False, single=False, index=False, invert=True, report=False, fullns=False,
              prefix='', broken='broken', tag='tag',
              media='images'):
 
     # configure global config object
     config['source'] = source
     config['target'] = target
+    config['verbose'] = verbose
     config['single'] = single
     config['index'] = index
     config['invert'] = invert
@@ -124,6 +125,9 @@ def create_indexes(file_list):
     # create all indexes
     for file in file_list:
 
+        if config['verbose']:
+            print(f'indexing {file}...')
+
         with open(file, 'r', encoding='utf8') as input_file:
             contents = input_file.read()
 
@@ -195,6 +199,9 @@ def process_files(file_list):
     directives['comment'] = re.compile(r"\/\/.*$", re.MULTILINE)
 
     for file in file_list:
+
+        if config['verbose']:
+            print(f'processing {file}...')
 
         with open(file, 'r', encoding='utf8') as input_file:
             contents = input_file.read()
@@ -282,17 +289,17 @@ def update_search_index(contents, title):
     # at this point must have a title
     terms = metadata['title']
 
-    if 'alias' in metadata:
+    if 'alias' in metadata and metadata['alias']:
         terms += ' ' + metadata['alias']
 
-    if 'summary' in metadata:
+    if 'summary' in metadata and metadata['summary']:
         terms += ' ' + metadata['summary']
 
-    if 'tags' in metadata:
+    if 'tags' in metadata and metadata['tags']:
         # convert tags list to string
         terms += ' ' + ' '.join(metadata['tags'])
 
-    if 'keywords' in metadata:
+    if 'keywords' in metadata and metadata['keywords']:
         # convert keywords list to string
         terms += ' ' + ' '.join(metadata['keywords'])
 
@@ -511,6 +518,9 @@ def convert_file_link(file):
         # remove YAML header from file
         _, file_contents = split_doc(file_contents)
 
+        if not file_contents:
+            continue
+
         # add prefix if required
         if line_prefix:
             file_contents = line_prefix + re.sub('\n', '\n' + line_prefix, file_contents)
@@ -612,13 +622,13 @@ def split_doc(content):
 
     """
 
-    # TODO better regex that matches FIRST set of three dots (in case of Ellipsis in doc!), or three dashes
-    # python-frontmatter insists on ending metadata with ---
-    match = re.match(r'(^---.*\.\.\.)(.*)', content, flags=re.DOTALL)
+    # NOTE: python-frontmatter insists on ending metadata with ---
+    match = re.match(r'(^---.*?\.\.\.)(.*)', content, flags=re.DOTALL)
 
     if match:
         return yaml.safe_load(match[1]), match[2]
-
+    else:
+        return None, None
 
 ###
 
@@ -664,9 +674,10 @@ if __name__ == '__main__':
 
     parser.add_argument('source', help='Source directory')
     parser.add_argument('target', help='Target directory')
+    parser.add_argument('-v', '--verbose', help='Output current file and task', action='store_true', default=False)
     parser.add_argument('-s', '--single', help='Run in single file mode', action='store_true', default=False)
     parser.add_argument('-i', '--index', help='Produce a search index (JSON)', action='store_true', default=False)
-    parser.add_argument('-v', '--invert', help='Produce an inverted search index (JSON)', action='store_true', default=True)
+    parser.add_argument('-n', '--invert', help='Produce an inverted search index (JSON)', action='store_true', default=True)
     parser.add_argument('-p', '--prefix', help='Prefix string for search index', action='store', default='')
     parser.add_argument('-r', '--report', help='Report broken links', action='store_true', default=False)
     parser.add_argument('-f', '--fullns', help='Use full paths for namespaces', action='store_true', default=False)
@@ -676,6 +687,7 @@ if __name__ == '__main__':
     config = vars(parser.parse_args())
 
     mokuwiki(config['source'], config['target'],
-             single=config['single'], index=config['index'], invert=config['invert'], 
-             report=config['report'], fullns=config['fullns'], prefix=config['prefix'], 
+             verbose=config['verbose'], single=config['single'],
+             index=config['index'], invert=config['invert'],
+             report=config['report'], fullns=config['fullns'], prefix=config['prefix'],
              broken=config['broken'], tag=config['tag'], media=config['media'])
