@@ -216,7 +216,7 @@ As MokuWiki is available on [PyPi](https://pypi.org) installation should be as s
 $ pip install mokuwiki
 ```
 
-There are no dependencies to install (although there are if you want to clone the repo and run the test files).
+`mokuwiki` is dependent on [PyYAML](https://pyyaml.org). Some of the unit tests are dependent on [DeepDiff](https://github.com/seperman/deepdiff). 
     
 # Usage
 
@@ -239,17 +239,14 @@ Run `mokuwiki --help` for all options.
 
 # Caveats
 
-1.  This is my first Python project (yay!), so it's mostly been cobbled together from Stack Overflow answers, mostly. As a result it's probably not what you'd call Pythonic but it does what it's supposed to do..
-2.  Error checking/handling is minimal/probably woefully inadequate.
-3.  There are some things you can't do (brackets in titles etc) that could probably be addressed by better regular expressions or a more complete model of what I think it should be doing.
-4.  `mokuwiki` only converts the directive markup into the equivalent Markdown---adding any other features to the resultant HTML will have to be done by say, a `pandoc` template or similar mechanism. Regular Markdown syntax should be preserved.
-5.  You cannot have two pages with the same title/alias (which actually kind of makes sense, for a wiki).
-6.  The image link markup... to be honest this was just because it was easy to do! I'm not sure if it really worth it but you can always ignore it and put images in normally.
+1.  You cannot have two pages with the same title/alias (which actually kind of makes sense, for a wiki).
+2.  `mokuwiki` only converts the directive markup into the equivalent Markdown---adding any other features to the resultant HTML will have to be done by say, a `pandoc` template or similar mechanism. Regular Markdown syntax should be preserved.
+3.  This is started as one of my first Python projects, so it's mostly been cobbled together from Stack Overflow answers, mostly. It also designed mainly for my specific needs although I have tried to generalise it where I could. It seems to work alright but I wouldn't use it in production without some careful thought...
 
 # To Do
 
-1.  Better error handling.
-2.  More efficient file I/O. Currently each file is read once to create an index, then they are all read again so that the tag links can be resolved. There may be a more efficient way to do this using a database, or some other new-fangled doohickey, but in tests the time taken for the script to run is negligable compared to the "conversion to HTML" step.
-3.  Replace the complex namespace/show name/page name logic with a suitable regular expression. In fact, have a better namespace system modelled on *DokuWiki*'s.
+1.  Better (any?) error handling.
+2.  More efficient file I/O. Currently each file is read once to create an index, then they are all read again so that the tag links can be resolved. There may be a more efficient way to do this using a database, or some other new-fangled doohickey, but in tests the time taken for the script to run is negligible compared to the "conversion to HTML" step.
+3.  Replace the current namespace mechanism with something modelled on *DokuWiki*'s.
 4.  Replace the complex logic that handles special tag characters (e.g. "{{@}}") with something more elegant.
 
