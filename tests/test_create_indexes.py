@@ -34,8 +34,8 @@ A link to [[Page One]]
     assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
     assert not os.path.exists(os.path.join(target_dir, 'page_two.md'))
 
-    # assert contents of page_one.md have a link to page_two.md
-    expect_one = '''---
+    # assert contents of page_one.md has a broken link to page_two.md
+    expect = '''---
 title: Page One
 author: Phil
 tags: [abc]
@@ -45,6 +45,6 @@ A link to [Page Two]{.broken}
 '''
 
     with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as f1:
-        actual_one = f1.read()
+        actual = f1.read()
 
-    assert expect_one == actual_one
+    assert expect == actual
