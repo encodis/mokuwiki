@@ -38,8 +38,7 @@ import yaml
 
 def mokuwiki(source, target,
              verbose=False, single=False, index=False, invert=True, report=False, fullns=False,
-             prefix='', broken='broken', tag='tag',
-             media='images'):
+             prefix='', broken='broken', tag='tag', media='images'):
 
     # configure global config object
     config['source'] = source
@@ -89,7 +88,7 @@ def mokuwiki(source, target,
             exit()
 
     # first pass - create indexes
-    create_indexes(file_list)
+    file_list = create_indexes(file_list)
 
     # second pass - process files
     process_files(file_list)
@@ -109,24 +108,29 @@ def mokuwiki(source, target,
 ###
 
 def create_indexes(file_list):
-    """Create all relevant indexes by scanning each file in the given file list
+    """Create all relevant indexes by scanning each file in the given file list.
+    Returns a list of files with duplicates removed (for subsequent processing);
+    if this is not done then files with duplicate titles will overwrite existing
+    ones on output processing.
 
     Args:
         file_list (list): list of files to be indexed
 
     Returns:
-        None
+        list: list of files with duplicate titles removed
 
     """
 
     # reset page indexes
     reset_page_index()
 
+    skip_list = []
+
     # create all indexes
     for file in file_list:
 
         if config['verbose']:
-            print(f'indexing {file}...')
+            print(f"mokuwiki: indexing '{file}'...")
 
         with open(file, 'r', encoding='utf8') as input_file:
             contents = input_file.read()
@@ -135,10 +139,11 @@ def create_indexes(file_list):
         metadata, _ = split_doc(contents)
 
         if not metadata:
-            print(f"mokuwiki: skipping {file}, no front matter")
+            print(f"mokuwiki: skipping '{file}', no metadata")
             continue
 
         if 'title' not in metadata:
+            print(f"mokuwiki: skipping '{file}', no title in metadata")
             continue
 
         title = metadata['title']
@@ -147,6 +152,7 @@ def create_indexes(file_list):
             page_index['title'][title] = create_valid_filename(title)
         else:
             print(f"mokuwiki: skipping '{file}', duplicate title '{title}'")
+            skip_list.append(file)
             continue
 
         # get alias (if any)
@@ -173,12 +179,16 @@ def create_indexes(file_list):
 
                 page_index['tags'][tag].add(title)
 
+    # remove files that were skipped and return new list
+    return [file for file in file_list if file not in skip_list]
+
 
 ###
 
 def process_files(file_list):
     """Read and process all files, implementing all directives contained in the
-    file and writing out the target file
+    file and writing out the target file. Assumes that 'file_list' has had files
+    with duplicate titles removed.
 
     Args:
         file_list (list): list of files to be processed
@@ -201,25 +211,27 @@ def process_files(file_list):
     for file in file_list:
 
         if config['verbose']:
-            print(f'processing {file}...')
+            print(f"processing '{file}'...")
 
         with open(file, 'r', encoding='utf8') as input_file:
             contents = input_file.read()
-
-        # title = parse_metadata('title', contents)
 
         # get YAML metadata
         metadata, _ = split_doc(contents)
 
         if not metadata:
-            print(f"mokuwiki: skipping {file}, no front matter")
+            print(f"mokuwiki: skipping '{file}', no metadata")
             continue
 
         if 'title' not in metadata:
-            print(f"mokuwiki: skipping '{file}', no title found")
+            print(f"mokuwiki: skipping '{file}', no title in metadata")
             continue
 
         title = metadata['title']
+
+        if title not in page_index['title']:
+            print(f"mokuwiki: skipping '{file}', duplicate title '{title}'")
+            continue
 
         # remove comments
         contents = directives['comment'].sub('', contents)
@@ -269,6 +281,9 @@ def update_search_index(contents, title):
 
     """
 
+    if config['verbose']:
+        print(f"updating index for title '{title}'...")
+
     # list of stop words for search indexing
     stop_words = ['a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for',
                   'if', 'i', 'in', 'into', 'is', 'it', 'no', 'not', 'of', 'on',
@@ -279,7 +294,7 @@ def update_search_index(contents, title):
     metadata, _ = split_doc(contents)
 
     if not metadata:
-        print(f"mokuwiki: skipping page {title}, no front matter")
+        print(f"mokuwiki: skipping index update for '{title}', no metadata")
         return
 
     # test for 'noindex' metadata
@@ -367,8 +382,6 @@ def convert_page_link(page):
     # resolve any alias for the title
     if page_name in page_index['alias']:
         page_name = page_index['alias'][page_name]
-
-    page_link = ''
 
     if page_name in page_index['title']:
         # if title exists in index make into a link
@@ -630,6 +643,7 @@ def split_doc(content):
     else:
         return None, None
 
+
 ###
 
 def reset_page_index():
@@ -645,14 +659,16 @@ def reset_page_index():
 
     global page_index
     page_index = {}
+
     page_index['tags'] = {}        # index of tags, with set of titles with that tag
     page_index['title'] = {}       # index of titles, with associated base file name
     page_index['alias'] = {}       # index of title aliases
+    page_index['broken'] = set()   # index of broken links (page names not in index)
+
     if config['invert']:
         page_index['search'] = {}  # index of search terms (for inverted JSON search index)
     else:
         page_index['search'] = []  # index of search terms (for JSON search index)
-    page_index['broken'] = set()   # index of broken links (page names not in index)
 
 
 # MAIN #
