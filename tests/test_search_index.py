@@ -31,7 +31,7 @@ This is Page Two
 
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir, index=True, prefix='')
+    mokuwiki(source_dir, target_dir, index=True)
 
     # assert correct output files exist
     assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
@@ -159,6 +159,53 @@ This is Page Two
     assert os.path.exists(os.path.join(target_dir, '_index.json'))
 
     # assert contents of page_one.md have a link to page_two.md
+    expect = {
+        "page": [
+            ["page_one", "Page One"]
+        ],
+        "abc": [
+            ["page_one", "Page One"]
+        ],
+        "one": [
+            ["page_one", "Page One"]
+        ]
+    }
+
+    with open(os.path.join(target_dir, '_index.json'), 'r', encoding='utf8') as fh:
+        index = fh.read()
+
+    actual = json.loads(index)
+
+    # use DeepDiff to compare structures
+    assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
+
+
+def test_noise_words(tmpdir):
+
+    source_dir = tmpdir.mkdir('source')
+
+    file1 = source_dir.join('file1.md')
+    file1.write('''---
+title: Page One
+author: Phil
+tags: [abc, xyz]
+...
+
+A link to [[Page Two]]
+''')
+
+    file2 = source_dir.join('noise.txt')
+    file2.write('''xyz
+two''')
+
+    target_dir = tmpdir.mkdir('target')
+
+    mokuwiki(source_dir, target_dir, index=True, noise=file2)
+
+    # assert correct output files exist
+    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    assert os.path.exists(os.path.join(target_dir, '_index.json'))
+
     expect = {
         "page": [
             ["page_one", "Page One"]

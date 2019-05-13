@@ -38,7 +38,7 @@ import yaml
 
 def mokuwiki(source, target,
              verbose=False, single=False, index=False, report=False, fullns=False,
-             prefix='', broken='broken', tag='tag', media='images'):
+             noise='', prefix='', broken='broken', tag='tag', media='images'):
 
     # configure global config object
     config['source'] = source
@@ -48,6 +48,7 @@ def mokuwiki(source, target,
     config['index'] = index
     config['report'] = report
     config['fullns'] = fullns
+    config['noise'] = noise
     config['prefix'] = prefix
     config['broken'] = broken
     config['tag'] = tag
@@ -85,6 +86,13 @@ def mokuwiki(source, target,
         if not os.path.isdir(config['target']):
             print(f"mokuwiki: target folder '{config['target']}' does not exist or is not a folder")
             exit()
+
+    # load noise word file if required
+    if config['noise']:
+        with open(config['noise'], 'r', encoding='utf8') as noise_file:
+            global noise_words
+            noise_words = noise_file.read()
+            noise_words = noise_words.split('\n')
 
     # first pass - create indexes
     file_list = create_indexes(file_list)
@@ -283,12 +291,6 @@ def update_search_index(contents, title):
     if config['verbose']:
         print(f"updating index for title '{title}'...")
 
-    # list of stop words for search indexing
-    stop_words = ['a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for',
-                  'if', 'i', 'in', 'into', 'is', 'it', 'no', 'not', 'of', 'on',
-                  'or', 'such', 'that', 'the', 'their', 'then', 'there', 'these',
-                  'they', 'this', 'to', 'was', 'will', 'with']
-
     # get YAML metadata
     metadata, _ = split_doc(contents)
 
@@ -321,8 +323,8 @@ def update_search_index(contents, title):
     table = str.maketrans(';_()', '    ')
     terms = terms.translate(table).replace(',', '').lower()
 
-    # remove stop words, make unique
-    terms = [term for term in terms.split() if term not in stop_words]
+    # remove noise words, make unique
+    terms = [term for term in terms.split() if term not in noise_words]
     terms = list(set(terms))
 
     for term in terms:
@@ -659,19 +661,21 @@ def reset_page_index():
 
 
 # MAIN #
-
 __version__ = '1.0.0'
 
 # page index
-
 page_index = {}
 
-# global configuration
+# list of noise (stop) words for search indexing
+noise_words = ['a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for',
+               'if', 'i', 'in', 'into', 'is', 'it', 'no', 'not', 'of', 'on',
+               'or', 'such', 'that', 'the', 'their', 'then', 'there', 'these',
+               'they', 'this', 'to', 'was', 'will', 'with']
 
+# global configuration
 config = {}
 
 # execute if main
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert folder of Markdown files to support interpage linking and tags')
 
@@ -681,6 +685,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--single', help='Run in single file mode', action='store_true', default=False)
     parser.add_argument('-i', '--index', help='Produce a search index (JSON)', action='store_true', default=False)
     parser.add_argument('-p', '--prefix', help='Prefix string for search index', action='store', default='')
+    parser.add_argument('-n', '--noise', help='File of noise words to remove from search index', action='store', default='')
     parser.add_argument('-r', '--report', help='Report broken links', action='store_true', default=False)
     parser.add_argument('-f', '--fullns', help='Use full paths for namespaces', action='store_true', default=False)
     parser.add_argument('-b', '--broken', help='CSS class for broken links', default='broken')
@@ -688,7 +693,15 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--media', help='Path to media files', default='images')
     config = vars(parser.parse_args())
 
-    mokuwiki(config['source'], config['target'],
-             verbose=config['verbose'], single=config['single'], index=config['index'],
-             report=config['report'], fullns=config['fullns'], prefix=config['prefix'],
-             broken=config['broken'], tag=config['tag'], media=config['media'])
+    mokuwiki(config['source'],
+             config['target'],
+             verbose=config['verbose'],
+             single=config['single'],
+             index=config['index'],
+             report=config['report'],
+             fullns=config['fullns'],
+             noise=config['noise'],
+             prefix=config['prefix'],
+             broken=config['broken'],
+             tag=config['tag'],
+             media=config['media'])
