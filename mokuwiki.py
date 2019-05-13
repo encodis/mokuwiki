@@ -37,7 +37,7 @@ import yaml
 ###
 
 def mokuwiki(source, target,
-             verbose=False, single=False, index=False, invert=True, report=False, fullns=False,
+             verbose=False, single=False, index=False, report=False, fullns=False,
              prefix='', broken='broken', tag='tag', media='images'):
 
     # configure global config object
@@ -46,7 +46,6 @@ def mokuwiki(source, target,
     config['verbose'] = verbose
     config['single'] = single
     config['index'] = index
-    config['invert'] = invert
     config['report'] = report
     config['fullns'] = fullns
     config['prefix'] = prefix
@@ -326,19 +325,11 @@ def update_search_index(contents, title):
     terms = [term for term in terms.split() if term not in stop_words]
     terms = list(set(terms))
 
-    if config['invert']:
-        for term in terms:
-            if term not in page_index['search']:
-                page_index['search'][term] = []
+    for term in terms:
+        if term not in page_index['search']:
+            page_index['search'][term] = []
 
-            page_index['search'][term].append((page_index['title'][title], title))
-    else:
-        # update search index, use unique terms only (set() removes duplicates)
-        search = {'file': page_index['title'][title],
-                  'title': title,
-                  'terms': terms}
-
-        page_index['search'].append(search)
+        page_index['search'][term].append((page_index['title'][title], title))
 
 
 ###
@@ -664,11 +655,7 @@ def reset_page_index():
     page_index['title'] = {}       # index of titles, with associated base file name
     page_index['alias'] = {}       # index of title aliases
     page_index['broken'] = set()   # index of broken links (page names not in index)
-
-    if config['invert']:
-        page_index['search'] = {}  # index of search terms (for inverted JSON search index)
-    else:
-        page_index['search'] = []  # index of search terms (for JSON search index)
+    page_index['search'] = {}      # index of search terms (for inverted JSON search index)
 
 
 # MAIN #
@@ -693,7 +680,6 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', help='Output current file and task', action='store_true', default=False)
     parser.add_argument('-s', '--single', help='Run in single file mode', action='store_true', default=False)
     parser.add_argument('-i', '--index', help='Produce a search index (JSON)', action='store_true', default=False)
-    parser.add_argument('-n', '--invert', help='Produce an inverted search index (JSON)', action='store_true', default=True)
     parser.add_argument('-p', '--prefix', help='Prefix string for search index', action='store', default='')
     parser.add_argument('-r', '--report', help='Report broken links', action='store_true', default=False)
     parser.add_argument('-f', '--fullns', help='Use full paths for namespaces', action='store_true', default=False)
@@ -703,7 +689,6 @@ if __name__ == '__main__':
     config = vars(parser.parse_args())
 
     mokuwiki(config['source'], config['target'],
-             verbose=config['verbose'], single=config['single'],
-             index=config['index'], invert=config['invert'],
+             verbose=config['verbose'], single=config['single'], index=config['index'],
              report=config['report'], fullns=config['fullns'], prefix=config['prefix'],
              broken=config['broken'], tag=config['tag'], media=config['media'])

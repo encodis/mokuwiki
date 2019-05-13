@@ -164,25 +164,7 @@ Single file mode can be enabled with the `--single` option. Only a single input 
 
 ### Search Index
 
-The optional command line option `--index` will cause MoukWiki to output a JSON file (called '_index.json') which contains an index of titles, file names and terms contained in each page. This can be used to create a simplistic search function in the "wiki". This is in JSON format:
-
-```
-[
-    {
-      "file" : "file_name",
-      "title" : "The Title",
-      "terms" : "word1 word2 word3"
-    },
-    ...
-]
-```
-
-To include this directly in an HTML page using a `<script>` statement it is often convenient to have this declared as a variable. Use the `--prefix` option to prefix the JSON with a string. For example, the author uses `--prefix='var MW = MW || {}; MW.searchIndex = '` on one of his projects for this purpose.
-
-The following YAML metadata fields are parsed to create this index: 'title', 'alias', 'summary', 'tags' and 'keywords'. A file that has a metadata field of 'noindex' set to 'true' will *not* be indexed. A small list of 'stop words' is included in MokuWiki and these are removed. 
-
-The `--invert` option will produce an inverted index, which is arguably more useful (or at least more efficient). This has the following format, where each term is followed by a list of 'page name' and 'title' pairs. The `--prefix` option can be also be used with inverted indexes.
-
+The optional command line option `--index` will cause MokuWiki to output a JSON file (called '_index.json') which contains an inverted index of terms contained in each page against page titles and file names. This can be used to create a simplistic search function in the "wiki". This is in JSON format:
 
 ```
 {
@@ -202,6 +184,10 @@ The `--invert` option will produce an inverted index, which is arguably more use
     ]
 }
 ```
+
+To include this directly in an HTML page using a `<script>` statement it is often convenient to have this declared as a variable. Use the `--prefix` option to prefix the JSON with a string. For example, the author uses `--prefix='var MW = MW || {}; MW.searchIndex = '` on one of his projects for this purpose.
+
+The following YAML metadata fields are parsed to create this index: 'title', 'alias', 'summary', 'tags' and 'keywords'. A file that has a metadata field of 'noindex' set to 'true' will *not* be indexed. A small list of 'stop words' is included in MokuWiki and these are removed. 
 
 ### Filename Conversion
 
