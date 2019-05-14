@@ -38,7 +38,8 @@ import yaml
 
 def mokuwiki(source, target,
              verbose=False, single=False, index=False, report=False, fullns=False,
-             noise='', prefix='', broken='broken', tag='tag', media='images'):
+             noise='', prefix='', fields='title,alias,tags,summary,keywords',
+             broken='broken', tag='tag', media='images'):
 
     # configure global config object
     config['source'] = source
@@ -50,6 +51,7 @@ def mokuwiki(source, target,
     config['fullns'] = fullns
     config['noise'] = noise
     config['prefix'] = prefix
+    config['fields'] = fields.split(',')
     config['broken'] = broken
     config['tag'] = tag
     config['media'] = media
@@ -73,26 +75,27 @@ def mokuwiki(source, target,
 
     # check single file mode configuration
     if config['single']:
-
         # cannot generate search index in single file mode
         config['index'] = False
 
         if len(file_list) > 1:
             print("mokuwiki: single file mode specified but more than one input file found")
             exit()
-
     else:
-
         if not os.path.isdir(config['target']):
             print(f"mokuwiki: target folder '{config['target']}' does not exist or is not a folder")
             exit()
 
     # load noise word file if required
     if config['noise']:
-        with open(config['noise'], 'r', encoding='utf8') as noise_file:
-            global noise_words
-            noise_words = noise_file.read()
-            noise_words = noise_words.split('\n')
+        try:
+            with open(config['noise'], 'r', encoding='utf8') as noise_file:
+                noise_words = noise_file.read()
+            config['noise'] = noise_words.split('\n')
+        except IOError:
+            print(f"mokuwiki: could not open noise file '{config['noise']}' ")
+    else:
+        config['noise'] = default_noise_words()
 
     # first pass - create indexes
     file_list = create_indexes(file_list)
@@ -302,29 +305,25 @@ def update_search_index(contents, title):
     if 'noindex' in metadata and metadata['noindex']:
         return
 
-    # at this point must have a title
-    terms = metadata['title']
+    terms = ''
 
-    if 'alias' in metadata and metadata['alias']:
-        terms += ' ' + metadata['alias']
-
-    if 'summary' in metadata and metadata['summary']:
-        terms += ' ' + metadata['summary']
-
-    if 'tags' in metadata and metadata['tags']:
-        # convert tags list to string
-        terms += ' ' + ' '.join(metadata['tags'])
-
-    if 'keywords' in metadata and metadata['keywords']:
-        # convert keywords list to string
-        terms += ' ' + ' '.join(metadata['keywords'])
+    for field in config['fields']:
+        if field in metadata and metadata[field]:
+            if type(metadata[field]) is str:
+                terms += ' ' + metadata[field]
+            elif type(metadata[field]) is list:
+                # if field is a list, convert to string before adding
+                terms += ' ' + ' '.join(metadata[field])
+            else:
+                print(f"mokuwiki: unknown metadata type '{field}' in page title: '{title}'")
+                continue
 
     # remove punctuation etc from YAML values, make lower case, remove commas (e.g. from numbers in summary)
     table = str.maketrans(';_()', '    ')
     terms = terms.translate(table).replace(',', '').lower()
 
     # remove noise words, make unique
-    terms = [term for term in terms.split() if term not in noise_words]
+    terms = [term for term in terms.split() if term not in config['noise']]
     terms = list(set(terms))
 
     for term in terms:
@@ -660,17 +659,21 @@ def reset_page_index():
     page_index['search'] = {}      # index of search terms (for inverted JSON search index)
 
 
+###
+
+def default_noise_words():
+    return ['a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for',
+            'if', 'i', 'in', 'into', 'is', 'it', 'no', 'not', 'of', 'on',
+            'or', 'such', 'that', 'the', 'their', 'then', 'there', 'these',
+            'they', 'this', 'to', 'was', 'will', 'with']
+
+
 # MAIN #
+
 __version__ = '1.0.0'
 
-# page index
+# global page index
 page_index = {}
-
-# list of noise (stop) words for search indexing
-noise_words = ['a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for',
-               'if', 'i', 'in', 'into', 'is', 'it', 'no', 'not', 'of', 'on',
-               'or', 'such', 'that', 'the', 'their', 'then', 'there', 'these',
-               'they', 'this', 'to', 'was', 'will', 'with']
 
 # global configuration
 config = {}
@@ -685,6 +688,7 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--single', help='Run in single file mode', action='store_true', default=False)
     parser.add_argument('-i', '--index', help='Produce a search index (JSON)', action='store_true', default=False)
     parser.add_argument('-p', '--prefix', help='Prefix string for search index', action='store', default='')
+    parser.add_argument('-f', '--fields', help='Metadata fields to search for index', action='store', default='title,alias,tags,summary,keywords')
     parser.add_argument('-n', '--noise', help='File of noise words to remove from search index', action='store', default='')
     parser.add_argument('-r', '--report', help='Report broken links', action='store_true', default=False)
     parser.add_argument('-f', '--fullns', help='Use full paths for namespaces', action='store_true', default=False)
@@ -692,6 +696,8 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--tag', help='CSS class for tag links', default='tag')
     parser.add_argument('-m', '--media', help='Path to media files', default='images')
     config = vars(parser.parse_args())
+
+    # TODO ensure that fields is not empty if index=True
 
     mokuwiki(config['source'],
              config['target'],
@@ -702,6 +708,7 @@ if __name__ == '__main__':
              fullns=config['fullns'],
              noise=config['noise'],
              prefix=config['prefix'],
+             fields=config['fields'],
              broken=config['broken'],
              tag=config['tag'],
              media=config['media'])
