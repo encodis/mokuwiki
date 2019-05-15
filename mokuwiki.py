@@ -691,7 +691,7 @@ if __name__ == '__main__':
     parser.add_argument('-f', '--fields', help='Metadata fields to search for index', action='store', default='title,alias,tags,summary,keywords')
     parser.add_argument('-n', '--noise', help='File of noise words to remove from search index', action='store', default='')
     parser.add_argument('-r', '--report', help='Report broken links', action='store_true', default=False)
-    parser.add_argument('-f', '--fullns', help='Use full paths for namespaces', action='store_true', default=False)
+    parser.add_argument('-F', '--fullns', help='Use full paths for namespaces', action='store_true', default=False)
     parser.add_argument('-b', '--broken', help='CSS class for broken links', default='broken')
     parser.add_argument('-t', '--tag', help='CSS class for tag links', default='tag')
     parser.add_argument('-m', '--media', help='Path to media files', default='images')
