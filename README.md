@@ -187,7 +187,13 @@ The optional command line option `--index` will cause MokuWiki to output a JSON 
 
 To include this directly in an HTML page using a `<script>` statement it is often convenient to have this declared as a variable. Use the `--prefix` option to prefix the JSON with a string. For example, the author uses `--prefix='var MW = MW || {}; MW.searchIndex = '` on one of his projects for this purpose.
 
-The following YAML metadata fields are parsed to create this index: 'title', 'alias', 'summary', 'tags' and 'keywords'. A file that has a metadata field of 'noindex' set to 'true' will *not* be indexed. A small list of 'stop words' is included in MokuWiki and these are removed. 
+### Search Index Fields
+
+By default the following YAML metadata fields are parsed to create the search index: 'title', 'alias', 'summary', 'tags' and 'keywords'. A source file that has a metadata field of 'noindex' set to 'true' will *not* be indexed. Use the `--fields` option to specify a different list, e.g. `--fields='title,author'`.
+
+### Noise Words
+
+A small list of 'noise words' is included in MokuWiki by default. These are not indexed if they occur in any of the chosen metadata fields. The list can be changed using the `--noise` option to supply a plain text file of words, with one word on each line. For example, `--noise=bad_words.txt`.
 
 ### Filename Conversion
 
