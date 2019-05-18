@@ -142,8 +142,12 @@ def create_indexes(file_list):
         if config['verbose']:
             print(f"mokuwiki: indexing '{file}'...")
 
-        with open(file, 'r', encoding='utf8') as input_file:
-            contents = input_file.read()
+        try:
+            with open(file, 'r', encoding='utf8') as input_file:
+                contents = input_file.read()
+        except IOError:
+            print(f"mokuwiki: could not read '{file}'")
+            continue
 
         # get YAML metadata
         metadata, _ = split_doc(contents)
@@ -208,8 +212,7 @@ def process_files(file_list):
 
     """
 
-    # regular expressions to identify directives
-
+    # compile regular expressions to identify directives
     directives = {}
     directives['page'] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
     directives['tags'] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
@@ -218,13 +221,18 @@ def process_files(file_list):
     directives['exec'] = re.compile(r"%%.*%%")
     directives['comment'] = re.compile(r"\/\/.*$", re.MULTILINE)
 
+    # process each file in list
     for file in file_list:
 
         if config['verbose']:
             print(f"processing '{file}'...")
 
-        with open(file, 'r', encoding='utf8') as input_file:
-            contents = input_file.read()
+        try:
+            with open(file, 'r', encoding='utf8') as input_file:
+                contents = input_file.read()
+        except IOError:
+            print(f"mokuwiki: could not read '{file}'")
+            continue
 
         # get YAML metadata
         metadata, _ = split_doc(contents)
@@ -245,6 +253,10 @@ def process_files(file_list):
 
         # remove comments
         contents = directives['comment'].sub('', contents)
+
+        # add terms to search index (after comments removed but before other directives, in case _body_ is an index field)
+        if config['index']:
+            update_search_index(contents, title)
 
         # replace file transclusion first (may include tag and page links)
         contents = directives['file'].sub(convert_file_link, contents)
@@ -267,12 +279,11 @@ def process_files(file_list):
         else:
             output_name = os.path.join(config['target'], page_index['title'][title] + '.md')
 
-        with open(output_name, 'w', encoding='utf8') as output_file:
-            output_file.write(contents)
-
-        # add terms to search index
-        if config['index']:
-            update_search_index(contents, title)
+        try:
+            with open(output_name, 'w', encoding='utf8') as output_file:
+                output_file.write(contents)
+        except IOError:
+            print(f"mokuwiki: could not write '{file}'")
 
 
 ###
@@ -283,8 +294,8 @@ def update_search_index(contents, title):
     value 'true' then the file will not be indexed.
 
     Args:
-        contents (str): the contents of the Markdown file
-        title (str): title of the document
+        contents (str): the entire contents of the Markdown file, including metadata
+        title (str): the title of the document
 
     Returns:
         None
@@ -295,7 +306,7 @@ def update_search_index(contents, title):
         print(f"updating index for title '{title}'...")
 
     # get YAML metadata
-    metadata, _ = split_doc(contents)
+    metadata, body = split_doc(contents)
 
     if not metadata:
         print(f"mokuwiki: skipping index update for '{title}', no metadata")
@@ -308,7 +319,9 @@ def update_search_index(contents, title):
     terms = ''
 
     for field in config['fields']:
-        if field in metadata and metadata[field]:
+        if field == '_body_':
+            terms += ' ' + body
+        elif field in metadata and metadata[field]:
             if type(metadata[field]) is str:
                 terms += ' ' + metadata[field]
             elif type(metadata[field]) is list:
@@ -316,17 +329,17 @@ def update_search_index(contents, title):
                 terms += ' ' + ' '.join(metadata[field])
             else:
                 print(f"mokuwiki: unknown metadata type '{field}' in page title: '{title}'")
-                continue
+        else:
+            pass
 
-    # remove punctuation etc from YAML values, make lower case, remove commas (e.g. from numbers in summary)
-    table = str.maketrans(';_()', '    ')
-    terms = terms.translate(table).replace(',', '').lower()
+    # remove punctuation etc from YAML values, make lower case
+    terms = re.sub('[^a-zA-Z0-9 ]', '', terms.lower())
 
-    # remove noise words, make unique
+    # remove noise words
     terms = [term for term in terms.split() if term not in config['noise']]
-    terms = list(set(terms))
 
-    for term in terms:
+    # update index of unique terms
+    for term in list(set(terms)):
         if term not in page_index['search']:
             page_index['search'][term] = []
 

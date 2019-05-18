@@ -191,6 +191,8 @@ To include this directly in an HTML page using a `<script>` statement it is ofte
 
 By default the following YAML metadata fields are parsed to create the search index: 'title', 'alias', 'summary', 'tags' and 'keywords'. A source file that has a metadata field of 'noindex' set to 'true' will *not* be indexed. Use the `--fields` option to specify a different list, e.g. `--fields='title,author'`.
 
+The contents of files (i.e. the body text, after the metadata) can be indexed by using a "pseudo-field" called `_body_`. All punctuation etc. is removed from the indexed terms. 
+
 ### Noise Words
 
 A small list of 'noise words' is included in MokuWiki by default. These are not indexed if they occur in any of the chosen metadata fields. The list can be changed using the `--noise` option to supply a plain text file of words, with one word on each line. For example, `--noise=bad_words.txt`.
