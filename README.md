@@ -8,6 +8,8 @@ So this project hosts a Python script (`mokuwiki.py`) that takes a source folder
 
 > NOTE: Originally I referred to this project as "fake wiki". Then I though it was more like a  "mock wiki", and in a fit of alliterative humour I changed the project to "mokuwiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software---if you need a proper wiki use that, don't use this!
 
+# How it works
+
 MokuWiki makes two key assumptions about the files that it processes:
 
 1.   YAML metadata elements in each source file control how it is processed. Most importantly this includes the name of the resulting file in the target folder (the 'title' element, see below). 
@@ -73,7 +75,7 @@ A link to [1st Page](page_one.html)
 
 The following directives are supported within a page. These generally take the form of 
 
-### Page Links
+### Page links
 
 As described above links between pages are specified using double square brackets, so `[[Page One]]` is converted to a standard Markdown link to the HTML version of the page with that title: `[Page One](page_one.html)`. If a page has an alias then that can be used instead of the title, although the link name is still based on the title: `[[1st Page]]` becomes `[1st Page](page_one.html)`. 
 
@@ -95,7 +97,7 @@ Page names can contain references to namespaces, again based on the MoukWiki mod
 
 > NOTE: MokuWiki does **not** recursively process folders and keep track of namespaces. This functionality merely makes it easier to create links between pages in different folders. Note also that this functionality may change in future versions...
 
-### Tag Links
+### Tag links
 
 Tags that have been can be referenced in a page using the following syntax: `{{tag1}}`. This will produce a list of page links that have the "tag1" tag. So, for example, a source fragment:
 
@@ -127,7 +129,7 @@ Tags can be combined using various operators:
 6.  `{{#tag1}}` represents the number of pages that have the tag 'tag1'
 7.  `{{@}}` will return a list of all tags defined in the source folder as a series of bracketed spans with the class name 'tag'. This can be used to style tag lists. The class name can be changed using the `--tag` command line option.
 
-### Include Directive
+### Include directives
 
 Include one file in another using the following markup: `<<include_me.md>>`. Any YAML data blocks will be removed from the included file before inclusion. This pattern actually supports globbing, so you can do `<<include_X*Y.dat>>` and so on. The path is assumed to be relative to the directory that the module was invoked from.
 
@@ -135,7 +137,7 @@ Blank lines will be inserted between the contents of each file, and separators c
 
 A prefix can also be inserted in front of each *line* of the included files by specifying it as a third 'argument'. For example, `<<include_X*Y.dat|* * *|> >>` will insert `> ` in front of each line, including the content of the file as a block quote. To do so without a separator between files just leave that argument empty: `<<include_X*Y.dat||> >>`.
 
-### Image Links
+### Image links
 
 The image link directive provides an easier way to link to images: the syntax `!!A Nice Image!!` will be converted to `![A Nice Image](images/a_nice_image.jpg)`. Some points to note include:
 
@@ -144,7 +146,7 @@ The image link directive provides an easier way to link to images: the syntax `!
 3.  The default file format assumed is JPEG, therefore the extension is '.jpg'. This can be changed using the following syntax: `!!Another Picture|png!!`.
 4.  MoukWiki will not check for the existence of the 'image' folder or move any images into the target folder.
 
-### Exec Links
+### Exec directives
 
 The 'exec' directive allows the output of a command can be inserted into the document using the following syntax: `%% ls -l test/*.dat %%`. The command must be in the user's PATH and any file specifications that the directive is to glob must be the last element of the command line (as shown here). Multiple, semi-colon separated commands are supported.
 
@@ -152,17 +154,17 @@ The 'exec' directive allows the output of a command can be inserted into the doc
 2.  This feature has not been checked on Windows machines, but should work if executed in the appropriate shell (e.g. Git Bash).
 3.  The output of the command should be text suitable for a Markdown file.
 
-### Comment Directives
+### Comment directives
 
 Single line comments can be included in a source file: any characters on the line that occur after a double slash (`//`) will be removed. There are no block comments. 
 
-## Other Features
+## Other features
 
-### Single File Mode
+### Single file mode
 
 Single file mode can be enabled with the `--single` option. Only a single input file is expected and the output file given on the command line is used 'as-is' for the output (i.e. is assumed to be the intended output file name). This is not very useful for page links and tags but can be very handy for using the 'include' and 'exec' directives in the specified input file. The [search index] option is disabled in single file mode.
 
-### Search Index
+### Search index
 
 The optional command line option `--index` will cause MokuWiki to output a JSON file (called '_index.json') which contains an inverted index of terms contained in each page against page titles and file names. This can be used to create a simplistic search function in the "wiki". This is in JSON format:
 
@@ -187,17 +189,17 @@ The optional command line option `--index` will cause MokuWiki to output a JSON 
 
 To include this directly in an HTML page using a `<script>` statement it is often convenient to have this declared as a variable. Use the `--prefix` option to prefix the JSON with a string. For example, the author uses `--prefix='var MW = MW || {}; MW.searchIndex = '` on one of his projects for this purpose.
 
-### Search Index Fields
+### Search index fields
 
 By default the following YAML metadata fields are parsed to create the search index: 'title', 'alias', 'summary', 'tags' and 'keywords'. A source file that has a metadata field of 'noindex' set to 'true' will *not* be indexed. Use the `--fields` option to specify a different list, e.g. `--fields='title,author'`.
 
 The contents of files (i.e. the body text, after the metadata) can be indexed by using a "pseudo-field" called `_body_`. All punctuation etc. is removed from the indexed terms. 
 
-### Noise Words
+### Noise words
 
 A small list of 'noise words' is included in MokuWiki by default. These are not indexed if they occur in any of the chosen metadata fields. The list can be changed using the `--noise` option to supply a plain text file of words, with one word on each line. For example, `--noise=bad_words.txt`.
 
-### Filename Conversion
+### Filename conversion
 
 Target file names are created from the 'title' field as follows: leading and following spaces are stripped, remaining spaces are replaced with underscores and the whole string is made lower case. Unicode characters are also removed.
 
@@ -238,8 +240,71 @@ Run `mokuwiki --help` for all options.
 
 # To Do
 
-1.  Better (any?) error handling.
+1.  Better error handling.
 2.  More efficient file I/O. Currently each file is read once to create an index, then they are all read again so that the tag links can be resolved. There may be a more efficient way to do this using a database, or some other new-fangled doohickey, but in tests the time taken for the script to run is negligible compared to the "conversion to HTML" step.
 3.  Replace the current namespace mechanism with something modelled on *DokuWiki*'s.
 4.  Replace the complex logic that handles special tag characters (e.g. "{{@}}") with something more elegant.
 
+
+# Development notes
+
+## Unit testing
+
+A number of unit tests are included in the `tests` folder and can be run using the [pytest](https://pypi.org/project/pytest/) application.
+
+## Packaging a distribution
+
+When ready for a release use the [bumpversion](https://pypi.org/project/bumpversion/) application to update the version number, e.g.
+
+```
+$ bumpversion major --tag
+```
+
+This will update the source file and the setup configuration. Then build the distribution:
+
+```
+$ python setup.py bdist_wheel
+```
+
+## Testing installation
+
+Testing that the distribution installs correctly can be accomplished using Docker. Use the following command (which will download the "python" Docker image if necessary, so it might take a couple of minutes when first run):
+
+```
+$ docker run -it -v "$PWD":/mnt --entrypoint=bash python
+```
+
+This will start the "python" Docker image and execute a command prompt. From here install the "mokuwiki" distribution from the local "dist" folder (mounted in the Docker image under "/mnt"). Note that you have to install the dependency ([pyyaml](https://pypi.org/project/PyYAML/)) first.
+
+```
+root@382a37174524:/# pip install pyyaml
+root@382a37174524:/# pip install mokuwiki --no-index --find-links /mnt/dist"
+root@382a37174524:/# mokuwiki -h
+root@382a37174524:/# python
+>>> import mokuwiki
+>>> exit()
+```
+
+## Upload to TestPyPi
+
+Upload the distribution to the TestPyPi site:
+
+```
+$ twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+```
+
+Then run the "python" Docker image and attempt to install from there:
+
+```
+$ docker run -it -v "$PWD":/mnt --entrypoint=bash python
+root@382a37174524:/# pip install --extra-index-url https://pypi.org --index-url https://test.pypi.org/simple/ mokuwiki
+root@382a37174524:/# mokuwiki -h
+```
+
+## Upload to PyPi
+
+Upload to the real package index as follows (or specify the latest distribution):
+
+```
+$ twine upload dist/*
+```
