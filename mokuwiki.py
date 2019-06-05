@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 """mokuwiki.py
 
 Process a source folder of Markdown files, applying certain directives and
@@ -25,6 +23,7 @@ syntax: `//A comment`
 """
 
 import os
+import sys
 import re
 import json
 import glob
@@ -33,8 +32,15 @@ import subprocess
 import shlex
 import yaml
 
+# version
+__version__ = '1.0.0'
 
-###
+# global page index
+page_index = {}
+
+# global configuration
+config = {}
+
 
 def mokuwiki(source, target,
              verbose=False, single=False, index=False, report=False, fullns=False,
@@ -87,6 +93,7 @@ def mokuwiki(source, target,
             exit()
 
     # load noise word file if required
+    # TODO should be function
     if config['noise']:
         try:
             with open(config['noise'], 'r', encoding='utf8') as noise_file:
@@ -97,7 +104,7 @@ def mokuwiki(source, target,
     else:
         config['noise'] = default_noise_words()
 
-    # first pass - create indexes
+    # first pass - create indexes, update file list
     file_list = create_indexes(file_list)
 
     # second pass - process files
@@ -114,8 +121,6 @@ def mokuwiki(source, target,
         with open(os.path.join(config['target'], "_index.json"), "w", encoding="utf8") as json_file:
             json_file.write(search_index)
 
-
-###
 
 def create_indexes(file_list):
     """Create all relevant indexes by scanning each file in the given file list.
@@ -187,7 +192,6 @@ def create_indexes(file_list):
 
             # add each tag to index, with titles as set
             for tag in tags:
-
                 if tag not in page_index['tags']:
                     page_index['tags'][tag] = set()
 
@@ -196,8 +200,6 @@ def create_indexes(file_list):
     # remove files that were skipped and return new list
     return [file for file in file_list if file not in skip_list]
 
-
-###
 
 def process_files(file_list):
     """Read and process all files, implementing all directives contained in the
@@ -286,8 +288,6 @@ def process_files(file_list):
             print(f"mokuwiki: could not write '{file}'")
 
 
-###
-
 def update_search_index(contents, title):
     """Update the search index with strings extracted from metadata in a
     Markdown file. If the file's metadata contains the key 'noindex' with the
@@ -346,8 +346,6 @@ def update_search_index(contents, title):
         page_index['search'][term].append((page_index['title'][title], title))
 
 
-###
-
 def convert_page_link(page):
     """Convert a page title in double square brackets into an inter-page link.
     Typically this will be `[[Page name]]` or `[[Display name|Page name]]`, or
@@ -404,8 +402,6 @@ def convert_page_link(page):
 
     return page_link
 
-
-###
 
 def convert_tags_link(tags):
     """Convert a tag specification into a string containing inter-page links to
@@ -488,8 +484,6 @@ def convert_tags_link(tags):
     return tag_links
 
 
-###
-
 def convert_file_link(file):
     """Reads the content of all files matching the file specification (removing
     YAML metadata blocks is required) for insertion into the calling file.
@@ -552,8 +546,6 @@ def convert_file_link(file):
     return incl_contents
 
 
-###
-
 def convert_image_link(image):
     """Convert an image linke specification into a Markdown image link
 
@@ -576,8 +568,6 @@ def convert_image_link(image):
 
     return image_link
 
-
-###
 
 def convert_exec_link(command):
     """Execute a shell command and return the output as a string for inclusion
@@ -604,8 +594,6 @@ def convert_exec_link(command):
     return str(cmd_output.stdout)
 
 
-###
-
 def create_valid_filename(name):
     """Return a valid filename from a string. See
     https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
@@ -623,8 +611,6 @@ def create_valid_filename(name):
     name = str(name).strip().replace(' ', '_').lower()
     return re.sub(r'(?u)[^-\w.]', '', name)
 
-
-###
 
 def split_doc(content):
     """Split a document contents into the YAML metadata and the content
@@ -649,8 +635,6 @@ def split_doc(content):
         return None, None
 
 
-###
-
 def reset_page_index():
     """Reset the global index of pages, tags etc.
 
@@ -665,14 +649,12 @@ def reset_page_index():
     global page_index
     page_index = {}
 
-    page_index['tags'] = {}        # index of tags, with set of titles with that tag
     page_index['title'] = {}       # index of titles, with associated base file name
     page_index['alias'] = {}       # index of title aliases
+    page_index['tags'] = {}        # index of tags, with set of titles with that tag
     page_index['broken'] = set()   # index of broken links (page names not in index)
     page_index['search'] = {}      # index of search terms (for inverted JSON search index)
 
-
-###
 
 def default_noise_words():
     return ['a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for',
@@ -681,18 +663,10 @@ def default_noise_words():
             'they', 'this', 'to', 'was', 'will', 'with']
 
 
-# MAIN #
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
 
-__version__ = '1.0.0'
-
-# global page index
-page_index = {}
-
-# global configuration
-config = {}
-
-# execute if main
-if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Convert folder of Markdown files to support interpage linking and tags')
 
     parser.add_argument('source', help='Source directory')
@@ -708,7 +682,8 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--broken', help='CSS class for broken links', default='broken')
     parser.add_argument('-t', '--tag', help='CSS class for tag links', default='tag')
     parser.add_argument('-m', '--media', help='Path to media files', default='images')
-    config = vars(parser.parse_args())
+
+    config = vars(parser.parse_args(args))
 
     # TODO ensure that fields is not empty if index=True
 
@@ -725,3 +700,8 @@ if __name__ == '__main__':
              broken=config['broken'],
              tag=config['tag'],
              media=config['media'])
+
+
+# execute if main
+if __name__ == '__main__':
+    main()
