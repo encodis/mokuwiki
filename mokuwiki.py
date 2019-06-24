@@ -627,10 +627,16 @@ def split_doc(content):
     """
 
     # NOTE: python-frontmatter insists on ending metadata with ---
-    match = re.match(r'(^---.*?\.\.\.)(.*)', content, flags=re.DOTALL)
+    match = re.match(r'(^---.*?\.\.\.)?(.*)', content, flags=re.DOTALL)
 
     if match:
-        return yaml.safe_load(match[1]), match[2]
+        # check for "plain text" file, i.e. no header
+        match = match.groups()
+
+        if match[0] is None:
+            return None, match[1]
+        else:
+            return yaml.safe_load(match[0]), match[1]
     else:
         return None, None
 
