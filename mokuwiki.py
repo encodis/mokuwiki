@@ -215,13 +215,12 @@ def process_files(file_list):
     """
 
     # compile regular expressions to identify directives
-    directives = {}
-    directives['page'] = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
-    directives['tags'] = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
-    directives['file'] = re.compile(r"<<[\w\s,./:|'*?\>-]*>>")
-    directives['image'] = re.compile(r"!![\w\s,.:|'-]*!!")
-    directives['exec'] = re.compile(r"%%.*%%")
-    directives['comment'] = re.compile(r"\/\/.*$", re.MULTILINE)
+    directive_page = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
+    directive_tags = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
+    directive_file = re.compile(r"<<[\w\s,./:|'*?\>-]*>>")
+    directive_image = re.compile(r"!![\w\s,.:|'-]*!!")
+    directive_exec = re.compile(r"%%.*%%")
+    directive_comment = re.compile(r"\/\/.*$", re.MULTILINE)
 
     # process each file in list
     for file in file_list:
@@ -254,26 +253,26 @@ def process_files(file_list):
             continue
 
         # remove comments
-        contents = directives['comment'].sub('', contents)
+        contents = directive_comment.sub('', contents)
 
         # add terms to search index (after comments removed but before other directives, in case _body_ is an index field)
         if config['index']:
             update_search_index(contents, title)
 
         # replace file transclusion first (may include tag and page links)
-        contents = directives['file'].sub(convert_file_link, contents)
+        contents = directive_file.sub(convert_file_link, contents)
 
         # replace exec links next
-        contents = directives['exec'].sub(convert_exec_link, contents)
+        contents = directive_exec.sub(convert_exec_link, contents)
 
         # replace tag links next (this may create page links, so do this before page links)
-        contents = directives['tags'].sub(convert_tags_link, contents)
+        contents = directive_tags.sub(convert_tags_link, contents)
 
         # replace page links
-        contents = directives['page'].sub(convert_page_link, contents)
+        contents = directive_page.sub(convert_page_link, contents)
 
         # replace image links
-        contents = directives['image'].sub(convert_image_link, contents)
+        contents = directive_image.sub(convert_image_link, contents)
 
         # get output file name by adding ".md" to title's file name
         if config['single']:
