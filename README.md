@@ -2,11 +2,11 @@
 
 For a while I've been running the excellent [DokuWiki](https://www.dokuwiki.org) on my Mac using OS X's bundled Apache server. The problem is that every time Apple update the OS they futz with the Apache config, so I have to work out how to get it going again. Then I have to update `DokuWiki` itself, as I don't do that nearly as often as I should. Etc, etc.
 
-However, it struck me that I don't really need a wiki as such---all I really need for my purposes are inter-page links (within pages in the same folder, usually) and the ability to tag pages and then get lists of pages that match a given set of tags. (This is basically DokuWiki's double bracket syntax for links to another page -- `[[A Page Title]] ` -- and its [tag](https://www.dokuwiki.org/plugin:tag) plugin.) I don't actually need the "wiki" bit, as I can easily edit the files locally and compile/deploy as needed. I've also got used to using Markdown rather than DokuWiki's markup (although there is a Markdown plugin for that but it's not Pandoc Markdown... and so on and so on).
+However, it struck me that I don't really need a wiki as such---all I really need for my purposes are inter-page links (within pages in the same folder, usually) and the ability to tag pages and then get lists of pages that match a given set of tags. (This is basically DokuWiki's double bracket syntax for links to another page -- `[[A Page Title]] ` -- and its [tag](https://www.dokuwiki.org/plugin:tag) plugin.) I don't actually need the "wiki" bit, as I can easily edit the files locally and compile/deploy as needed. I've also got used to using Markdown rather than DokuWiki's markup (although there is a Markdown plugin for that but it's not Pandoc Markdown, which I prefer... and so on and so on).
 
-So this project hosts a Python script (`mokuwiki.py`) that takes a source folder of Markdown documents (or a folder with a file specification) and processes them according to a number of directives, putting the results in a target  folder. The files in this target folder can then processed by Pandoc as usual. For my 'wikis' I usually use the 'single file' mode and Pandoc's standalone option on each file to produce the individual HTML pages, but you can also run MokuWiki on a single file to take advantage of useful directives like file includes or comments.
+So this project hosts a Python script (`mokuwiki.py`) that takes a source folder of Markdown documents and processes them according to a number of directives, putting the results in a target folder. The files in this target folder can then processed by a Markdown engine (such as [Pandoc](https://pandoc.org)) as usual. For my 'wikis' I usually use the 'single file' mode and Pandoc's standalone option on each file to produce the individual HTML pages (so in that respect it's a bit like part of a static site generator), but you can also run MokuWiki on a single file to take advantage of useful directives like file includes or comments.
 
-> NOTE: Originally I referred to this project as "fake wiki". Then I though it was more like a  "mock wiki", and in a fit of alliterative humour I changed the project to "mokuwiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software---if you need a proper wiki use that, don't use this!
+> NOTE: Originally I referred to this project as "fake wiki" which led to "mock wiki", and in a fit of alliterative humour I changed the project to "mokuwiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software---if you need a proper wiki use that, don't use this!
 
 # How it works
 
@@ -19,7 +19,7 @@ MokuWiki makes two key assumptions about the files that it processes:
 
 All YAML metadata elements are passed through to the output files in the target folder unchanged. However, the presence of the following metadata will have the indicated result:
 
-*   *title*: The page's title is used to link to it using a 'page link' directive in another page (see below). It is also used to create the file name for that page in the target folder. Titles must be unique within the source folder. 
+*   *title*: The page's title is used to link to it using a 'page link' directive in another page (see below). It is also used to create the file name for that page in the target folder (see [Filename conversion] below). Titles must be unique within the source folder. 
 
 *   *alias*: Aliases are also used to link to a page as an alternative to using a page's title. This can be useful if the actual title that is to be displayed (the "formal" title, if you will) is long but has a common shorter form. Aliases must be unique and not the same as any title.
 
@@ -54,7 +54,7 @@ A link to [[1st Page]]
 
 ```
 
-Then MokuWiki will create two files in the target folder. Based on their titles these will become `page_one.md` and `page_two.md` in the target folder. The page link directives (the double square brackets) will become, in `page_two.md` for example:
+then MokuWiki will create two files in the target folder. Based on their titles these will be `page_one.md` and `page_two.md` in the target folder. The page link directives (the double square brackets) will become, in `page_two.md` for example:
 
 ```
 ---
@@ -73,7 +73,7 @@ A link to [1st Page](page_one.html)
 
 ## Directives
 
-The following directives are supported within a page. These generally take the form of 
+The following directives are supported within a page. These generally take the form of double characters (often brackets) that should be unrecognised by a Markdown processor. 
 
 ### Page links
 
@@ -215,7 +215,13 @@ $ pip install mokuwiki
     
 # Usage
 
-Once installed as above then just run "mokuwiki" as a module from the command line:
+Once installed `mokuwiki` should be available as a command line script:
+
+```
+$ mokuwiki source-dir target-dir
+```
+
+or it can be run as a standard Python module:
 
 ```
 $ python -m mokuwiki source-dir target-dir
@@ -271,10 +277,10 @@ $ python setup.py bdist_wheel
 Testing that the distribution installs correctly can be accomplished using Docker. Use the following command (which will download the "python" Docker image if necessary, so it might take a couple of minutes when first run):
 
 ```
-$ docker run -it -v "$PWD":/mnt --entrypoint=bash python
+$ docker run -it --rm -v "$PWD":/mnt python bash
 ```
 
-This will start the "python" Docker image and execute a command prompt. From here install the "mokuwiki" distribution from the local "dist" folder (mounted in the Docker image under "/mnt"). Note that you have to install the dependency ([pyyaml](https://pypi.org/project/PyYAML/)) first.
+This will start the "python" Docker image and execute a command prompt. From here install the "mokuwiki" distribution from the local "dist" folder (mounted in the Docker image under "/mnt"). Note that you have to install the dependency ([pyyaml](https://pypi.org/project/PyYAML/)) first as "--no-index" is specified.
 
 ```
 root@382a37174524:/# pip install pyyaml
