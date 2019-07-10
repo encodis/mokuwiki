@@ -284,7 +284,7 @@ This will start the "python" Docker image and execute a command prompt. From her
 
 ```
 root@382a37174524:/# pip install pyyaml
-root@382a37174524:/# pip install mokuwiki --no-index --find-links /mnt/dist"
+root@382a37174524:/# pip install mokuwiki --no-index --find-links /mnt/dist
 root@382a37174524:/# mokuwiki -h
 root@382a37174524:/# python
 >>> import mokuwiki
