@@ -31,6 +31,7 @@ import argparse
 import subprocess
 import shlex
 import yaml
+from collections import defaultdict
 
 # version
 __version__ = '1.0.0'
@@ -192,9 +193,6 @@ def create_indexes(file_list):
 
             # add each tag to index, with titles as set
             for tag in tags:
-                if tag not in page_index['tags']:
-                    page_index['tags'][tag] = set()
-
                 page_index['tags'][tag].add(title)
 
     # remove files that were skipped and return new list
@@ -339,9 +337,6 @@ def update_search_index(contents, title):
 
     # update index of unique terms
     for term in list(set(terms)):
-        if term not in page_index['search']:
-            page_index['search'][term] = []
-
         page_index['search'][term].append((page_index['title'][title], title))
 
 
@@ -654,11 +649,11 @@ def reset_page_index():
     global page_index
     page_index = {}
 
-    page_index['title'] = {}       # index of titles, with associated base file name
-    page_index['alias'] = {}       # index of title aliases
-    page_index['tags'] = {}        # index of tags, with set of titles with that tag
-    page_index['broken'] = set()   # index of broken links (page names not in index)
-    page_index['search'] = {}      # index of search terms (for inverted JSON search index)
+    page_index['title'] = {}                    # index of titles, with associated base file name
+    page_index['alias'] = {}                    # index of title aliases
+    page_index['tags'] = defaultdict(set)       # index of tags, with set of titles with that tag
+    page_index['broken'] = set()                # index of broken links (page names not in index)
+    page_index['search'] = defaultdict(list)    # inverted index of search terms
 
 
 def default_noise_words():
