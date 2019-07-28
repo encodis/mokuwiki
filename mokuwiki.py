@@ -94,14 +94,13 @@ def mokuwiki(source, target,
             exit()
 
     # load noise word file if required
-    # TODO should be function
     if config['noise']:
         try:
             with open(config['noise'], 'r', encoding='utf8') as noise_file:
                 noise_words = noise_file.read()
             config['noise'] = noise_words.split('\n')
         except IOError:
-            print(f"mokuwiki: could not open noise file '{config['noise']}' ")
+            print(f"mokuwiki: could not open noise word file '{config['noise']}' ")
     else:
         config['noise'] = default_noise_words()
 
@@ -685,7 +684,11 @@ def main(args=None):
 
     config = vars(parser.parse_args(args))
 
-    # TODO ensure that fields is not empty if index=True
+    # ensure that fields is not empty if index=True
+    if config['index']:
+        if 'fields' not in config or config['fields'] == '':
+            print('mokuwiki: index requested but no index fields given')
+            exit(1)
 
     mokuwiki(config['source'],
              config['target'],
