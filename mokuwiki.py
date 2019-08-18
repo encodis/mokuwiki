@@ -217,7 +217,7 @@ def process_files(file_list):
     directive_file = re.compile(r"<<[\w\s,./:|'*?\>-]*>>")
     directive_image = re.compile(r"!![\w\s,.:|'-]*!!")
     directive_exec = re.compile(r"%%.*%%")
-    directive_comment = re.compile(r"\/\/.*$", re.MULTILINE)
+    directive_comment = re.compile(r"\/\/\s.*$", re.MULTILINE)
 
     # process each file in list
     for file in file_list:

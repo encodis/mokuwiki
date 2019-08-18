@@ -156,7 +156,7 @@ The 'exec' directive allows the output of a command can be inserted into the doc
 
 ### Comment directives
 
-Single line comments can be included in a source file: any characters on the line that occur after a double slash (`//`) will be removed. There are no block comments. 
+Single line comments can be included in a source file: any characters on the line that occur after a double slash followed by a space (`// `) will be removed. There are no block comments. 
 
 ## Other features
 
