@@ -453,7 +453,7 @@ def convert_tags_link(tags):
         page_set = set(page_index['tags'][tag_name])
 
         # add other categories
-        for __, tag in enumerate(tag_list[1:]):
+        for tag in tag_list[1:]:
 
             if tag.startswith(('+', '-')):
                 tag_name = tag[1:]
