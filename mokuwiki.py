@@ -446,12 +446,16 @@ def convert_tags_link(tags):
 
     else:
         # copy first tag set
+        # BUG: need to check, e.g. for +, that all sets are not empty. then what about combos of + and - ?
+        # loop is never being done, so defaults to page_set. might have to check after each loop as you
+        # are order dependant: {{tag1 +tag2 -tag3}} might be diff than {{tag1 -tag3 +tag2}}
+
         page_set = set(page_index['tags'][tag_name])
 
         # add other categories
         for __, tag in enumerate(tag_list[1:]):
 
-            if tag[0] == '+' or tag[0] == '-':
+            if tag.startswith(('+', '-')):
                 tag_name = tag[1:]
             else:
                 tag_name = tag
