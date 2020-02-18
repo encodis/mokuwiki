@@ -455,10 +455,7 @@ def convert_tags_link(tags):
         # add other categories
         for tag in tag_list[1:]:
 
-            if tag.startswith(('+', '-')):
-                tag_name = tag[1:]
-            else:
-                tag_name = tag
+            tag_name = tag[1:] if tag.startswith(('+', '-')) else tag
 
             # normalise tag name
             tag_name = tag_name.replace('_', ' ').lower()
