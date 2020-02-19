@@ -10,7 +10,6 @@ def test_report_broken(tmpdir, capsys):
     file1 = source_dir.join('file1.md')
     file1.write('''---
 title: Page One
-author: Phil
 tags: [abc]
 ...
 
@@ -24,10 +23,9 @@ A link to [[Page Two]]
     # assert correct output files exist
     assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
 
-    # assert contents of page_one.md have a link to page_two.md
+    # assert contents of page_one.md has a link to page_two tagged as broken
     expect = '''---
 title: Page One
-author: Phil
 tags: [abc]
 ...
 

@@ -28,7 +28,7 @@ Text ending in a // comment
     # assert correct output files exist
     assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
 
-    # expected text
+    # assert comments have been removed
     expect = f'''---
 title: Page One
 author: Phil

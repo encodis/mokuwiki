@@ -5,29 +5,26 @@ import deepdiff
 from mokuwiki import mokuwiki
 
 
+# helper function to create pages
+def make_test_page(title, tags, content=''):
+    return f'''---
+title: {title}
+tags: [{tags}]
+...
+
+{content}
+'''
+
+
 def test_search_index(tmpdir):
 
     source_dir = tmpdir.mkdir('source')
 
     file1 = source_dir.join('file1.md')
-    file1.write('''---
-title: Page One
-author: Phil
-tags: [abc]
-...
-
-A link to [[Page Two]]
-''')
+    file1.write(make_test_page('Page One', 'abc', 'A link to [[Page Two'))
 
     file2 = source_dir.join('file2.md')
-    file2.write('''---
-title: Page Two
-author: Phil
-tags: [abc]
-...
-
-This is Page Two
-''')
+    file2.write(make_test_page('Page Two', 'abc'))
 
     target_dir = tmpdir.mkdir('target')
 
@@ -68,24 +65,10 @@ def test_search_index_prefix(tmpdir):
     source_dir = tmpdir.mkdir('source')
 
     file1 = source_dir.join('file1.md')
-    file1.write('''---
-title: Page One
-author: Phil
-tags: [abc]
-...
-
-A link to [[Page Two]]
-''')
+    file1.write(make_test_page('Page One', 'abc', 'A link to [[Page Two'))
 
     file2 = source_dir.join('file2.md')
-    file2.write('''---
-title: Page Two
-author: Phil
-tags: [abc]
-...
-
-This is Page Two
-''')
+    file2.write(make_test_page('Page Two', 'abc'))
 
     target_dir = tmpdir.mkdir('target')
 
@@ -95,7 +78,6 @@ This is Page Two
     assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
     assert os.path.exists(os.path.join(target_dir, '_index.json'))
 
-    # assert contents of page_one.md have a link to page_two.md
     expect = {
         "page": [
             ["page_one", "Page One"],
@@ -116,6 +98,7 @@ This is Page Two
     with open(os.path.join(target_dir, '_index.json'), 'r', encoding='utf8') as fh:
         index = fh.read()
 
+    # assert index starts with prefix
     assert index.startswith('var MW = MW || {};\nMW.searchIndex = ')
 
     # with no prefix, just look at JSON
@@ -130,19 +113,11 @@ def test_search_index_noindex(tmpdir):
     source_dir = tmpdir.mkdir('source')
 
     file1 = source_dir.join('file1.md')
-    file1.write('''---
-title: Page One
-author: Phil
-tags: [abc]
-...
-
-A link to [[Page Two]]
-''')
+    file1.write(make_test_page('Page One', 'abc', 'A link to [[Page Two'))
 
     file2 = source_dir.join('file2.md')
     file2.write('''---
 title: Page Two
-author: Phil
 tags: [abc]
 noindex: true
 ...
@@ -158,7 +133,7 @@ This is Page Two
     assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
     assert os.path.exists(os.path.join(target_dir, '_index.json'))
 
-    # assert contents of page_one.md have a link to page_two.md
+    # assert contents of index do not contain page two
     expect = {
         "page": [
             ["page_one", "Page One"]
@@ -185,14 +160,7 @@ def test_noise_words(tmpdir):
     source_dir = tmpdir.mkdir('source')
 
     file1 = source_dir.join('file1.md')
-    file1.write('''---
-title: Page One
-author: Phil
-tags: [abc, xyz]
-...
-
-A link to [[Page Two]]
-''')
+    file1.write(make_test_page('Page One', 'abc, xyz', 'A link to [[Page Two'))
 
     file2 = source_dir.join('noise.txt')
     file2.write('''xyz
@@ -206,6 +174,7 @@ two''')
     assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
     assert os.path.exists(os.path.join(target_dir, '_index.json'))
 
+    # assert index does not contain words in noise list
     expect = {
         "page": [
             ["page_one", "Page One"]
@@ -232,24 +201,10 @@ def test_search_index_fields(tmpdir):
     source_dir = tmpdir.mkdir('source')
 
     file1 = source_dir.join('file1.md')
-    file1.write('''---
-title: Page One
-author: Phil
-tags: [abc]
-...
-
-A link to [[Page Two]]
-''')
+    file1.write(make_test_page('Page One', 'abc', 'A link to [[Page Two'))
 
     file2 = source_dir.join('file2.md')
-    file2.write('''---
-title: Page Two
-author: Phil
-tags: [abc]
-...
-
-This is Page Two
-''')
+    file2.write(make_test_page('Page Two', 'abc'))
 
     target_dir = tmpdir.mkdir('target')
 
@@ -260,6 +215,7 @@ This is Page Two
     assert os.path.exists(os.path.join(target_dir, 'page_two.md'))
     assert os.path.exists(os.path.join(target_dir, '_index.json'))
 
+    # assert index only contains words in titles
     expect = {
         "page": [
             ["page_one", "Page One"],
@@ -287,24 +243,10 @@ def test_search_index_content(tmpdir):
     source_dir = tmpdir.mkdir('source')
 
     file1 = source_dir.join('file1.md')
-    file1.write('''---
-title: Page One
-author: Phil
-tags: [abc]
-...
-
-A link to [[Page Two]]
-''')
+    file1.write(make_test_page('Page One', 'abc', 'A link to [[Page Two'))
 
     file2 = source_dir.join('file2.md')
-    file2.write('''---
-title: Page Two
-author: Phil
-tags: [abc]
-...
-
-This is Page Two
-''')
+    file2.write(make_test_page('Page Two', 'abc', 'This is Page Two'))
 
     target_dir = tmpdir.mkdir('target')
 
@@ -315,6 +257,7 @@ This is Page Two
     assert os.path.exists(os.path.join(target_dir, 'page_two.md'))
     assert os.path.exists(os.path.join(target_dir, '_index.json'))
 
+    # assert index contains only words in body
     expect = {
         "page": [
             ["page_one", "Page One"],

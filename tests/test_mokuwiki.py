@@ -3,28 +3,25 @@ import os
 from mokuwiki import mokuwiki
 
 
+# helper function to create pages
+def make_test_page(title, tags, content=''):
+    return f'''---
+title: {title}
+tags: [{tags}]
+...
+
+{content}
+'''
+
+
 def test_mokuwiki(tmpdir):
     source_dir = tmpdir.mkdir('source')
 
     file1 = source_dir.join('file1.md')
-    file1.write('''---
-title: Page One
-author: Phil
-tags: [abc]
-...
-
-A link to [[Page Two]]
-''')
+    file1.write(make_test_page('Page One', 'abc', 'A link to [[Page Two]]'))
 
     file2 = source_dir.join('file2.md')
-    file2.write('''---
-title: Page Two
-author: Phil
-tags: [abc]
-...
-
-A link to [[Page One]]
-''')
+    file2.write(make_test_page('Page Two', 'abc', 'A link to [[Page One]]'))
 
     target_dir = tmpdir.mkdir('target')
 
@@ -37,7 +34,6 @@ A link to [[Page One]]
     # assert contents of page_one.md have a link to page_two.md
     expect_one = '''---
 title: Page One
-author: Phil
 tags: [abc]
 ...
 
@@ -46,7 +42,6 @@ A link to [Page Two](page_two.html)
 
     expect_two = '''---
 title: Page Two
-author: Phil
 tags: [abc]
 ...
 
@@ -67,26 +62,10 @@ def test_mokuwiki_ellipses(tmpdir):
     source_dir = tmpdir.mkdir('source')
 
     file1 = source_dir.join('file1.md')
-    file1.write('''---
-title: Page One
-author: Phil
-tags: [abc]
-...
-
-A link to [[Page Two]]
-''')
+    file1.write(make_test_page('Page One', 'abc', 'A link to [[Page Two]]'))
 
     file2 = source_dir.join('file2.md')
-    file2.write('''---
-title: Page Two
-author: Phil
-tags: [abc]
-...
-
-Some text... or is it?
-
-A link to [[Page One]]
-''')
+    file2.write(make_test_page('Page Two', 'abc', 'Some text... or is it?\n\nA link to [[Page One]]'))
 
     target_dir = tmpdir.mkdir('target')
 
@@ -99,7 +78,6 @@ A link to [[Page One]]
     # assert contents of page_one.md have a link to page_two.md
     expect_one = '''---
 title: Page One
-author: Phil
 tags: [abc]
 ...
 
@@ -108,7 +86,6 @@ A link to [Page Two](page_two.html)
 
     expect_two = '''---
 title: Page Two
-author: Phil
 tags: [abc]
 ...
 

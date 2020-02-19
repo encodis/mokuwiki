@@ -9,7 +9,6 @@ def test_single_file_mode(tmpdir):
     file1 = source_dir.join('file1.md')
     file1.write('''---
 title: Page One
-author: Phil
 tags: [abc]
 ...
 
@@ -26,7 +25,6 @@ A line of text.
     # assert contents of page_one.md have a link to page_two.md
     expect = '''---
 title: Page One
-author: Phil
 tags: [abc]
 ...
 
