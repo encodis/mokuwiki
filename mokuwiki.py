@@ -175,6 +175,7 @@ def create_indexes(file_list):
             continue
 
         # get alias (if any)
+        # TODO: multiple aliases? would be a sequence
         if 'alias' in metadata:
             alias = metadata['alias']
 
@@ -184,7 +185,7 @@ def create_indexes(file_list):
                 print(f"mokuwiki: duplicate alias '{alias}', in file '{file}'")
 
         # get list of tags (if any)
-        if 'tags' in metadata:
+        if 'tags' in metadata and metadata['tags']:
             tags = metadata['tags']
 
             # strip end spaces and convert to lower case
@@ -445,14 +446,11 @@ def convert_tags_link(tags):
                     tag_links = str(len(page_index['tags'][tag_name[1:]]))
 
     else:
-        # copy first tag set
-        # BUG: need to check, e.g. for +, that all sets are not empty. then what about combos of + and - ?
-        # loop is never being done, so defaults to page_set. might have to check after each loop as you
-        # are order dependant: {{tag1 +tag2 -tag3}} might be diff than {{tag1 -tag3 +tag2}}
+        # copy first tag set, which must exist
 
         page_set = set(page_index['tags'][tag_name])
 
-        # add other categories
+        # add/del/combine other tagged categories
         for tag in tag_list[1:]:
 
             tag_name = tag[1:] if tag.startswith(('+', '-')) else tag
@@ -460,15 +458,12 @@ def convert_tags_link(tags):
             # normalise tag name
             tag_name = tag_name.replace('_', ' ').lower()
 
-            if tag_name not in page_index['tags']:
-                continue
-
             if tag[0] == '+':
-                page_set &= page_index['tags'][tag_name]
+                page_set &= page_index['tags'].get(tag_name, set())
             elif tag[0] == '-':
-                page_set -= page_index['tags'][tag_name]
+                page_set -= page_index['tags'].get(tag_name, set())
             else:
-                page_set |= page_index['tags'][tag_name]
+                page_set |= page_index['tags'].get(tag_name, set())
 
         # format the set into a string of page links, sorted alphabetically
         tag_links = ']]\n\n[['.join(sorted(page_set))
