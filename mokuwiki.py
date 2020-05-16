@@ -34,7 +34,7 @@ import yaml
 from collections import defaultdict
 
 # version
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 # global page index
 page_index = {}

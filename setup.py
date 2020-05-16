@@ -10,7 +10,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 setup(name='mokuwiki',
-      version='1.0.0',
+      version='1.0.1',
       description='Convert a folder of Markdown documents, replacing inter-page link and tag markup with Markdown links and lists',
       long_description=long_description,
       long_description_content_type='text/markdown',
