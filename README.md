@@ -137,6 +137,8 @@ Blank lines will be inserted between the contents of each file, and separators c
 
 A prefix can also be inserted in front of each *line* of the included files by specifying it as a third 'argument'. For example, `<<include_X*Y.dat|* * *|> >>` will insert `> ` in front of each line, including the content of the file as a block quote. To do so without a separator between files just leave that argument empty: `<<include_X*Y.dat||> >>`.
 
+Although the metadata section of each included file is discarded, it is parsed. This allows MokuWiki to substitute those metadata values into the body of the included file using certain placeholders: `?{value}` or just `?value`. (The former is preferred to reduce ambiguity.) For example, to include the date (assuming there is such a metadata) field, you would have the text "this is the ?{date}" in the file body.
+
 ### Image links
 
 The image link directive provides an easier way to link to images: the syntax `!!A Nice Image!!` will be converted to `![A Nice Image](images/a_nice_image.jpg)`. Some points to note include:

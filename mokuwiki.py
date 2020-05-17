@@ -32,6 +32,7 @@ import subprocess
 import shlex
 import yaml
 from collections import defaultdict
+from string import Template
 
 # version
 __version__ = '1.0.1'
@@ -41,6 +42,11 @@ page_index = {}
 
 # global configuration
 config = {}
+
+
+# customized metadata replacement template
+class MetadataReplace(Template):
+    delimiter = '?'
 
 
 def mokuwiki(source, target,
@@ -517,10 +523,13 @@ def convert_file_link(file):
         # TODO check contents for file include regex to do nested includes?
 
         # remove YAML header from file
-        _, file_contents = split_doc(file_contents)
+        file_metadata, file_contents = split_doc(file_contents)
 
         if not file_contents:
             continue
+
+        # replace ${value}
+        file_contents = MetadataReplace(file_contents).safe_substitute(file_metadata)
 
         # add prefix if required
         if line_prefix:
