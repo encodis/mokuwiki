@@ -52,7 +52,7 @@ class MetadataReplace(Template):
 def mokuwiki(source, target,
              verbose=False, single=False, index=False, report=False, fullns=False,
              noise='', prefix='', fields='title,alias,tags,summary,keywords',
-             broken='broken', tag='tag', media='images'):
+             replace=True, broken='broken', tag='tag', media='images'):
 
     # configure global config object
     config['source'] = source
@@ -65,6 +65,7 @@ def mokuwiki(source, target,
     config['noise'] = noise
     config['prefix'] = prefix
     config['fields'] = fields.split(',')
+    config['replace'] = replace
     config['broken'] = broken
     config['tag'] = tag
     config['media'] = media
@@ -528,8 +529,9 @@ def convert_file_link(file):
         if not file_contents:
             continue
 
-        # replace ${value}
-        file_contents = MetadataReplace(file_contents).safe_substitute(file_metadata)
+        # replace ?{value}
+        if config['replace']:
+            file_contents = MetadataReplace(file_contents).safe_substitute(file_metadata)
 
         # add prefix if required
         if line_prefix:
@@ -683,6 +685,7 @@ def main(args=None):
     parser.add_argument('-n', '--noise', help='File of noise words to remove from search index', action='store', default='')
     parser.add_argument('-p', '--prefix', help='Prefix string for search index', action='store', default='')
     parser.add_argument('-r', '--report', help='Report broken links', action='store_true', default=False)
+    parser.add_argument('-R', '--replace', help='Replace metadata in included files', action='store_true', default=True)
     parser.add_argument('-s', '--single', help='Run in single file mode', action='store_true', default=False)
     parser.add_argument('-t', '--tag', help='CSS class for tag links', default='tag')
     parser.add_argument('-v', '--verbose', help='Output current file and task', action='store_true', default=False)
@@ -705,6 +708,7 @@ def main(args=None):
              noise=config['noise'],
              prefix=config['prefix'],
              fields=config['fields'],
+             replace=config['replace'],
              broken=config['broken'],
              tag=config['tag'],
              media=config['media'])
