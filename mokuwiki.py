@@ -531,6 +531,10 @@ def convert_file_link(file):
         # remove YAML header from file
         file_metadata, file_contents = split_doc(file_contents)
 
+        # process prefix and suffix in included metadata
+        if file_metadata:
+            file_contents = file_metadata.get('prefix', '') + file_contents + file_metadata.get('suffix', '')
+
         if not file_contents:
             continue
 

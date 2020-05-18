@@ -139,6 +139,8 @@ A prefix can also be inserted in front of each *line* of the included files by s
 
 Although the metadata section of each included file is discarded, it is parsed. This allows MokuWiki to substitute those metadata values into the body of the included file using certain placeholders: `?{value}` or just `?value`. (The former is preferred to reduce ambiguity.) For example, to include the date (assuming there is such a metadata) field, you would have the text "this is the ?{date}" in the file body. This behaviour is on by default, but can be turned off using the `-R` or `--replace` flags.
 
+Two specific metadata fields are also recognized. If either (or both) of the fields `prefix` or `suffix` are present they will be prepended/appended to the file's content before further processing. In essence, these act as though the directives `?{prefix}` and `?{suffix}` were embedded in the body of the file.
+
 ### Image links
 
 The image link directive provides an easier way to link to images: the syntax `!!A Nice Image!!` will be converted to `![A Nice Image](images/a_nice_image.jpg)`. Some points to note include:
