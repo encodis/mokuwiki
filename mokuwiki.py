@@ -52,7 +52,7 @@ class MetadataReplace(Template):
 def mokuwiki(source, target,
              verbose=False, single=False, index=False, report=False, fullns=False,
              noise='', prefix='', fields='title,alias,tags,summary,keywords',
-             replace=True, broken='broken', tag='tag', media='images'):
+             replace=True, broken='broken', tag='tag', custom='.sc', media='images'):
 
     # configure global config object
     config['source'] = source
@@ -68,6 +68,7 @@ def mokuwiki(source, target,
     config['replace'] = replace
     config['broken'] = broken
     config['tag'] = tag
+    config['custom'] = custom
     config['media'] = media
 
     # default file spec
@@ -226,6 +227,7 @@ def process_files(file_list):
     directive_image = re.compile(r"!![\w\s,.:|'-]*!!")
     directive_exec = re.compile(r"%%.*%%")
     directive_comment = re.compile(r"\/\/\s.*$", re.MULTILINE)
+    directive_custom = re.compile(r"\\(.*)\\")
 
     # process each file in list
     for file in file_list:
@@ -278,6 +280,9 @@ def process_files(file_list):
 
         # replace image links
         contents = directive_image.sub(convert_image_link, contents)
+
+        # replace custom style
+        contents = directive_custom.sub(convert_custom_style, contents)
 
         # get output file name by adding ".md" to title's file name
         if config['single']:
@@ -547,7 +552,7 @@ def convert_file_link(file):
 
 
 def convert_image_link(image):
-    """Convert an image linke specification into a Markdown image link
+    """Convert an image link specification into a Markdown image link
 
     Args:
         image (Match): A Match object corresponding to an image link
@@ -567,6 +572,26 @@ def convert_image_link(image):
     image_link = f"![{image_name}]({os.path.join(config['media'], create_valid_filename(image_name))}.{file_ext})"
 
     return image_link
+
+
+def convert_custom_style(style):
+    """Convert a custom style specification into a (Pandoc) bracketed span
+
+    Args:
+        style (Match): A Match object corresponding to a custom style
+
+    Returns:
+        str: Pandoc bracketed span
+
+    """
+
+    style_text = str(style.group(1))
+
+    style_class = config['custom']
+
+    style_span = f'[{style_text}]{{{style_class}}}'
+
+    return style_span
 
 
 def convert_exec_link(command):
@@ -678,6 +703,7 @@ def main(args=None):
     parser.add_argument('source', help='Source directory')
     parser.add_argument('target', help='Target directory')
     parser.add_argument('-b', '--broken', help='CSS class for broken links', default='broken')
+    parser.add_argument('-c', '--custom', help='Class for custom style', default='.sc')
     parser.add_argument('-f', '--fields', help='Metadata fields to search for index', action='store', default='title,alias,tags,summary,keywords')
     parser.add_argument('-F', '--fullns', help='Use full paths for namespaces', action='store_true', default=False)
     parser.add_argument('-i', '--index', help='Produce a search index (JSON)', action='store_true', default=False)
@@ -711,6 +737,7 @@ def main(args=None):
              replace=config['replace'],
              broken=config['broken'],
              tag=config['tag'],
+             custom=config['custom'],
              media=config['media'])
 
 
