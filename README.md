@@ -158,7 +158,7 @@ The 'exec' directive allows the output of a command can be inserted into the doc
 
 ### Custom style
 
-The custom style directive provides a way to wrap text in a custom style using Pandoc's [bracketed span](https://pandoc.org/MANUAL.html#divs-and-spans) feature: the syntax `\\styled text\\` will give an output of `[styled text]{.sc}`, i.e. the default Pandoc command for small caps. The style can be changed using the `--custom` flag on the command line. The text of this argument is copied directly into CSS portion of the span, so should include the leading "dot" if it is to be a CSS class. 
+The custom style directive provides a way to wrap text in a custom style using Pandoc's [bracketed span](https://pandoc.org/MANUAL.html#divs-and-spans) feature: the syntax `\\styled text\\` will give an output of `[styled text]{.smallcaps}`, i.e. the default Pandoc command for small caps. The style can be changed using the `--custom` flag on the command line. The text of this argument is copied directly into CSS portion of the span, so should include the leading "dot" if it is to be a CSS class. 
 
 Note that this directive is processed last, so it will apply the custom style to links (e.g. `\\[[Page One]]\\` will work as expected).
 

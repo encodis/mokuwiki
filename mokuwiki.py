@@ -52,7 +52,7 @@ class MetadataReplace(Template):
 def mokuwiki(source, target,
              verbose=False, single=False, index=False, report=False, fullns=False,
              noise='', prefix='', fields='title,alias,tags,summary,keywords',
-             replace=True, broken='broken', tag='tag', custom='.sc', media='images'):
+             replace=True, broken='broken', tag='tag', custom='.smallcaps', media='images'):
 
     # configure global config object
     config['source'] = source
@@ -227,7 +227,7 @@ def process_files(file_list):
     directive_image = re.compile(r"!![\w\s,.:|'-]*!!")
     directive_exec = re.compile(r"%%.*%%")
     directive_comment = re.compile(r"\/\/\s.*$", re.MULTILINE)
-    directive_custom = re.compile(r"\\(.*)\\")
+    directive_custom = re.compile(r"\^\^(.*)\^\^")
 
     # process each file in list
     for file in file_list:
@@ -703,7 +703,7 @@ def main(args=None):
     parser.add_argument('source', help='Source directory')
     parser.add_argument('target', help='Target directory')
     parser.add_argument('-b', '--broken', help='CSS class for broken links', default='broken')
-    parser.add_argument('-c', '--custom', help='Class for custom style', default='.sc')
+    parser.add_argument('-c', '--custom', help='Class for custom style', default='.smallcaps')
     parser.add_argument('-f', '--fields', help='Metadata fields to search for index', action='store', default='title,alias,tags,summary,keywords')
     parser.add_argument('-F', '--fullns', help='Use full paths for namespaces', action='store_true', default=False)
     parser.add_argument('-i', '--index', help='Produce a search index (JSON)', action='store_true', default=False)
