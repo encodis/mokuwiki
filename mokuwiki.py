@@ -612,13 +612,24 @@ def convert_exec_link(command):
 
     cmd_name = str(command.group())[2:-2]
 
+    # break string into command args
     cmd_name = shlex.split(cmd_name)
 
     # if last element of cmd_name contains * or ? then glob it and the result back to the cmd_name list
-    if any(c in '*?' for c in cmd_name[-1]):
-        cmd_name = cmd_name[:-1] + sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), cmd_name[-1]))))
+    # if any(c in '*?' for c in cmd_name[-1]):
+    #     cmd_name = cmd_name[:-1] + sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), cmd_name[-1]))))
 
-    cmd_output = subprocess.run(cmd_name, stdout=subprocess.PIPE, shell=False, universal_newlines=True, encoding='utf-8')
+    # manually perform file globbing so that CWD is correct
+    out_c = []
+    for c in cmd_name:
+        if any(g in '*?' for g in c):
+            out_c.append(' '.join(sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), c))))))
+        else:
+            out_c.append(c)
+
+    cmd_name = ' '.join(out_c)
+
+    cmd_output = subprocess.run(cmd_name, stdout=subprocess.PIPE, shell=True, universal_newlines=True, encoding='utf-8')
 
     return str(cmd_output.stdout)
 
