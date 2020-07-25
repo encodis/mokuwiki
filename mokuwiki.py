@@ -221,13 +221,13 @@ def process_files(file_list):
     """
 
     # compile regular expressions to identify directives
-    directive_page = re.compile(r"\[\[[\w\s,.:|'-]*\]\]")
-    directive_tags = re.compile(r"\{\{[\w\s\*#@'+-]*\}\}")
-    directive_file = re.compile(r"<<[\w\s,./:|'*?\>-]*>>")
-    directive_image = re.compile(r"!![\w\s,.:|'-]*!!")
-    directive_exec = re.compile(r"%%.*%%")
+    directive_page = re.compile(r"\[\[([\w\s,.:|'-]*)\]\]")
+    directive_tags = re.compile(r"\{\{([\w\s\*#@'+-]*)\}\}")
+    directive_file = re.compile(r"<<([\w\s,./:|'*?\>-]*)>>")
+    directive_image = re.compile(r"!!([\w\s,.:|'-]*)!!")
+    directive_exec = re.compile(r"%%(.*)%%")
     directive_comment = re.compile(r"\/\/\s.*$", re.MULTILINE)
-    directive_custom = re.compile(r"\^\^([a-zA-Z()\s\[\]]*)\^\^")
+    directive_custom = re.compile(r"\^\^(.*)\^\^")
 
     # process each file in list
     for file in file_list:
@@ -366,7 +366,7 @@ def convert_page_link(page):
 
     """
 
-    page_name = str(page.group())[2:-2]
+    page_name = str(page.group(1))
     show_name = ''
 
     if '|' in page_name:
@@ -424,7 +424,7 @@ def convert_tags_link(tags):
 
     """
 
-    tag_list = str(tags.group())[2:-2]
+    tag_list = str(tags.group(1))
     tag_list = tag_list.split()
 
     # get initial category
@@ -499,7 +499,7 @@ def convert_file_link(file):
 
     """
 
-    incl_file = str(file.group())[2:-2]
+    incl_file = str(file.group(1))
 
     file_sep = ''
     line_prefix = ''
@@ -566,7 +566,7 @@ def convert_image_link(image):
 
     """
 
-    image_name = str(image.group())[2:-2]
+    image_name = str(image.group(1))
 
     file_ext = 'jpg'
 
@@ -610,26 +610,20 @@ def convert_exec_link(command):
 
     """
 
-    cmd_name = str(command.group())[2:-2]
-
     # break string into command args
-    cmd_name = shlex.split(cmd_name)
-
-    # if last element of cmd_name contains * or ? then glob it and the result back to the cmd_name list
-    # if any(c in '*?' for c in cmd_name[-1]):
-    #     cmd_name = cmd_name[:-1] + sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), cmd_name[-1]))))
+    cmd_args = shlex.split(str(command.group(1)))
 
     # manually perform file globbing so that CWD is correct
-    out_c = []
-    for c in cmd_name:
-        if any(g in '*?' for g in c):
-            out_c.append(' '.join(sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), c))))))
+    globbed = []
+    for arg in cmd_args:
+        if any(g in '*?' for g in arg):
+            globbed.append(' '.join(sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), arg))))))
         else:
-            out_c.append(c)
+            globbed.append(arg)
 
-    cmd_name = ' '.join(out_c)
+    cmd_args = ' '.join(globbed)
 
-    cmd_output = subprocess.run(cmd_name, stdout=subprocess.PIPE, shell=True, universal_newlines=True, encoding='utf-8')
+    cmd_output = subprocess.run(cmd_args, stdout=subprocess.PIPE, shell=True, universal_newlines=True, encoding='utf-8')
 
     return str(cmd_output.stdout)
 
