@@ -227,7 +227,9 @@ def process_files(file_list):
     directive_image = re.compile(r"!!([\w\s,.:|'-]*)!!")
     directive_exec = re.compile(r"%%(.*)%%")
     directive_comment = re.compile(r"\/\/\s.*$", re.MULTILINE)
-    directive_custom = re.compile(r"\^\^(.*)\^\^")
+    # directive_custom = re.compile(r"\^\^.*\^\^")
+    directive_custom = re.compile(r"\^\^([a-zA-Z()\s.,_\[\]-]*)\^\^")
+
 
     # process each file in list
     for file in file_list:
@@ -589,7 +591,7 @@ def convert_custom_style(style):
 
     """
 
-    style_text = str(style.group(1))
+    style_text = str(style.group())[2:-2]
 
     style_class = config['custom']
 

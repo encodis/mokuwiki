@@ -74,7 +74,7 @@ def test_convert_custom_style_link(tmpdir):
     source_dir = tmpdir.mkdir('source')
 
     file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', 'This is a styled link ^^[[Page Two]]^^'))
+    file1.write(make_test_page('Page One', 'abc', 'This is a styled ^^[[Page Two]]^^ link'))
 
     file2 = source_dir.join('file2.md')
     file2.write(make_test_page('Page Two', 'abc'))
@@ -92,7 +92,7 @@ title: Page One
 tags: [abc]
 ...
 
-This is a styled link [[Page Two](page_two.html)]{.smallcaps}
+This is a styled [[Page Two](page_two.html)]{.smallcaps} link
 '''
 
     with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
