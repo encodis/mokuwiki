@@ -12,7 +12,7 @@ title: Page One
 tags: [abc]
 ...
 
-%% ls READ* %%
+%% ls -1 -d "$PWD"/READ* %%
 
 ''')
 
@@ -49,7 +49,7 @@ title: Page One
 tags: [abc]
 ...
 
-%% grep -l mokuwiki READ*.md | cat %%
+%% find "$PWD" -name READ*  | cat %%
 
 ''')
 

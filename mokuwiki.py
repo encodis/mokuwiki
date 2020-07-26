@@ -610,22 +610,11 @@ def convert_exec_link(command):
 
     """
 
-    # break string into command args
-    cmd_args = shlex.split(str(command.group(1)))
+    cmd_args = str(command.group(1))
 
-    # manually perform file globbing so that CWD is correct
-    globbed = []
-    for arg in cmd_args:
-        if any(g in '*?' for g in arg):
-            globbed.append(' '.join(sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), arg))))))
-        else:
-            globbed.append(arg)
+    cmd_output = subprocess.run(cmd_args, shell=True, capture_output=True, universal_newlines=True, encoding='utf-8')
 
-    cmd_args = ' '.join(globbed)
-
-    cmd_output = subprocess.run(cmd_args, stdout=subprocess.PIPE, shell=True, universal_newlines=True, encoding='utf-8')
-
-    return str(cmd_output.stdout)
+    return cmd_output.stdout
 
 
 def create_valid_filename(name):
