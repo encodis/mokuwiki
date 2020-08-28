@@ -228,7 +228,7 @@ def process_files(file_list):
     directive_exec = re.compile(r"%%(.*)%%")
     directive_comment = re.compile(r"\/\/\s.*$", re.MULTILINE)
     # directive_custom = re.compile(r"\^\^.*\^\^")
-    directive_custom = re.compile(r"\^\^([a-zA-Z()\s.,_\[\]-]*)\^\^")
+    directive_custom = re.compile(r"\^\^([a-zA-Z()\s\d.,_+\[\]-]*?)\^\^")
 
 
     # process each file in list
