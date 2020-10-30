@@ -13,7 +13,8 @@ So this project hosts a Python script (`mokuwiki.py`) that takes a source folder
 MokuWiki makes two key assumptions about the files that it processes:
 
 1.   YAML metadata elements in each source file control how it is processed. Most importantly this includes the name of the resulting file in the target folder (the 'title' element, see below). 
-2.  Directives are processed once to yield Markdown files that will then bprocessed by some other application (the assumption is Pandoc, or something that understands Pandoc flavoured Markdown as that is what MokuWiki emits).
+
+2.  Directives are processed once to yield Markdown files that will then be processed by some other application (the assumption is Pandoc, or something that understands Pandoc flavoured Markdown as that is what MokuWiki emits).
 
 ## Metadata
 
