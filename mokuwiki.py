@@ -29,7 +29,6 @@ import json
 import glob
 import argparse
 import subprocess
-import shlex
 import yaml
 from collections import defaultdict
 from string import Template
@@ -70,6 +69,8 @@ def mokuwiki(source, target,
     config['tag'] = tag
     config['custom'] = custom
     config['media'] = media
+
+    config['metadata'] = ['tags']
 
     # default file spec
     file_spec = '*.md'
@@ -251,6 +252,7 @@ def process_files(file_list):
             print(f"mokuwiki: skipping '{file}', no metadata")
             continue
 
+        # CHECK - is this correct?
         if 'title' not in metadata:
             print(f"mokuwiki: skipping '{file}', no title in metadata")
             continue
@@ -267,6 +269,9 @@ def process_files(file_list):
         # add terms to search index (after comments removed but before other directives, in case _body_ is an index field)
         if config['index']:
             update_search_index(contents, title)
+
+        # replace tags with links, if appropriate page exists
+        # contents = process_metadata_links(contents, config['metadata'])
 
         # replace file transclusion first (may include tag and page links)
         contents = directive_file.sub(convert_file_link, contents)
@@ -352,6 +357,33 @@ def update_search_index(contents, title):
     # update index of unique terms
     for term in list(set(terms)):
         page_index['search'][term].append((page_index['title'][title], title))
+
+
+def process_metadata_links(contents, links=['tags']):
+    """Replace metadata elements with appropriate page links, if the page
+    title exists. Otherwise leave as is.
+
+    Args:
+        content (str): The file contents
+        links (list): List of metadata tags to process as links (default='tags')
+    """
+
+    ### WAIT can we just convert tags to [tags] and then run through convert_page_link() ?
+    ### treat contenst including metdata as string 
+    ### so regex is 'tag: [' + xxx, xxx, xxx + ']'
+    ### and convert each xxx into [[xxx]] so that convert_page_link() will convert it 
+    ### but only add the  [[xxx]] if page exists...
+    ### really need Wiki, Namespace and Page classes!
+
+    metadata, body = split_doc(contents)
+
+    for link in links:
+
+        if link in metadata:
+
+            metadata[link] = ['[[' + e + ']]' if e in page_index["title"] else e for e in metadata[link]]            
+
+    return '---\n' + yaml.safe_dump(metadata, default_flow_style=None) + '...' + body
 
 
 def convert_page_link(page):
