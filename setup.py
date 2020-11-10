@@ -2,7 +2,7 @@
 
 """
 
-from setuptools import setup
+from setuptools import setup, find_packages
 from os import path
 
 this_directory = path.abspath(path.dirname(__file__))
@@ -26,13 +26,15 @@ setup(name='mokuwiki',
         'Topic :: Utilities'
       ],
       keywords='markdown wiki converter',
-      py_modules=['mokuwiki'],
+      packages=find_packages('src'),
+      package_dir={'': 'src'},
       install_requires=[
-        'pyyaml>=5.1'
+          'pyyaml>=5.1'
       ],
       entry_points={
         'console_scripts': [
-            'mokuwiki = mokuwiki:main',
+            'mokuwiki = wiki:mokuwiki',
+            'mwpage = page:mwpage'
         ],
       }
-      )
+    )
