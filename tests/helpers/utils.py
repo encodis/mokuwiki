@@ -2,13 +2,14 @@ import yaml
 import configparser
 
 
-def create_wiki_config(file_handle, default, *namespaces):
+def create_wiki_config(file_name, default, *namespaces):
     """Create wiki config file for tests
 
     Args:
-        file_handle ([type]): [description]
+        file_name ([type]): [description]
         default (dict): [description]
     """
+
     config = configparser.ConfigParser()
 
     if default:
@@ -18,14 +19,11 @@ def create_wiki_config(file_handle, default, *namespaces):
                              'target': '.',
                              'media_dir': 'images',
                              'broken_css': '.broken',
-                             'tags_css': '.tags',
+                             'tags_css': '.tag',
                              'custom_css': '.smallcaps',
-                             'search_index': False,
-                             'search_fields': 'title,alias,tags,summary,keywords',
+                             'search_fields': '',
                              'search_prefix': '',
-                             'meta_links': True,
-                             'meta_fields': 'tags',
-                             'noise_words': ''}
+                             'meta_fields': ''}
 
     if len(namespaces) == 0:
         config['ns1'] = {'name': 'ns1',
@@ -36,9 +34,13 @@ def create_wiki_config(file_handle, default, *namespaces):
             if 'name' not in namespace:
                 continue
 
-            config[namespace['name']] = namespace
+            config[namespace['name']] = {}
 
-    file_handle.write(config)
+            for k, v in namespace.items():
+                config[namespace['name']][k] = v
+
+    with open(file_name, 'w', encoding='utf8') as fp:
+        config.write(fp)
 
 
 def create_markdown_file(file_handle, meta, body):
@@ -54,7 +56,7 @@ def create_markdown_string(meta, body):
     for k, v in meta.items():
         contents += f'{k}: {v}\n'
 
-    contents += '...\n' + body + '\n'
+    contents += '...\n' + body
 
     return contents
 

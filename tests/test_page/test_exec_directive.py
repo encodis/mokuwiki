@@ -20,7 +20,7 @@ def test_process_exec_command(tmpdir):
 
     expect = create_markdown_string({'title': 'Page One',
                                      'tags': '[abc]'},
-                                    f'\n{os.getcwd()}/README.md')
+                                    f'{os.getcwd()}/README.md\n')
 
     assert os.path.exists(target_dir.join('file1.md'))
 
@@ -45,7 +45,7 @@ def test_process_exec_command_pipe(tmpdir):
 
     expect = create_markdown_string({'title': 'Page One',
                                      'tags': '[abc]'},
-                                    f'\n{os.getcwd()}/README.md')
+                                    f'{os.getcwd()}/README.md\n')
 
     assert os.path.exists(target_dir.join('file1.md'))
 

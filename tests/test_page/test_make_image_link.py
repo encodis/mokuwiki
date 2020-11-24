@@ -1,10 +1,10 @@
-from page import make_image_link
+from page import Page
 
 
 def test_make_image_link():
     image_name = 'Image One'
 
-    actual = make_image_link(image_name)
+    actual = Page.make_image_link(image_name)
 
     expect = '![Image One](image_one.jpg)'
 
@@ -14,7 +14,7 @@ def test_make_image_link():
 def test_make_image_link_ext():
     image_name = 'Image One'
 
-    actual = make_image_link(image_name, 'png')
+    actual = Page.make_image_link(image_name, 'png')
 
     expect = '![Image One](image_one.png)'
 
@@ -24,7 +24,7 @@ def test_make_image_link_ext():
 def test_make_image_link_media_dir():
     image_name = 'Image One'
 
-    actual = make_image_link(image_name, media_dir='test')
+    actual = Page.make_image_link(image_name, media_dir='test')
 
     expect = '![Image One](test/image_one.jpg)'
 

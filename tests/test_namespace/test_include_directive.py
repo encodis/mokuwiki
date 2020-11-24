@@ -1,263 +1,312 @@
 import os
 
-from mokuwiki import mokuwiki
+from wiki import Wiki
+
+from utils import create_wiki_config, create_markdown_file, create_markdown_string, compare_markdown_content
 
 
-# helper function to create pages
-def make_test_page(title, tags, content=''):
-    return f'''---
-title: {title}
-tags: [{tags}]
-...
+def test_process_file_includes(tmpdir):
 
-{content}
-'''
-
-
-def test_convert_file_link(tmpdir):
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', f'<<{tmpdir}/source/file2.md>>'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc', 'Contents of Page Two'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One'},
+                         f'<<{source_dir.join("ns1", "file2.md")}>>')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two'},
+                         'Included Text')
 
-    # assert contents of page_one.md has contents of page_two
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    expect1 = create_markdown_string({'title': 'Page One'},
+                                     '''Included Text''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
+def test_process_file_includes_globbing(tmpdir):
 
-Contents of Page Two
-
-
-
-'''
-
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert expect == actual
-
-
-def test_convert_file_link_globbing(tmpdir):
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', f'<<{tmpdir}/source/fileX*.md>>'))
-
-    file2 = source_dir.join('fileX2.md')
-    file2.write(make_test_page('Page Two', 'abc', 'Contents of Page Two'))
-
-    file3 = source_dir.join('fileX3.md')
-    file3.write(make_test_page('Page Three', 'abc', 'Contents of Page Three'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One'},
+                         f'<<{source_dir.join("ns1", "fileX*.md")}>>')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'fileX2.md'),
+                         {'title': 'Page Two'},
+                         'Included Text 2')
 
-    # assert contents of page_one.md has contents of pages 2 and 3
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_markdown_file(source_dir.join('ns1', 'fileX3.md'),
+                         {'title': 'Page Three'},
+                         'Included Text 3')
+
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    expect1 = create_markdown_string({'title': 'Page One'},
+                                     '''Included Text 2
+
+Included Text 3''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
+def test_process_file_includes_separator(tmpdir):
 
-Contents of Page Two
-
-
-
-
-
-
-Contents of Page Three
-
-
-
-'''
-
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert expect == actual
-
-
-def test_convert_file_link_separator(tmpdir):
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', f'<<{tmpdir}/source/fileX*.md|* * *>>'))
-
-    file2 = source_dir.join('fileX2.md')
-    file2.write(make_test_page('Page Two', 'abc', 'Contents of Page Two'))
-
-    file3 = source_dir.join('fileX3.md')
-    file3.write(make_test_page('Page Three', 'abc', 'Contents of Page Three'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One'},
+                         f'<<{source_dir.join("ns1", "fileX*.md|* * *")}>>')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'fileX2.md'),
+                         {'title': 'Page Two'},
+                         'Included Text 2')
 
-    # assert contents of page_one.md has contents of pages 2 and 3 with separator
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_markdown_file(source_dir.join('ns1', 'fileX3.md'),
+                         {'title': 'Page Three'},
+                         'Included Text 3')
 
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
 
+    wiki = Wiki(source_dir.join('test.cfg'))
 
-Contents of Page Two
+    wiki.process_namespaces()
 
+    expect1 = create_markdown_string({'title': 'Page One'},
+                                     '''Included Text 2
 
 * * *
 
+Included Text 3''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
-Contents of Page Three
+def test_process_file_includes_line_prefix(tmpdir):
 
-
-
-'''
-
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert expect == actual
-
-
-def test_convert_file_link_prefix(tmpdir):
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', f'<<{tmpdir}/source/file2.md||> >>'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc', 'Contents of Page Two'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One'},
+                         f'<<{source_dir.join("ns1", "file2.md")}||> >>')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two'},
+                         '''Included Text''')
 
-    # assert contents of page_one.md has contents of file2.md with prefix
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
 
-> 
-> 
-> Contents of Page Two
-> 
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    expect1 = create_markdown_string({'title': 'Page One'},
+                                     '''> Included Text''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
-'''
+def test_process_file_includes_separator_and_line_prefix(tmpdir):
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert expect == actual
-
-
-def test_convert_file_link_separator_and_prefix(tmpdir):
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', f'<<{tmpdir}/source/fileX*.md|* * *|> >>'))
-
-    file2 = source_dir.join('fileX2.md')
-    file2.write(make_test_page('Page Two', 'abc', 'Contents of Page Two'))
-
-    file3 = source_dir.join('fileX3.md')
-    file3.write(make_test_page('Page Three', 'abc', 'Contents of Page Three'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One'},
+                         f'<<{source_dir.join("ns1", "fileX*.md")}|* * *|> >>')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'fileX2.md'),
+                         {'title': 'Page Two'},
+                         'Included Text 2')
 
-    # assert contents of page_one.md has contents of pages 2 and 3 with prefix and separator
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_markdown_file(source_dir.join('ns1', 'fileX3.md'),
+                         {'title': 'Page Three'},
+                         'Included Text 3')
 
-> 
-> 
-> Contents of Page Two
-> 
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    expect1 = create_markdown_string({'title': 'Page One'},
+                                     '''> Included Text 2
 
 * * *
 
-> 
-> 
-> Contents of Page Three
-> 
+> Included Text 3''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
-'''
+def test_process_file_includes_prefix_and_suffix(tmpdir):
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert expect == actual
-
-
-def test_convert_file_plain(tmpdir):
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', f'<<{tmpdir}/source/file2.md>>'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write('''
-Contents of Page Two
-
-''')
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One'},
+                         f'<<{source_dir.join("ns1", "file2.md")}>>')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'prefix': '"The prefix line\n\n"',
+                          'suffix': '"\n\nThe suffix line"'},
+                         'Included Text')
 
-    # assert contents of page_one.md has contents of page 2
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    expect1 = create_markdown_string({'title': 'Page One'},
+                                     '''The prefix line
+Included Text
+The suffix line''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
-Contents of Page Two
+def test_process_file_includes_metadata_replace(tmpdir):
+
+    source_dir = tmpdir.mkdir('source')
+    source_dir.mkdir('ns1')
+    target_dir = tmpdir.mkdir('target')
+
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One'},
+                         f'<<{source_dir.join("ns1", "file2.md")}>>')
+
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two'},
+                         'Included page is ?{title}')
+
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    expect1 = create_markdown_string({'title': 'Page One'},
+                                     '''Included page is Page Two''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
+def test_process_file_includes_metadata_replace_multi(tmpdir):
 
+    source_dir = tmpdir.mkdir('source')
+    source_dir.mkdir('ns1')
+    target_dir = tmpdir.mkdir('target')
 
-'''
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One'},
+                         f'<<{source_dir.join("ns1", "file2.md")}>>')
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'subtitle': 'Second Page'},
+                         'Included page is ?{title} with subtitle ?{subtitle}')
 
-    assert expect == actual
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    expect1 = create_markdown_string({'title': 'Page One'},
+                                     '''Included page is Page Two with subtitle Second Page''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)

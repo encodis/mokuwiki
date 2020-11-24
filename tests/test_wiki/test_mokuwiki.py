@@ -1,104 +1,118 @@
+# TODO should test config and namespace overrides etc
+# NOTE that most tests have set the default section of test.cfg to default in create_wiki_config()
+
 import os
 
-from mokuwiki import mokuwiki
+from wiki import Wiki
+
+from utils import create_wiki_config, create_markdown_file, create_markdown_string, compare_markdown_content
 
 
-# helper function to create pages
-def make_test_page(title, tags, content=''):
-    return f'''---
-title: {title}
-tags: [{tags}]
-...
+def test_multiple_namespaces(tmpdir):
+    # two pages in same namespace, still need a wiki
 
-{content}
-'''
-
-
-def test_mokuwiki(tmpdir):
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', 'A link to [[Page Two]]'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc', 'A link to [[Page One]]'))
-
+    source_dir.mkdir('ns1')
+    source_dir.mkdir('ns2')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One'},
+                         'A link to [[ns2:Page Two]]')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
-    assert os.path.exists(os.path.join(target_dir, 'page_two.md'))
+    create_markdown_file(source_dir.join('ns2', 'file2.md'),
+                         {'title': 'Page Two'},
+                         'A link to [[ns1:Page One]]')
 
-    # assert contents of page_one.md have a link to page_two.md
-    expect_one = '''---
-title: Page One
-tags: [abc]
-...
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)},
+                       {'name': 'ns2',
+                        'path': f'{source_dir.join("ns2")}',
+                        'target': str(target_dir)})
 
-A link to [Page Two](page_two.html)
-'''
+    wiki = Wiki(source_dir.join('test.cfg'))
 
-    expect_two = '''---
-title: Page Two
-tags: [abc]
-...
+    wiki.process_namespaces()
 
-A link to [Page One](page_one.html)
-'''
+    assert len(wiki) == 2
+    assert len(wiki.namespaces['ns1']) == 1
+    assert len(wiki.namespaces['ns2']) == 1
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as f1:
-        actual_one = f1.read()
+    expect1 = create_markdown_string({'title': 'Page One'},
+                                     'A link to [Page Two](../ns2/page_two.html)')
 
-    with open(os.path.join(target_dir, 'page_two.md'), 'r', encoding='utf8') as f2:
-        actual_two = f2.read()
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
 
-    assert expect_one == actual_one
-    assert expect_two == actual_two
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
+
+    expect2 = create_markdown_string({'title': 'Page Two'},
+                                     'A link to [Page One](../ns1/page_one.html)')
+
+    assert os.path.exists(target_dir.join('ns2', 'page_two.md'))
+
+    with open(target_dir.join('ns2', 'page_two.md'), 'r', encoding='utf8') as fh:
+        actual2 = fh.read()
+
+    assert compare_markdown_content(expect2, actual2)
 
 
-def test_mokuwiki_ellipses(tmpdir):
+def test_multiple_namespaces_aliases(tmpdir):
+    # two pages in same namespace, still need a wiki
+
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', 'A link to [[Page Two]]'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc', 'Some text... or is it?\n\nA link to [[Page One]]'))
-
+    source_dir.mkdir('ns1')
+    source_dir.mkdir('ns2')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One'},
+                         'A link to [[Y:Page Two]]')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
-    assert os.path.exists(os.path.join(target_dir, 'page_two.md'))
+    create_markdown_file(source_dir.join('ns2', 'file2.md'),
+                         {'title': 'Page Two'},
+                         'A link to [[X:Page One]]')
 
-    # assert contents of page_one.md have a link to page_two.md
-    expect_one = '''---
-title: Page One
-tags: [abc]
-...
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'alias': 'X',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)},
+                       {'name': 'ns2',
+                        'alias': 'Y',
+                        'path': f'{source_dir.join("ns2")}',
+                        'target': str(target_dir)})
 
-A link to [Page Two](page_two.html)
-'''
+    wiki = Wiki(source_dir.join('test.cfg'))
 
-    expect_two = '''---
-title: Page Two
-tags: [abc]
-...
+    wiki.process_namespaces()
 
-Some text... or is it?
+    assert len(wiki) == 2
+    assert len(wiki.namespaces['ns1']) == 1
+    assert len(wiki.namespaces['ns2']) == 1
 
-A link to [Page One](page_one.html)
-'''
+    expect1 = create_markdown_string({'title': 'Page One'},
+                                     'A link to [Page Two](../ns2/page_two.html)')
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as f1:
-        actual_one = f1.read()
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
 
-    with open(os.path.join(target_dir, 'page_two.md'), 'r', encoding='utf8') as f2:
-        actual_two = f2.read()
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
 
-    assert expect_one == actual_one
-    assert expect_two == actual_two
+    assert compare_markdown_content(expect1, actual1)
+
+    expect2 = create_markdown_string({'title': 'Page Two'},
+                                     'A link to [Page One](../ns1/page_one.html)')
+
+    assert os.path.exists(target_dir.join('ns2', 'page_two.md'))
+
+    with open(target_dir.join('ns2', 'page_two.md'), 'r', encoding='utf8') as fh:
+        actual2 = fh.read()
+
+    assert compare_markdown_content(expect2, actual2)

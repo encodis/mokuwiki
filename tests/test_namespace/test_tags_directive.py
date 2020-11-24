@@ -1,380 +1,408 @@
 import os
 
-from mokuwiki import mokuwiki
+from wiki import Wiki
+
+from utils import create_wiki_config, create_markdown_file, create_markdown_string, compare_markdown_content
 
 
-# helper function to create pages
-def make_test_page(title, tags, content=''):
-    return f'''---
-title: {title}
-tags: [{tags}]
-...
+def test_process_tags_directive(tmpdir):
+    """Test that the directive '{{tag}}' produces a list of pages with that tag,
+    and that pages without those tags are not included in the list
+    """
 
-{content}
-'''
-
-
-def test_convert_tags_link(tmpdir):
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', '{{abc}}'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc'))
-
-    file3 = source_dir.join('file3.md')
-    file3.write(make_test_page('Page Three', 'xyz'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One',
+                          'tags': '[abc]'},
+                         '{{abc}}')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'tags': '[abc]'},
+                         'Text')
 
-    # assert contents of page_one.md has links to pages with tag 'abc'
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_markdown_file(source_dir.join('ns1', 'file3.md'),
+                         {'title': 'Page Three',
+                          'tags': '[xyz]'},
+                         '{{xyz}}')
 
-[Page One](page_one.html)
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    # assert page 3 not in list as it is not tagged 'abc'
+    expect1 = create_markdown_string({'title': 'Page One',
+                                      'tags': '[abc]'},
+                                     '''[Page One](page_one.html)
 
 [Page Two](page_two.html)
 
+''')
 
-'''
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
 
-    assert expect == actual
+    # assert page 3 only contains itself, as only it is tagged 'xyz'
+    assert compare_markdown_content(expect1, actual1)
+
+    expect3 = create_markdown_string({'title': 'Page Three',
+                                      'tags': '[xyz]'},
+                                     '''[Page Three](page_three.html)
+
+''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_three.md'))
+
+    with open(target_dir.join('ns1', 'page_three.md'), 'r', encoding='utf8') as fh:
+        actual3 = fh.read()
+
+    assert compare_markdown_content(expect3, actual3)
 
 
-def test_convert_tags_link_no_tag(tmpdir):
+def test_process_tags_directive_or(tmpdir):
+    """Test OR
+    """
+
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', '', '{{abc}}'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc'))
-
-    file3 = source_dir.join('file3.md')
-    file3.write(make_test_page('Page Three', 'xyz'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One',
+                          'tags': '[abc]'},
+                         '{{abc def}}')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'tags': '[def]'},
+                         'Text')
 
-    # assert contents of page_one.md has links to pages with tag 'abc' (which does not include page_one.md)
-    expect = '''---
-title: Page One
-tags: []
-...
+    create_markdown_file(source_dir.join('ns1', 'file3.md'),
+                         {'title': 'Page Three',
+                          'tags': '[xyz]'},
+                         '{{xyz}}')
+
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    # assert page 3 not in list as it is not tagged 'abc'
+    expect1 = create_markdown_string({'title': 'Page One',
+                                      'tags': '[abc]'},
+                                     '''[Page One](page_one.html)
 
 [Page Two](page_two.html)
 
+''')
 
-'''
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
 
-    assert expect == actual
+    assert compare_markdown_content(expect1, actual1)
 
 
-def test_convert_tags_link_or(tmpdir):
+def test_process_tags_directive_and(tmpdir):
+    """Test AND
+    """
+
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', '{{abc def}}'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'def'))
-
-    file3 = source_dir.join('file3.md')
-    file3.write(make_test_page('Page Three', 'xyz'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One',
+                          'tags': '[abc]'},
+                         '{{abc +def}}')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'tags': '[abc, def]'},
+                         'Text')
 
-    # assert contents of page_one.md has links to pages with tags 'abc' OR 'def'
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_markdown_file(source_dir.join('ns1', 'file3.md'),
+                         {'title': 'Page Three',
+                          'tags': '[xyz]'},
+                         '{{xyz}}')
 
-[Page One](page_one.html)
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
 
-[Page Two](page_two.html)
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    # assert page 3 not in list as it is not tagged 'abc'
+    expect1 = create_markdown_string({'title': 'Page One',
+                                      'tags': '[abc]'},
+                                     '''[Page Two](page_two.html)
+
+''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
-'''
+def test_process_tags_directive_not(tmpdir):
+    """Test NOT
+    """
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert expect == actual
-
-
-def test_convert_tags_link_and(tmpdir):
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', '{{abc +def}}'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc, def'))
-
-    file3 = source_dir.join('file3.md')
-    file3.write(make_test_page('Page Three', 'xyz'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One',
+                          'tags': '[abc]'},
+                         '{{abc -def}}')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'tags': '[abc, def]'},
+                         'Text')
 
-    # assert contents of page_one.md has links to pages with both tags 'abc' AND 'def'
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_markdown_file(source_dir.join('ns1', 'file3.md'),
+                         {'title': 'Page Three',
+                          'tags': '[xyz]'},
+                         '{{xyz}}')
 
-[Page Two](page_two.html)
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    # assert page 3 not in list as it is not tagged 'abc'
+    expect1 = create_markdown_string({'title': 'Page One',
+                                      'tags': '[abc]'},
+                                     '''[Page One](page_one.html)
+
+''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
-'''
+def test_process_tags_directive_list_all(tmpdir):
+    """Test LIST ALL
+    """
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert expect == actual
-
-
-def test_convert_tags_link_not(tmpdir):
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', '{{abc -def}}'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc, def'))
-
-    file3 = source_dir.join('file3.md')
-    file3.write(make_test_page('Page Three', 'xyz'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One',
+                          'tags': '[abc]'},
+                         '{{*}}')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'tags': '[def]'},
+                         'Text')
 
-    # assert contents of page_one.md has a link to pages with tags 'abc' but NOT if they also have 'def'
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_markdown_file(source_dir.join('ns1', 'file3.md'),
+                         {'title': 'Page Three',
+                          'tags': '[xyz]'},
+                         '{{xyz}}')
 
-[Page One](page_one.html)
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
 
+    wiki = Wiki(source_dir.join('test.cfg'))
 
-'''
+    wiki.process_namespaces()
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert expect == actual
-
-
-def test_convert_tags_link_all(tmpdir):
-    source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', '{{*}}'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc'))
-
-    file3 = source_dir.join('file3.md')
-    file3.write(make_test_page('Page Three', 'xyz'))
-
-    target_dir = tmpdir.mkdir('target')
-
-    mokuwiki(source_dir, target_dir)
-
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
-
-    # assert contents of page_one.md has a link to all pages
-    expect = '''---
-title: Page One
-tags: [abc]
-...
-
-[Page One](page_one.html)
+    # assert all pages are listed. NOTE: list is alphabetical (Three before Two!)
+    expect1 = create_markdown_string({'title': 'Page One',
+                                      'tags': '[abc]'},
+                                     '''[Page One](page_one.html)
 
 [Page Three](page_three.html)
 
-[Page Two](page_two.html)
-'''
+[Page Two](page_two.html)''')
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
 
-    assert expect == actual
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
-def test_convert_tags_link_number_all(tmpdir):
+def test_process_tags_directive_count_all(tmpdir):
+    """Test COUNT ALL
+    """
+
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', '{{#}}'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc'))
-
-    file3 = source_dir.join('file3.md')
-    file3.write(make_test_page('Page Three', 'xyz'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One',
+                          'tags': '[abc]'},
+                         '{{#}}')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'tags': '[def]'},
+                         'Text')
 
-    # assert contents of page_one.md has the number of pages with a tag
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_markdown_file(source_dir.join('ns1', 'file3.md'),
+                         {'title': 'Page Three',
+                          'tags': '[xyz]'},
+                         '{{xyz}}')
 
-3
-'''
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
+    wiki = Wiki(source_dir.join('test.cfg'))
 
-    assert expect == actual
+    wiki.process_namespaces()
+
+    # assert all pages are counted
+    expect1 = create_markdown_string({'title': 'Page One',
+                                      'tags': '[abc]'},
+                                     '''3''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
-def test_convert_tags_link_number_tag(tmpdir):
+def test_process_tags_directive_count_tag(tmpdir):
+    """Test COUNT TAG
+    """
+
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', '{{#abc}}'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc, def'))
-
-    file3 = source_dir.join('file3.md')
-    file3.write(make_test_page('Page Three', 'xyz'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One',
+                          'tags': '[abc]'},
+                         '{{#abc}}')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'tags': '[abc, def]'},
+                         'Text')
 
-    # assert contents of page_one.md has the number of pages with tag 'abc
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_markdown_file(source_dir.join('ns1', 'file3.md'),
+                         {'title': 'Page Three',
+                          'tags': '[xyz]'},
+                         '{{xyz}}')
 
-2
-'''
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
+    wiki = Wiki(source_dir.join('test.cfg'))
 
-    assert expect == actual
+    wiki.process_namespaces()
+
+    # assert all pages are counted
+    expect1 = create_markdown_string({'title': 'Page One',
+                                      'tags': '[abc]'},
+                                     '''2''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
 
 
-def test_convert_tags_link_list(tmpdir):
+def test_process_tags_directive_list_tags(tmpdir):
+    """Test LIST TAGS
+    """
+
     source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', '{{@}}'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc, def'))
-
-    file3 = source_dir.join('file3.md')
-    file3.write(make_test_page('Page Three', 'xyz'))
-
+    source_dir.mkdir('ns1')
     target_dir = tmpdir.mkdir('target')
 
-    mokuwiki(source_dir, target_dir)
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One',
+                          'tags': '[abc]'},
+                         '{{@}}')
 
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'tags': '[abc, def]'},
+                         'Text')
 
-    # assert contents of page_one.md has a list of all tags
-    expect = '''---
-title: Page One
-tags: [abc]
-...
+    create_markdown_file(source_dir.join('ns1', 'file3.md'),
+                         {'title': 'Page Three',
+                          'tags': '[xyz]'},
+                         '{{xyz}}')
 
-[abc]{.tag}
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    # assert all pages are counted
+    expect1 = create_markdown_string({'title': 'Page One',
+                                      'tags': '[abc]'},
+                                     '''[abc]{.tag}
 
 [def]{.tag}
 
-[xyz]{.tag}
-'''
+[xyz]{.tag}''')
 
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
 
-    assert expect == actual
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
 
-
-def test_convert_tags_link_list_alt(tmpdir):
-    source_dir = tmpdir.mkdir('source')
-
-    file1 = source_dir.join('file1.md')
-    file1.write(make_test_page('Page One', 'abc', '{{@}}'))
-
-    file2 = source_dir.join('file2.md')
-    file2.write(make_test_page('Page Two', 'abc, def'))
-
-    file3 = source_dir.join('file3.md')
-    file3.write(make_test_page('Page Three', 'xyz'))
-
-    target_dir = tmpdir.mkdir('target')
-
-    mokuwiki(source_dir, target_dir, tag='alt_tag')
-
-    # assert correct output files exist
-    assert os.path.exists(os.path.join(target_dir, 'page_one.md'))
-
-    # assert contents of page_one.md has a list of all tags, alternate class
-    expect = '''---
-title: Page One
-tags: [abc]
-...
-
-[abc]{.alt_tag}
-
-[def]{.alt_tag}
-
-[xyz]{.alt_tag}
-'''
-
-    with open(os.path.join(target_dir, 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert expect == actual
+    assert compare_markdown_content(expect1, actual1)
