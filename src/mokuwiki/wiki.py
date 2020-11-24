@@ -2,7 +2,7 @@ import sys
 import argparse
 import configparser
 
-from namespace import Namespace
+from mokuwiki.namespace import Namespace
 
 import logging
 logging.basicConfig(format='mokuwiki: %(levelname)s %(message)s', level=logging.WARNING)
@@ -19,7 +19,7 @@ class Wiki():
 
     # NOTE should be singleton?
 
-    def __init__(self, config_file, target='', reindex=False, nosearch=False, verbose=1):
+    def __init__(self, config_file, target='build', reindex=False, nosearch=False, verbose=1):
         """Initialize a Wiki instance.
 
         Args:
@@ -30,25 +30,28 @@ class Wiki():
             verbose (int, optional): Increase verbose level. Defaults to 1.
         """
 
-        if verbose:
-            # set logging level to 20 (info), 30 (warn) or 40 (error)
-            verbose = 10 + max(verbose, 3) * 10
-            logging.getLogger().setLevel(verbose)
-
         # TODO could we just have properties to pull what we need out of config as required?
 
         config = configparser.ConfigParser()
         config.read(config_file)
 
-        self.wikiname = config['DEFAULT'].get('name', 'Wiki')
+        # set logging level to 20 (info), 30 (warn) or 40 (error)
+        if not verbose:
+            verbose = 1
+
+        self.verbose = config['DEFAULT'].get('verbose', verbose)
+
+        verbose = 10 + max(verbose, 3) * 10
+        logging.getLogger().setLevel(verbose)
+
+        self.wikiname = config['DEFAULT'].get('wikiname', 'Wiki')
 
         # default target path for each namespace, can be overidden by namespace initialization
         self.target = config['DEFAULT'].get('target', target)
 
         if not self.target:
-            logging.warning(f'no target set for {self.wikiname}')
-
-        self.verbose = config['DEFAULT'].get('verbose', verbose)
+            logging.warning(f"no target set for '{self.wikiname}', assuming 'build'")
+            self.target = 'build'
 
         self.reindex = config['DEFAULT'].getboolean('reindex', reindex)
 
@@ -68,6 +71,10 @@ class Wiki():
         # set default noise word list or file, will be read by each namespace
         self.noise_words = config['DEFAULT'].get('noise_words', '')
 
+        # TODO auto-discover namespaces (if none specified in config) by looking
+        # at sub-folders of wiki.path (or wiki.source?). No aliasese available
+        # but would be easy. Also could we set defaults if no config file specified?
+
         # create namespaces
         self.namespaces = {}
 
@@ -82,7 +89,7 @@ class Wiki():
                 logging.warning(f"namespace '{namespace.name}' already exists, skipping")
                 continue
 
-            if self.ns_alias(namespace.alias):
+            if self.get_ns_by_alias(namespace.alias):
                 logging.warning(f"namespace alias '{namespace.name}' already exists, skipping")
                 continue
 
@@ -100,21 +107,22 @@ class Wiki():
 
     # getitem for namespace lookup, by name or alias? ditto namespaces for pages?
 
-    def ns_exists(self, alias):
+    def get_ns_by_name(self, name):
 
         for namespace in self.namespaces:
-            if alias == self.namespaces[namespace].alias:
-                return True
+            if name == self.namespaces[namespace].name:
+                return self.namespaces[namespace]
 
-        return False
+        return None
 
-    def ns_alias(self, alias):
+    def get_ns_by_alias(self, alias):
 
         for namespace in self.namespaces:
             if alias == self.namespaces[namespace].alias:
                 return self.namespaces[namespace]
 
         return None
+
 
     def process_namespaces(self):
         """Process each namespace. First the namespaces are indexed,
@@ -128,18 +136,19 @@ class Wiki():
             self.namespaces[namespace].process_pages()
 
     def report_broken_links(self):
-        """Report broken links. This will set the logging level
-        to "ERROR" to ensure output, as it has been explicitly
-        requested.
+        """Report broken links. If the verbose level is set
+        to 3 then report broken links.
         """
-        logging.getLogger().setLevel(logging.ERROR)
+
+        if logging.getLogger().getEffectiveLevel() < logging.ERROR:
+            return
 
         for namespace in self.namespaces:
-            if not namespace.index.broken:
+            if len(self.namespaces[namespace].index.broken) == 0:
                 continue
 
-            for page_name in namespace.index.broken:
-                logging.error(f'broken link: {namespace.name}:{page_name}')
+            for page_name in self.namespaces[namespace].index.broken:
+                logging.error(f'broken link: {self.namespaces[namespace].name}:{page_name}')
 
 
 def mokuwiki(args=None):

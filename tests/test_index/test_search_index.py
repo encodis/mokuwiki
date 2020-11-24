@@ -3,7 +3,7 @@ import json
 
 import deepdiff
 
-from wiki import Wiki
+from mokuwiki.wiki import Wiki
 
 from utils import create_wiki_config, create_markdown_file
 

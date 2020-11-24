@@ -1,6 +1,6 @@
 import os
 
-from wiki import Wiki
+from mokuwiki.wiki import Wiki
 
 from utils import create_wiki_config, create_markdown_file, create_markdown_string, compare_markdown_content
 

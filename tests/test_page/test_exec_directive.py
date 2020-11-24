@@ -1,6 +1,6 @@
 import os
 
-from page import Page
+from mokuwiki.page import Page
 
 from utils import create_markdown_file, create_markdown_string, compare_markdown_content
 

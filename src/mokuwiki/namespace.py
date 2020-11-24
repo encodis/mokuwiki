@@ -2,8 +2,8 @@ import os
 import glob
 import logging
 
-import page as p
-from index import Index
+import mokuwiki.page as p
+from mokuwiki.index import Index
 
 DEFAULT_NOISE_WORDS = ['a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', 'for',
                        'if', 'i', 'in', 'into', 'is', 'it', 'no', 'not', 'of', 'on',
@@ -43,6 +43,7 @@ class Namespace():
         self.wiki = wiki
 
         # get namespace name, if none use name of config section
+        # TODO use p.slugify() in case of spaces in name?
         self.name = config.get('name', config.name.lower())
 
         # get namespace alias, if none then use name of namespace

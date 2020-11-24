@@ -8,6 +8,93 @@ So this project hosts a Python script (`mokuwiki.py`) that takes a source folder
 
 > NOTE: Originally I referred to this project as "fake wiki" which led to "mock wiki", and in a fit of alliterative humour I changed the project to "mokuwiki" in homage to *DokuWiki*. This should not be construed as "mocking" *DokuWiki*---far from it! *DokuWiki* is a great piece of software---if you need a proper wiki use that, don't use this!
 
+# Usage
+
+this will be basic operations and the general idea, source to target etc.
+
+# Wiki Configuration File
+
+This version (v2.0 and greater) of `mokuwiki` supports multiple namespaces and many more configuration options. Consequently the configuration has been moved from the command line to a configuration file, a full example of which is shown below:
+
+```
+# Sample MokuWiki configuration file
+
+[DEFAULT]
+wikiname = My Wiki
+verbose = 1
+target = build
+media_dir = images
+broken_css = .broken
+tags_css = .tags
+custom_css = .smallcaps
+search_fields = title,alias,tags,summary,keywords
+search_prefix = 
+search_file = _index.json
+meta_fields = tags
+noise_words = x,y,z
+# noise_words = file:noise.txt
+
+[Namespace 1]
+name = namespace1
+alias = ns1
+path = ./folder1/pages
+```
+
+A __wiki__ is composed of one or more __namespaces__; each namespace contains a number of __pages__. The folder containing the configuration file is assumed to be the root folder. Each namespace is in a sub-folder of this root folder, with the folder name given by the `path` configuration option for that namespace. So in the example above the pages for the namespace called "Namespace 1" live in the `folder1/pages` folder. Once processed these files will end up in the `build/namespace1` folder --- the wiki options set the base target and the namespace's `name` sets the folder name within that. 
+
+## Wiki Options
+
+Note that these options will be applied as the default for all namespaces, but individual namespaces can override them by including that optin in their own section.
+### name
+
+The name of the wiki. Currently this is not used in the page processing.
+
+### verbose
+
+How verbose to make the output. This takes a value from 1 to 3 (most verbose).
+
+### target
+
+The base target folder. All namespaces will be created under this folder. The default target is "build".
+
+### media_dir
+
+The name of the media directory to include in image links. The default is `images`, i.e. it is assumed that all images that belong to a namepsace will be placed in an "images/" sub-folder.
+
+### broken_css
+
+The CSS used to identify a "broken" link, i.e. when a page link does not exist. The default is `.broken`, implying that once the processed files are rendered from Markdown to HTML there will be a CSS definition for that CSS.
+
+### tags_css
+
+The CSS used to identify a "tag" link, which is produced by the `{{#tag}}` directive. The default is `.tag`. Again, the actual CSS defintion should be available to the final HTML.
+
+### custom_css
+
+The CSS used to identify a "custom" link, which is produced by the `^^some text^^` directive. The default is `.smallcaps` which must be available to the final HTML. Note that `pandoc` provides a default value for this in its default template.
+
+### search_fields
+
+The metadata fields used to build the search index. This is a comma separated list of keywords. The default is `title,alias,tags,summary,keywords`. The pseudo-keyword `_body_` can also be used to index the body of the file. To turn off generation of a search index leave this field empty, or use the `--nosearch` command line option.
+
+Note that this is customisable for each namespace.
+
+### search_prefix
+
+The search index is a JSON file that can be included in a web page. To facilitate this the `search_prefix` will be prepended to the output so that the file can be included as a JSON object. For example, the author uses `var MW = MW || {}; MW.searchIndex = ` as the prefix to faciliate direct inclusion of a search index.
+
+### search_file
+
+The name of the search index file. The default value is "_index.json". Note that search indexes are created for and are specific to an individual namespace.
+
+### meta_fields
+
+In some cases it is useful to convert some metadata fields into page links. A good example of this is when tags are used and displayed by the resulting HTML file. 
+
+### noise_words
+
+A comma separated list of words to ignore when building the search index. If the value of this options starts with the string "file:" then the remainder of the string will be assumed to be a plain text file containing a list of noise words (one word per line). If so this file will be read and used instead. The default is a list of common noise words.
+
 # How it works
 
 MokuWiki makes two key assumptions about the files that it processes:
@@ -161,9 +248,9 @@ The 'exec' directive allows the output of a command can be inserted into the doc
 
 ### Custom style
 
-The custom style directive provides a way to wrap text in a custom style using Pandoc's [bracketed span](https://pandoc.org/MANUAL.html#divs-and-spans) feature: the syntax `\\styled text\\` will give an output of `[styled text]{.smallcaps}`, i.e. the default Pandoc command for small caps. The style can be changed using the `--custom` flag on the command line. The text of this argument is copied directly into CSS portion of the span, so should include the leading "dot" if it is to be a CSS class. 
+The custom style directive provides a way to wrap text in a custom style using Pandoc's [bracketed span](https://pandoc.org/MANUAL.html#divs-and-spans) feature: the syntax `^^styled text^^` will give an output of `[styled text]{.smallcaps}`, i.e. the default Pandoc command for small caps. The style can be changed using the `--custom` flag on the command line. The text of this argument is copied directly into CSS portion of the span, so should include the leading "dot" if it is to be a CSS class. 
 
-Note that this directive is processed last, so it will apply the custom style to links (e.g. `\\[[Page One]]\\` will work as expected).
+Note that this directive is processed last, so it will apply the custom style to links (e.g. `^^[[Page One]]^^` will work as expected).
 
 ### Comment directives
 

@@ -3,7 +3,7 @@
 
 import os
 
-from wiki import Wiki
+from mokuwiki.wiki import Wiki
 
 from utils import create_wiki_config, create_markdown_file, create_markdown_string, compare_markdown_content
 
@@ -72,7 +72,7 @@ def test_multiple_namespaces_aliases(tmpdir):
 
     create_markdown_file(source_dir.join('ns1', 'file1.md'),
                          {'title': 'Page One'},
-                         'A link to [[Y:Page Two]]')
+                         'A link to [[2nd Page|Y:Page Two]]')
 
     create_markdown_file(source_dir.join('ns2', 'file2.md'),
                          {'title': 'Page Two'},
@@ -98,7 +98,7 @@ def test_multiple_namespaces_aliases(tmpdir):
     assert len(wiki.namespaces['ns2']) == 1
 
     expect1 = create_markdown_string({'title': 'Page One'},
-                                     'A link to [Page Two](../ns2/page_two.html)')
+                                     'A link to [2nd Page](../ns2/page_two.html)')
 
     assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
 

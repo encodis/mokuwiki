@@ -1,4 +1,4 @@
-from page import Page
+from mokuwiki.page import Page
 
 
 def test_make_markdown_span():

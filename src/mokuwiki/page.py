@@ -28,11 +28,11 @@ class MetadataReplace(Template):
 
 
 class Page():
-    """The Page class definition. 
+    """The Page class definition.
 
     A Page instance contains the (YAML) metadata and contents of a
     Markdown page. The class definition also includes a number of
-    compiled regular expressions as class variables. 
+    compiled regular expressions as class variables.
 
     """
 
@@ -44,7 +44,7 @@ class Page():
     image_link_re = re.compile(r"!!([\w\s,.:|'-]*)!!")
     custom_style_re = re.compile(r"\^\^([a-zA-Z()\s\d.,_+\[\]-]*?)\^\^")
 
-    def __init__(self, page_file, namespace, media='images', custom='.smallcaps'):
+    def __init__(self, page_file, namespace, included=False, media='images', custom='.smallcaps'):
         """Initialize a Page object by reading a Markdown file and
         splitting the contents into metadata and body components.
 
@@ -59,6 +59,8 @@ class Page():
         Args:
             page_file (str): The page's file name
             namespace (Namespace): The parent namespace of the page.
+            included (bool, optional): If true then page was created for an
+            include directive and checks are less restrictive. Default is False.
             media (str, optional): When used in "single file mode" used to
             override the media folder name. Defaults to 'images'.
             custom (str, optional): When used in "single file mode"
@@ -76,22 +78,30 @@ class Page():
             with open(page_file, 'r', encoding='utf8') as f:
                 contents = f.read()
         except IOError:
-            # maybe 'file' was actually a string? try reading directly
-            contents = page_file
+            logging.error(f"could not read file '{page_file}'")
+            self.valid = False
+            return
 
         if '...' in contents:
             self.meta, _, self.body = contents.partition('...\n')
         else:
-            logging.warning(f"incorrect metadata specification in '{page_file}'")
-            self.valid = False
-            return
+            if included:
+                # if the file was an include directive and has no YAML marker, then
+                # then set meta as empty dict and body to contents of whole file
+                self.meta = {}
+                self.body = contents
+            else:
+                logging.warning(f"incorrect metadata specification in '{page_file}'")
+                self.valid = False
+                return
 
-        try:
-            self.meta = yaml.safe_load(self.meta)
-        except yaml.YAMLError:
-            logging.warning(f"error in metadata for '{page_file}'")
-            self.valid = False
-            return
+        if self.meta:
+            try:
+                self.meta = yaml.safe_load(self.meta)
+            except yaml.YAMLError:
+                logging.warning(f"error in metadata for '{page_file}'")
+                self.valid = False
+                return
 
         self.file = page_file
 
@@ -195,7 +205,7 @@ class Page():
 
     def convert_metadata_links(self):
         """Convert specified metadata fields into links.
-        
+
         The (somewhat specialised) use case is as follows: in some
         cases it is useful to convert items in metadata into a page
         link. For example, all 'tags' could be converted into links,
@@ -253,7 +263,7 @@ class Page():
                 str: the file contents of the file, plus the separator
             """
 
-            incl_page = Page(file_name, self.namespace)
+            incl_page = Page(file_name, self.namespace, included=True)
 
             if not incl_page.valid:
                 logging.error(f"error reading file '{file_name}' for inclusion")
@@ -330,7 +340,7 @@ class Page():
     def process_tags_directive(self, tags):
         """Convert a tag specification into a string containing inter-page links to
         pages marked with those tags. A tag specification is of the form '{{tag}}':
-        
+
         -  `{{tag}}`: list all pages with 'tag'
         -  `{{tag1 tag2}}`: list all pages with 'tag1' or 'tag2'
         -  `{{tag1 +tag2}}`: list all pages with 'tag1' and 'tag2'
@@ -369,9 +379,9 @@ class Page():
 
             elif '@' in tag_name:
                 # if the first tag contains a "@" then list all tags as bracketed span with class='tag' (default)
-                tag_links = f"]{{{self.namespace.wiki.tags_css}}}\n\n["
+                tag_links = f"]{{{self.namespace.tags_css}}}\n\n["
                 tag_links = tag_links.join(sorted(self.namespace.index.tags.keys()))
-                tag_links = f"[{tag_links}]{{{self.namespace.wiki.tags_css}}}"
+                tag_links = f"[{tag_links}]{{{self.namespace.tags_css}}}"
 
             elif '#' in tag_name:
                 # if the first tag contains a "#" then return the count of pages
@@ -447,7 +457,13 @@ class Page():
 
         # resolve namespace aliases
         if namespace:
-            target_ns = self.namespace.wiki.ns_alias(namespace)
+            target_ns = self.namespace.wiki.get_ns_by_alias(namespace)
+
+            if not target_ns:
+                target_ns = self.namespace.wiki.get_ns_by_name(namespace)
+
+            if not target_ns:
+                logging.error(f"no namespace name or alias found for '{namespace}'")
         else:
             target_ns = self.namespace
 
@@ -532,6 +548,8 @@ class Page():
 
     @staticmethod
     def make_markdown_link(show_name, page_name, ns_path=''):
+        # TODO if namespace targets could be different then you would need to
+        # factor that in here
         if ns_path:
             return f'[{show_name}]({os.path.join(os.pardir, ns_path, page_name)}.html)'
 
