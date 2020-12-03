@@ -168,6 +168,59 @@ def test_process_tags_directive_and(tmpdir):
     assert compare_markdown_content(expect1, actual1)
 
 
+def test_process_tags_directive_and_three(tmpdir):
+    """Test AND
+    """
+
+    source_dir = tmpdir.mkdir('source')
+    source_dir.mkdir('ns1')
+    target_dir = tmpdir.mkdir('target')
+
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One',
+                          'tags': '[abc]'},
+                         '{{abc +def +ghi}}')
+
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'tags': '[abc, def]'},
+                         'Text')
+
+    create_markdown_file(source_dir.join('ns1', 'file3.md'),
+                         {'title': 'Page Three',
+                          'tags': '[xyz]'},
+                         '{{xyz}}')
+
+    create_markdown_file(source_dir.join('ns1', 'file4.md'),
+                         {'title': 'Page Four',
+                          'tags': '[abc, def, ghi]'},
+                         'Text')
+
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    # assert page 4 only one with all three tags
+    expect1 = create_markdown_string({'title': 'Page One',
+                                      'tags': '[abc]'},
+                                     '''[Page Four](page_four.html)
+
+''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
+
+
 def test_process_tags_directive_not(tmpdir):
     """Test NOT
     """
@@ -205,6 +258,54 @@ def test_process_tags_directive_not(tmpdir):
     expect1 = create_markdown_string({'title': 'Page One',
                                       'tags': '[abc]'},
                                      '''[Page One](page_one.html)
+
+''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)
+
+
+def test_process_tags_directive_not_and(tmpdir):
+    """Test NOT
+    """
+
+    source_dir = tmpdir.mkdir('source')
+    source_dir.mkdir('ns1')
+    target_dir = tmpdir.mkdir('target')
+
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One',
+                          'tags': '[abc]'},
+                         '{{abc +def -ghi}}')
+
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'tags': '[abc, def]'},
+                         'Text')
+
+    create_markdown_file(source_dir.join('ns1', 'file3.md'),
+                         {'title': 'Page Three',
+                          'tags': '[abc, def, ghi, jkl]'},
+                         'Text')
+
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir)})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    # assert page 4 not in list, has def but also ghi
+    expect1 = create_markdown_string({'title': 'Page One',
+                                      'tags': '[abc]'},
+                                     '''[Page Two](page_two.html)
 
 ''')
 
