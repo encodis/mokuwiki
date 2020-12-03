@@ -40,7 +40,7 @@ class Page():
     file_incl_re = re.compile(r"<<([\w\s,./:|'*?\>-]*)>>")
     exec_cmd_re = re.compile(r"%%(.*)%%")
     tags_repl_re = re.compile(r"\{\{([\w\s\*#@'+-]*)\}\}")
-    page_link_re = re.compile(r"\[\[([\w\s,.:|'-]*)\]\]")
+    page_link_re = re.compile(r"\[\[([\w\s(),.:|'-]*)\]\]")
     image_link_re = re.compile(r"!!([\w\s,.:|'-]*)!!")
     custom_style_re = re.compile(r"\^\^([a-zA-Z()\s\d.,_+\[\]-]*?)\^\^")
 
@@ -437,6 +437,8 @@ class Page():
             e.g. `[Page name](./page_name.html)`
 
         """
+
+        # TODO option to just change links to text rather than mark as broken?
 
         page_name = str(page.group(1))
         show_name = ''
