@@ -19,7 +19,7 @@ class Wiki():
 
     # NOTE should be singleton?
 
-    def __init__(self, config_file, target='build', reindex=False, nosearch=False, verbose=1):
+    def __init__(self, config_file, target='build', reindex=False, nosearch=False, verbose=0):
         """Initialize a Wiki instance.
 
         Args:
@@ -37,12 +37,22 @@ class Wiki():
 
         # set logging level to 20 (info), 30 (warn) or 40 (error)
         if not verbose:
-            verbose = 1
+            verbose = 0
 
-        self.verbose = config['DEFAULT'].get('verbose', verbose)
+        verbose = max(verbose, 3)
 
-        verbose = 10 + max(verbose, 3) * 10
-        logging.getLogger().setLevel(verbose)
+        self.verbose = config['DEFAULT'].getint('verbose', verbose)
+
+        if self.verbose == 0:
+            logging.getLogger().setLevel(logging.ERROR)
+        elif self.verbose == 1:
+            logging.getLogger().setLevel(logging.WARNING)
+        elif self.verbose == 2:
+            logging.getLogger().setLevel(logging.INFO)
+        elif self.verbose == 3:
+            logging.getLogger().setLevel(logging.DEBUG)
+        else:
+            pass
 
         self.wikiname = config['DEFAULT'].get('wikiname', 'Wiki')
 
@@ -123,7 +133,6 @@ class Wiki():
 
         return None
 
-
     def process_namespaces(self):
         """Process each namespace. First the namespaces are indexed,
         then the pages are processed.
@@ -140,15 +149,15 @@ class Wiki():
         to 3 then report broken links.
         """
 
-        if logging.getLogger().getEffectiveLevel() < logging.ERROR:
-            return
+        # if logging.getLogger().getEffectiveLevel() < logging.ERROR:
+        #     return
 
         for namespace in self.namespaces:
             if len(self.namespaces[namespace].index.broken) == 0:
                 continue
 
             for page_name in self.namespaces[namespace].index.broken:
-                logging.error(f'broken link: {self.namespaces[namespace].name}:{page_name}')
+                logging.info(f'broken link: {self.namespaces[namespace].name}:{page_name}')
 
 
 def mokuwiki(args=None):
