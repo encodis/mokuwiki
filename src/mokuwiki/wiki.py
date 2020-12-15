@@ -1,3 +1,4 @@
+import os
 import sys
 import argparse
 import configparser
@@ -132,6 +133,27 @@ class Wiki():
                 return self.namespaces[namespace]
 
         return None
+
+    def get_page_path_by_link(self, page_link):
+        """Get a page from a namespace by looking up
+        the namespace alias and title.
+
+        Example: "a:Foo" will return "aa/bb/foo.md" if the
+        namespace alias "a" maps to the path "aa/bb"
+
+        Args:
+            page_link (str): Page link in format "a:Foo"
+        """
+
+        if ':' not in page_link:
+            logging.warning(f"no namespace alias in '{page_link}'")
+            return None
+
+        ns_alias, page_title = page_link.split(':')
+        namespace = self.get_ns_by_alias(ns_alias)
+        page = namespace.get_page_by_title(page_title)
+
+        return page.file
 
     def process_namespaces(self):
         """Process each namespace. First the namespaces are indexed,
