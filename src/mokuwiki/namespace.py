@@ -120,6 +120,23 @@ class Namespace():
         """
         return len(self.pages)
 
+    def get_page_by_title(self, page_title):
+        """Get a reference to a page given the page title.
+        If no titles match then try aliases.
+
+        Args:
+            page_title (str): The page title (case sensitive)
+        """
+        
+        for page in self.pages:
+            if page.title == page_title:
+                return page
+
+        # if still here try aliases
+        for page in page.alias:
+            if page.alias == page_title:
+                return page
+
     def get_noise_words(self, noise_words):
         """Create a list of noise words to remove from the search index.
         Defaults to the constant DEFAULT_NOISE_WORDS in this module. If the
