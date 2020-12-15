@@ -111,9 +111,10 @@ class Page():
         self.media = media
         self.custom = custom
 
+        self.valid = True
         self.modified = os.path.getmtime(page_file)
 
-        self.valid = True
+        logging.debug(f"read page '{self.file}'")
 
     def __str__(self):
         """The string representation of a page is simply the metadata
@@ -248,7 +249,7 @@ class Page():
             str: the concatentated contents of the file specification
         """
 
-        def get_file_contents(file_name, separator=''):
+        def get_incl_file_contents(file_name, file_sep='', line_prefix=''):
             """An inner function used when iterating through the list
             of included files. This function was abstracted out to
             make the loop easier to understand. This function also adds
@@ -256,15 +257,19 @@ class Page():
 
             Args:
                 file_name (FileType): the file name
-                separator (str, optional): The (Markdown) separator
+                file_sep (str, optional): The (Markdown) separator
                 to insert between each file. Defaults to ''.
+                line_prefix (str, optional): The prefix string to add to
+                each line of the file
 
             Returns:
-                str: the file contents of the file, plus the separator
+                str: the file contents of the file, modified by the separator,
+                prefix and process options
             """
 
             incl_page = Page(file_name, self.namespace, included=True)
 
+            # TODO check this is robust against non-existant files
             if not incl_page.valid:
                 logging.error(f"error reading file '{file_name}' for inclusion")
                 return ''
@@ -283,15 +288,16 @@ class Page():
             if line_prefix:
                 incl_page.body = re.sub('^(.*)', line_prefix + r'\1', incl_page.body, flags=re.MULTILINE)
 
-            return incl_page.body + separator
+            return incl_page.body + file_sep
 
         incl_file = str(path.group(1))
 
         file_sep = ''
         line_prefix = ''
+        process = ''
         options = ''
 
-        # get file separator, if any
+        # get file separator etc, if any
         if '|' in incl_file:
             incl_file, *options = incl_file.split('|')
 
@@ -302,20 +308,39 @@ class Page():
             file_sep = options[0]
             line_prefix = options[1]
 
+        if len(options) == 3:
+            file_sep = options[0]
+            line_prefix = options[1]
+            process = options[2]
+
+        # ensure newline separation for Markdown
         if file_sep:
             file_sep = '\n\n' + file_sep + '\n\n'
         else:
             file_sep = '\n\n'
 
-        # create list of files
-        incl_list = sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), incl_file))))
+        # resolve namespace ref if present
+        if ':' in incl_file:
+            # if namespace ref exists list is only one file long
+            incl_file = self.namespace.wiki.get_page_path_by_link(incl_file)
+            incl_list = [incl_file]
+        else:
+            # no namespace ref so create globbed list
+            incl_list = sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), incl_file))))
 
+        # if process is defined run it and return
+        if process:
+            process_output = subprocess.run(process + ' ' + incl_file, shell=True, capture_output=True, universal_newlines=True, encoding='utf-8')
+
+            return process_output.stdout
+
+        # create list of files
         incl_contents = ''
 
         for incl_file in incl_list[:-1]:
-            incl_contents += get_file_contents(incl_file, file_sep)
+            incl_contents += get_incl_file_contents(incl_file, file_sep, line_prefix)
 
-        incl_contents += get_file_contents(incl_list[-1])
+        incl_contents += get_incl_file_contents(incl_list[-1], '', line_prefix)
 
         # return contents of all matched files
         return incl_contents
