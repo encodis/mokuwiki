@@ -43,11 +43,12 @@ class Index():
             page (Page): The page to index
         """
 
-        if page.title not in self.title:
-            self.title[page.title] = page.output
-        else:
+        if page.title in self.title:
             logging.warning(f"skipping '{page.file}', duplicate title '{page.title}'")
             page.valid = False
+            return
+
+        self.title[page.title] = page.output
 
     def update_alias(self, page):
         """Update the index of page aliases, if the page has one.
@@ -56,11 +57,18 @@ class Index():
             page (Page): The page to index
         """
 
-        if page.alias:
-            if page.alias not in self.alias and page.alias not in self.title:
-                self.alias[page.alias] = page.title
-            else:
-                logging.warning(f"duplicate alias '{page.alias}', in file '{page.file}'")
+        if not page.alias:
+            return
+
+        if page.alias in self.alias:
+            logging.warning(f"duplicate alias '{page.alias}', in file '{page.file}', compare to '{self.alias[page.alias]}'")
+            return
+
+        if page.alias in self.title:
+            logging.warning(f"duplicate title '{page.alias}', in file '{page.file}', compare to '{self.title[page.alias]}'")
+            return
+
+        self.alias[page.alias] = page.title
 
     def update_tags(self, page):
         """Update the index of tags.
@@ -69,9 +77,11 @@ class Index():
             page (Page): The page to index
         """
 
-        if 'tags' in page.meta:
-            for tag in page.meta['tags']:
-                self.tags[tag.replace('[', '').replace(']', '').lower()].add(page.title)
+        if 'tags' not in page.meta:
+            return
+
+        for tag in page.meta['tags']:
+            self.tags[tag.replace('[', '').replace(']', '').lower()].add(page.title)
 
     def update_search(self, page):
         """Update the search index with strings extracted from metadata in a
