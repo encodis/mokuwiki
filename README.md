@@ -223,11 +223,13 @@ Include one file in another using the following markup: `<<include_me.md>>`. Any
 
 Blank lines will be inserted between the contents of each file, and separators can be inserted between each one by using the syntax `<<include_X*Y.dat|* * *>>`. (The default is no separator, but "* * *" is a useful one as it becomes a horizontal rule when processed by `pandoc`. )
 
-A prefix can also be inserted in front of each *line* of the included files by specifying it as a third 'argument'. For example, `<<include_X*Y.dat|* * *|> >>` will insert `> ` in front of each line, including the content of the file as a block quote. To do so without a separator between files just leave that argument empty: `<<include_X*Y.dat||> >>`.
+A prefix can also be inserted in front of each *line* of the included files by specifying it as a third 'argument'. For example, `<<include_X*Y.dat|* * *|> >>` will insert `> ` in front of each line, thereby including the content of the file as a block quote. To do so without a separator between files just leave that argument empty: `<<include_X*Y.dat||> >>`.
 
-Although the metadata section of each included file is discarded, it is parsed. This allows MokuWiki to substitute those metadata values into the body of the included file using certain placeholders: `?{value}` or just `?value`. (The former is preferred to reduce ambiguity.) For example, to include the date (assuming there is such a metadata) field, you would have the text "this is the ?{date}" in the file body. This behaviour is on by default, but can be turned off using the `-R` or `--replace` flags.
+Although the metadata section of each included file is discarded, it *is* parsed. This allows MokuWiki to substitute those metadata values into the body of the included file using certain placeholders: `?{value}` or just `?value`. (The former is preferred to reduce ambiguity.) For example, to include the date (assuming there is such a metadata) field, you would have the text "this is the ?{date}" in the file body. This behaviour is on by default, but can be turned off using the `-R` or `--replace` flags.
 
 Two specific metadata fields are also recognized. If either (or both) of the fields `prefix` or `suffix` are present they will be prepended/appended to the file's content before further processing. In essence, these act as though the directives `?{prefix}` and `?{suffix}` were embedded in the body of the file.
+
+EXAMPLES OF PREFIX, SUFFIX
 
 ### Image links
 
