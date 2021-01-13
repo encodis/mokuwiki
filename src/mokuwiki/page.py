@@ -337,9 +337,12 @@ class Page():
         # create list of files
         incl_contents = ''
 
+        if len(incl_list) == 0:
+            return incl_contents
+
         for incl_file in incl_list[:-1]:
             incl_contents += get_incl_file_contents(incl_file, file_sep, line_prefix)
-
+        
         incl_contents += get_incl_file_contents(incl_list[-1], '', line_prefix)
 
         # return contents of all matched files
