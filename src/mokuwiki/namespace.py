@@ -73,6 +73,7 @@ class Namespace():
         self.broken_css = config.get('broken_css', '.broken')
         self.tags_css = config.get('tags_css', '.tags')
         self.custom_css = config.get('custom_css', '.smallcaps')
+        self.noise_tags = config.get('noise_tags', '').split(',')
 
         self.search_fields = config.get('search_fields', False)
 

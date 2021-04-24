@@ -42,7 +42,7 @@ class Page():
     tags_repl_re = re.compile(r"\{\{([\w\s\*#@'+-]*)\}\}")
     page_link_re = re.compile(r"\[\[([\w\s(),.:|'-]*)\]\]")
     image_link_re = re.compile(r"!!([\w\s,.:|'-]*)!!")
-    custom_style_re = re.compile(r"\^\^([a-zA-Z()\s\d.,_+\[\]-]*?)\^\^")
+    custom_style_re = re.compile(r"\^\^([a-zA-Z()\s\d.,_+/\[\]-]*?)\^\^")
 
     def __init__(self, page_file, namespace, included=False, media='images', custom='.smallcaps'):
         """Initialize a Page object by reading a Markdown file and
@@ -106,6 +106,13 @@ class Page():
         self.file = page_file
 
         self.namespace = namespace
+
+        # remove 'noise' tags for wiki
+        if self.namespace:
+            if 'tags' in self.meta and self.namespace.noise_tags:
+                for tag in self.namespace.noise_tags:
+                    if tag in self.meta['tags']:
+                        self.meta['tags'].remove(tag)
 
         # mainly for single file mode
         self.media = media
@@ -216,6 +223,12 @@ class Page():
         '[apple](apple.html)')
         """
 
+        def add_page_links(name):
+            if name.startswith('[['):
+                return name
+
+            return '[[' + name + ']]'
+
         if not self.namespace.meta_fields:
             return
 
@@ -227,12 +240,13 @@ class Page():
 
             if isinstance(self.meta[field], list):
                 for item in self.meta[field]:
-                    new_field = Page.page_link_re.sub(self.process_page_directives, '[[' + item + ']]')
+                    # TODO add the [[ and ]] if not there (for tags really)
+                    new_field = Page.page_link_re.sub(self.process_page_directives, add_page_links(item))
                     new_fields.append(new_field)
 
                 self.meta[field] = new_fields
             else:
-                self.meta[field] = Page.page_link_re.sub(self.process_page_directives, '[[' + self.meta[field] + ']]')
+                self.meta[field] = Page.page_link_re.sub(self.process_page_directives, add_page_links(self.meta[field]))
 
     def process_file_includes(self, path):
         """Reads the content of all files matching the file specification
@@ -322,7 +336,12 @@ class Page():
         # resolve namespace ref if present
         if ':' in incl_file:
             # if namespace ref exists list is only one file long
+            # in DW terms this will be the path in the 'monster' NS
             incl_file = self.namespace.wiki.get_page_path_by_link(incl_file)
+
+            if not incl_file:
+                return ''
+
             incl_list = [incl_file]
         else:
             # no namespace ref so create globbed list
@@ -342,7 +361,7 @@ class Page():
 
         for incl_file in incl_list[:-1]:
             incl_contents += get_incl_file_contents(incl_file, file_sep, line_prefix)
-        
+
         incl_contents += get_incl_file_contents(incl_list[-1], '', line_prefix)
 
         # return contents of all matched files
@@ -466,26 +485,24 @@ class Page():
 
         """
 
-        # TODO option to just change links to text rather than mark as broken?
+        # TODO the logic for handling names containing a ":" is a bit convoluted!
 
         page_name = str(page.group(1))
         show_name = ''
 
         if '|' in page_name:
-            show_name, page_name = page_name.split('|')
+            show_name, page_name = page_name.split('|', 1)
 
         # resolve namespace
         namespace = ''
 
         if ':' in page_name:
             # e.g. this is a [[x:Page One]] reference
-            namespace, page_name = page_name.rsplit(':', 1)
+            namespace, page_title = page_name.split(':', 1)
+        else:
+            page_title = page_name
 
-        # set show name if not already done
-        if not show_name:
-            show_name = page_name
-
-        # resolve namespace aliases
+        # resolve namespace names or aliases
         if namespace:
             target_ns = self.namespace.wiki.get_ns_by_alias(namespace)
 
@@ -493,24 +510,36 @@ class Page():
                 target_ns = self.namespace.wiki.get_ns_by_name(namespace)
 
             if not target_ns:
-                logging.error(f"no namespace name or alias found for '{namespace}'")
+                if ':' in page_name:
+                    # no valid NS so assume the : is part of the page name
+                    target_ns = self.namespace
+                    page_title = page_name
+                else:
+                    logging.error(f"no namespace name or alias found for '{namespace}' in '{self.file}'")
+                    return Page.make_markdown_span(page_title, self.namespace.wiki.broken_css)
         else:
             target_ns = self.namespace
 
+        # set show name if not already done
+        if not show_name:
+            show_name = page_title
+
         # resolve any alias for the title in the target index
-        if page_name in target_ns.index.alias:
-            page_name = target_ns.index.alias[page_name]
+        # TODO check that index has been created for that NS BEFORE using this
+        # SO need better error message and catch exception and print directive and page
+        if page_title in target_ns.index.alias:
+            page_title = target_ns.index.alias[page_title]
 
         # TODO really need an API for getting aliases etc
 
-        if page_name in target_ns.index.title:
+        if page_title in target_ns.index.title:
             # if title exists in target namespace index make into a link
             ns_path = '' if target_ns is self.namespace else target_ns.name
-            page_link = Page.make_markdown_link(show_name, target_ns.index.title[page_name], ns_path)
+            page_link = Page.make_markdown_link(show_name, target_ns.index.title[page_title], ns_path)
         else:
             # if title does not exist in index then turn into bracketed span with class='broken' (default)
-            page_link = Page.make_markdown_span(page_name, target_ns.wiki.broken_css)
-            target_ns.index.broken.add(page_name)
+            page_link = Page.make_markdown_span(page_title, target_ns.wiki.broken_css)
+            target_ns.index.broken.add(page_title)
 
         return page_link
 

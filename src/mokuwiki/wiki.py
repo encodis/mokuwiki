@@ -149,9 +149,13 @@ class Wiki():
             logging.warning(f"no namespace alias in '{page_link}'")
             return None
 
-        ns_alias, page_title = page_link.split(':')
+        ns_alias, page_title = page_link.split(':', 1)
         namespace = self.get_ns_by_alias(ns_alias)
         page = namespace.get_page_by_title(page_title)
+
+        if not page:
+            logging.error(f"no page titled '{page_title}' in namespace '{namespace.name}'")
+            return None
 
         return page.file
 

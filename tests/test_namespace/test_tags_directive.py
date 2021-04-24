@@ -507,3 +507,51 @@ def test_process_tags_directive_list_tags(tmpdir):
         actual1 = fh.read()
 
     assert compare_markdown_content(expect1, actual1)
+
+def test_process_tags_directive_noise(tmpdir):
+    """Test LIST TAGS
+    """
+
+    source_dir = tmpdir.mkdir('source')
+    source_dir.mkdir('ns1')
+    target_dir = tmpdir.mkdir('target')
+
+    create_markdown_file(source_dir.join('ns1', 'file1.md'),
+                         {'title': 'Page One',
+                          'tags': '[abc]'},
+                         '{{@}}')
+
+    create_markdown_file(source_dir.join('ns1', 'file2.md'),
+                         {'title': 'Page Two',
+                          'tags': '[abc, def]'},
+                         'Text')
+
+    create_markdown_file(source_dir.join('ns1', 'file3.md'),
+                         {'title': 'Page Three',
+                          'tags': '[xyz]'},
+                         '{{xyz}}')
+
+    create_wiki_config(str(source_dir.join('test.cfg')),
+                       None,
+                       {'name': 'ns1',
+                        'path': f'{source_dir.join("ns1")}',
+                        'target': str(target_dir),
+                        'noise_tags': 'xyz'})
+
+    wiki = Wiki(source_dir.join('test.cfg'))
+
+    wiki.process_namespaces()
+
+    # assert all pages are counted
+    expect1 = create_markdown_string({'title': 'Page One',
+                                      'tags': '[abc]'},
+                                     '''[abc]{.tag}
+
+[def]{.tag}''')
+
+    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+
+    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
+        actual1 = fh.read()
+
+    assert compare_markdown_content(expect1, actual1)

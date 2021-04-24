@@ -38,6 +38,7 @@ noise_words = x,y,z
 name = namespace1
 alias = ns1
 path = ./folder1/pages
+noise_tags = xxx,yyy,zzz
 ```
 
 A __wiki__ is composed of one or more __namespaces__; each namespace contains a number of __pages__. The folder containing the configuration file is assumed to be the root folder. Each namespace is in a sub-folder of this root folder, with the folder name given by the `path` configuration option for that namespace. So in the example above the pages for the namespace called "Namespace 1" live in the `folder1/pages` folder. Once processed these files will end up in the `build/namespace1` folder --- the wiki options set the base target and the namespace's `name` sets the folder name within that. 
