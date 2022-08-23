@@ -535,7 +535,7 @@ class Page():
         if page_title in target_ns.index.title:
             # if title exists in target namespace index make into a link
             ns_path = '' if target_ns is self.namespace else target_ns.name
-            page_link = Page.make_markdown_link(show_name, target_ns.index.title[page_title], ns_path)
+            page_link = Page.make_markdown_link(show_name, target_ns.index.title[page_title], ns_path, target_ns.is_root)
         else:
             # if title does not exist in index then turn into bracketed span with class='broken' (default)
             page_link = Page.make_markdown_span(page_title, target_ns.wiki.broken_css)
@@ -606,13 +606,20 @@ class Page():
         return name
 
     @staticmethod
-    def make_markdown_link(show_name, page_name, ns_path=''):
+    def make_markdown_link(show_name, page_name, ns_path='', root_ns=False):
         # TODO if namespace targets could be different then you would need to
         # factor that in here
-        if ns_path:
-            return f'[{show_name}]({os.path.join(os.pardir, ns_path, page_name)}.html)'
 
-        return f'[{show_name}]({page_name}.html)'
+        if not ns_path:
+            # source and target NS are the same
+            return f'[{show_name}]({page_name}.html)'
+
+        if root_ns:
+            # if target is root just go up one level
+            return f'[{show_name}]({os.path.join(os.pardir, page_name)}.html)'
+
+        # otherwise go up and come back down
+        return f'[{show_name}]({os.path.join(os.pardir, ns_path, page_name)}.html)'
 
     @staticmethod
     def make_image_link(image_name, ext='jpg', media_dir=''):
@@ -644,3 +651,24 @@ def mwpage(args=None):
     page = Page(args.source, None, media=args.media, custom=args.custom)
     page.process_directives()
     page.save(args.target)
+
+
+def mwmeta(args=None):
+
+    if args is None:
+        args = sys.argv[1:]
+
+    parser = argparse.ArgumentParser(description='Output page metadata using template')
+    parser.add_argument('template', help='Template string')
+    parser.add_argument('sources', help='Source file(s)')
+
+    args = parser.parse_args(args)
+
+    files = sorted(set(glob.glob(os.path.normpath(os.path.join(os.getcwd(), args.sources)), recursive=True)))
+
+    for file in files:
+        page = Page(file, None)
+    
+        output = MetadataReplace(args.template).safe_substitute(page.meta)
+    
+        print(output + '\n')

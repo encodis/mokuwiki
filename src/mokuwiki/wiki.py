@@ -56,7 +56,7 @@ class Wiki():
             pass
 
         self.wikiname = config['DEFAULT'].get('wikiname', 'Wiki')
-
+        
         # default target path for each namespace, can be overidden by namespace initialization
         self.target = config['DEFAULT'].get('target', target)
 
@@ -82,14 +82,54 @@ class Wiki():
         # set default noise word list or file, will be read by each namespace
         self.noise_words = config['DEFAULT'].get('noise_words', '')
 
-        # TODO auto-discover namespaces (if none specified in config) by looking
-        # at sub-folders of wiki.path (or wiki.source?). No aliasese available
-        # but would be easy. Also could we set defaults if no config file specified?
-
+        # TODO the config file has a meta_fields entry but this is not stored
+        self.content_dir = config['DEFAULT'].get('content_dir', '')
+        self.media_dir = config['DEFAULT'].get('media_dir', '')
+        self.pages_dir = config['DEFAULT'].get('pages_dir', '')
+        
+        self.root_ns = config['DEFAULT'].get('root_ns', '')        
+        
         # create namespaces
         self.namespaces = {}
 
+        # TODO look for root_ns config option and add root namespace with
+        # predefined aliases (:/ .. and -) then Namespace() should have 
+        # an "is_root" arg but note root/pages go into "/" on deployment
+
+        # read in individual namespace configs and combine into main config
+        # NOTE: this is for more flexibility and to allow ANT build scripts
+        # to read the config files are property files
+        namespaces = [n.strip() for n in config['DEFAULT']['namespaces'].split(',')]
+
+        for namespace in namespaces:
+            ns_config = configparser.ConfigParser()
+            ns_config.read(os.path.join(self.content_dir, namespace, 'ns.cfg'))
+            config.add_section(namespace)
+
+            for k, v in ns_config[namespace].items():
+                config[namespace][k] = v
+
+        # create root namespace
+        if self.root_ns:
+            # create dummay root section
+            # FIXME: this is hacky as all hell!
+            # possibly could have a root/ns.cfg with these are defaults if not present
+            # then one of the ns.cfg's would have is_root = true (which would be this default)
+            # and then wiki.cfg "root_ns" is just name of the root namespace, not path
+            config.add_section('root')
+            config['root']['name'] = 'root'
+            config['root']['alias'] = '/'
+            config['root']['path'] = os.path.join(self.root_ns, self.pages_dir)
+            config['root']['is_root'] = 'true'
+             
+            namespace = Namespace(config['root'], self)
+            self.namespaces['root'] = namespace
+
+        # create individual namespaces
         for section in config.sections():
+            if section == 'root':
+                continue
+            
             namespace = Namespace(config[section], self)
 
             if not namespace.valid:
@@ -151,6 +191,11 @@ class Wiki():
 
         ns_alias, page_title = page_link.split(':', 1)
         namespace = self.get_ns_by_alias(ns_alias)
+        
+        if not namespace:
+            logging.error(f"no namespace found for alias '{ns_alias}'")
+            return None
+        
         page = namespace.get_page_by_title(page_title)
 
         if not page:

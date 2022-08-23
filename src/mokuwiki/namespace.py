@@ -51,11 +51,16 @@ class Namespace():
 
         # check path exists
         self.path = config.get('path', '')
+        # self.path = config.get('path', f"{content_dir}/{self.name}/{pages_dir}")
 
         if not self.path or not os.path.isdir(self.path):
             logging.warning(f"namespace path '{self.path}' does not exist, skipping")
             self.valid = False
+            # TODO raise execption and have caller catch it
             return
+
+        # is root namespace?
+        self.is_root = True if config.get('is_root', '') == 'true' else False
 
         # set target, default target root will be wiki target
         self.target = config.get('target', '')

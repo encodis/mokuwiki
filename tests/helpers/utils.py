@@ -23,7 +23,8 @@ def create_wiki_config(file_name, default, *namespaces):
                              'custom_css': '.smallcaps',
                              'search_fields': '',
                              'search_prefix': '',
-                             'meta_fields': ''}
+                             'meta_fields': '',
+                             'namespaces': 'ns1, ns2'}
 
     if len(namespaces) == 0:
         config['ns1'] = {'name': 'ns1',
