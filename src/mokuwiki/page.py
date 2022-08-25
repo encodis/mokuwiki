@@ -661,14 +661,30 @@ def mwmeta(args=None):
     parser = argparse.ArgumentParser(description='Output page metadata using template')
     parser.add_argument('template', help='Template string')
     parser.add_argument('sources', help='Source file(s)')
+    parser.add_argument('--filter', default='', action='store', help='Filter on tags')
 
     args = parser.parse_args(args)
+
+    keep_filter = set()
+    drop_filter = set()    
+
+    if args.filter:
+        keep_filter = set([f for f in args.filter.split(',') if not f.startswith('!')])
+        drop_filter = set([f[1:] for f in args.filter.split(',') if f.startswith('!')])
 
     files = sorted(set(glob.glob(os.path.normpath(os.path.join(os.getcwd(), args.sources)), recursive=True)))
 
     for file in files:
         page = Page(file, None)
-    
+
+        tags = set(page.meta['tags'])
+        
+        if args.filter and tags:
+            if drop_filter and len(drop_filter.intersection(tags)) != 0:
+                continue
+            if keep_filter and len(keep_filter.intersection(tags)) != len(keep_filter):
+                continue
+
         output = MetadataReplace(args.template).safe_substitute(page.meta)
-    
+
         print(output + '\n')
