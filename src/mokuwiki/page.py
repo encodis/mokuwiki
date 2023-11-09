@@ -246,7 +246,9 @@ class Page():
 
                 self.meta[field] = new_fields
             else:
-                self.meta[field] = Page.page_link_re.sub(self.process_page_directives, add_page_links(self.meta[field]))
+                # string field, only update if not blank
+                if self.meta[field]:
+                    self.meta[field] = Page.page_link_re.sub(self.process_page_directives, add_page_links(self.meta[field]))
 
     def process_file_includes(self, path):
         """Reads the content of all files matching the file specification

@@ -33,6 +33,8 @@ class Wiki():
 
         # TODO could we just have properties to pull what we need out of config as required?
 
+        # TODO should have config.py with all config stuff in it, and maybe better way of
+        # accessing NS/root config properties
         config = configparser.ConfigParser()
         config.read(config_file)
 
