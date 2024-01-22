@@ -1,57 +1,75 @@
-import os
-
 from mokuwiki.page import Page
 
-from utils import create_markdown_file, create_markdown_string, compare_markdown_content
+from utils import Markdown
 
 
-def test_process_image_links(tmpdir):
-    source_dir = tmpdir.mkdir('source')
-    target_dir = tmpdir.mkdir('target')
+def test_process_image_links(tmp_path):
+    
+    source = tmp_path / 'source'
+    source.mkdir()
 
-    create_markdown_file(source_dir.join('file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '!!An Image!!')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    page = Page(source_dir.join('file1.md'), None)
+    file1 = source / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   ...
+                   !!An Image!!
+                   """)
+
+    page = Page(file1, None)
     page.process_directives()
-    page.save(target_dir.join('file1.md'))
+        
+    page.save(target / 'page_one.md')
 
-    expect = create_markdown_string({'title': 'Page One',
-                                     'tags': '[abc]'},
-                                    '![An Image](images/an_image.jpg)')
+    actual1 = target / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    ![An Image](images/an_image.jpg)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+    
+def test_process_image_links_format(tmp_path):
+    
+    source = tmp_path / 'source'
+    source.mkdir()
 
-    assert os.path.exists(target_dir.join('file1.md'))
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    with open(target_dir.join('file1.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
+    file1 = source / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   ...
+                   !!An Image|png!!
+                   """)
 
-    assert compare_markdown_content(expect, actual)
-
-
-def test_process_image_links_format(tmpdir):
-    source_dir = tmpdir.mkdir('source')
-    target_dir = tmpdir.mkdir('target')
-
-    create_markdown_file(source_dir.join('file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '!!An Image|png!!')
-
-    page = Page(source_dir.join('file1.md'), None)
+    page = Page(file1, None)
     page.process_directives()
-    page.save(target_dir.join('file1.md'))
+        
+    page.save(target / 'page_one.md')
 
-    expect = create_markdown_string({'title': 'Page One',
-                                     'tags': '[abc]'},
-                                    '![An Image](images/an_image.png)')
+    actual1 = target / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    ![An Image](images/an_image.png)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
 
-    assert os.path.exists(target_dir.join('file1.md'))
-
-    with open(target_dir.join('file1.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert compare_markdown_content(expect, actual)
 
 # TODO test media dir if settable in single file mode

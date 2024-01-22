@@ -1,42 +1,48 @@
-import os
-
 from mokuwiki.page import Page
 
-from utils import create_markdown_file, create_markdown_string, compare_markdown_content
+from utils import Markdown
 
-# these tests can be done in single file mode, as we're just testing page functionality
+# NOTE: these tests can be done in single file mode, as we're just testing page functionality
 
 
-def test_convert_comment(tmpdir):
-    source_dir = tmpdir.mkdir('source')
-    target_dir = tmpdir.mkdir('target')
+def test_convert_comment(tmp_path):
 
-    create_markdown_file(source_dir.join('file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '''A line of text.
+    source = tmp_path / 'source'
+    source.mkdir()
 
-// A comment
+    target = tmp_path / 'target'
+    target.mkdir()
 
-Text ending in a // comment
-''')
+    file1 = source / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   ...
+                   A line of text
+                   
+                   // A comment
+                   
+                   Text ending in // a comment
+                   """)
 
-    page = Page(source_dir.join('file1.md'), None)
+    page = Page(file1, None)
     page.process_directives()
-    page.save(target_dir.join('file1.md'))
+        
+    page.save(target / 'page_one.md')
 
-    expect = create_markdown_string({'title': 'Page One',
-                                     'tags': '[abc]'},
-                                    '''A line of text.
-
-
-
-Text ending in a 
-''')
-
-    assert os.path.exists(target_dir.join('file1.md'))
-
-    with open(target_dir.join('file1.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert compare_markdown_content(expect, actual)
+    actual1 = target / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    A line of text
+    
+    
+    
+    Text ending in 
+    """
+    
+    assert Markdown.compare(expect1, actual1)

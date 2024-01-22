@@ -11,6 +11,7 @@ import re
 import sys
 import yaml
 import glob
+from pathlib import Path
 import argparse
 import subprocess
 
@@ -21,13 +22,12 @@ logging.basicConfig(format='mokuwiki: %(levelname)s %(message)s', level=logging.
 
 
 class MetadataReplace(Template):
-    """Subclass of Template to allow for different
-    template character.
+    """Subclass of Template to allow for different template character.
     """
     delimiter = '?'
 
 
-class Page():
+class Page:
     """The Page class definition.
 
     A Page instance contains the (YAML) metadata and contents of a
@@ -36,15 +36,16 @@ class Page():
 
     """
 
-    comment_re = re.compile(r"\/\/\s.*$", re.MULTILINE)
-    file_incl_re = re.compile(r"<<([\w\s,./:|'*?\>-]*)>>")
-    exec_cmd_re = re.compile(r"%%(.*)%%")
-    tags_repl_re = re.compile(r"\{\{([\w\s\*#@'+-]*)\}\}")
-    page_link_re = re.compile(r"\[\[([\w\s(),.:|'-]*)\]\]")
-    image_link_re = re.compile(r"!!([\w\s,.:|'-]*)!!")
-    custom_style_re = re.compile(r"\^\^([a-zA-Z()\s\d.,_+/\[\]-]*?)\^\^")
+    # TODO these could be more complex e.g. include could cover options
+    CommentRE = re.compile(r"\/\/\s.*$", re.MULTILINE)
+    FileIncludeRE = re.compile(r"<<([\w\s,./:|'*?\>-]*)>>")
+    ExecCommandRE = re.compile(r"%%(.*)%%")
+    TagsReplaceRE = re.compile(r"\{\{([\w\s\*#@'+-]*)\}\}")
+    PageLinkRE = re.compile(r"\[\[([\w\s(),.:|'-]*)\]\]")
+    ImageLinkRE = re.compile(r"!!([\w\s,.:|'-]*)!!")
+    CustomeStyleRE = re.compile(r"\^\^([a-zA-Z()\s\d.,_+/\[\]-]*?)\^\^")
 
-    def __init__(self, page_file, namespace, included=False, media='images', custom='.smallcaps'):
+    def __init__(self, page_path, namespace, included=False, media='images', custom='.smallcaps'):
         """Initialize a Page object by reading a Markdown file and
         splitting the contents into metadata and body components.
 
@@ -57,7 +58,7 @@ class Page():
         directives will not be processed.
 
         Args:
-            page_file (str): The page's file name
+            page_path (Path): The page's file name
             namespace (Namespace): The parent namespace of the page.
             included (bool, optional): If true then page was created for an
             include directive and checks are less restrictive. Default is False.
@@ -69,18 +70,16 @@ class Page():
         """
 
         # file name might be empty
-        if not page_file:
-            self.valid = False
-            return
+        if not page_path:
+            raise ValueError
 
         # read file
         try:
-            with open(page_file, 'r', encoding='utf8') as f:
-                contents = f.read()
+            with page_path.open('r', encoding='utf8') as f:
+                contents = f.read().strip()
         except IOError:
-            logging.error(f"could not read file '{page_file}'")
-            self.valid = False
-            return
+            logging.error(f"could not read file '{page_path}'")
+            raise ValueError
 
         if '...' in contents:
             self.meta, _, self.body = contents.partition('...\n')
@@ -91,26 +90,24 @@ class Page():
                 self.meta = {}
                 self.body = contents
             else:
-                logging.warning(f"incorrect metadata specification in '{page_file}'")
-                self.valid = False
-                return
+                logging.warning(f"incorrect metadata specification in '{page_path}'")
+                raise ValueError
 
         if self.meta:
             try:
                 self.meta = yaml.safe_load(self.meta)
             except yaml.YAMLError:
-                logging.warning(f"error in metadata for '{page_file}'")
-                self.valid = False
-                return
+                logging.warning(f"error in metadata for '{page_path}'")
+                raise ValueError
 
-        self.file = page_file
+        self.file = page_path
 
         self.namespace = namespace
 
         # remove 'noise' tags for wiki
         if self.namespace:
-            if 'tags' in self.meta and self.namespace.noise_tags:
-                for tag in self.namespace.noise_tags:
+            if 'tags' in self.meta and self.namespace.config.noise_tags:
+                for tag in self.namespace.config.noise_tags:
                     if tag in self.meta['tags']:
                         self.meta['tags'].remove(tag)
 
@@ -118,10 +115,10 @@ class Page():
         self.media = media
         self.custom = custom
 
-        self.valid = True
-        self.modified = os.path.getmtime(page_file)
+        # self.modified = os.path.getmtime(page_file)
+        self.modified = page_path.stat().st_mtime
 
-        logging.debug(f"read page '{self.file}'")
+        logging.debug(f"created page '{self.file}'")
 
     def __str__(self):
         """The string representation of a page is simply the metadata
@@ -129,8 +126,7 @@ class Page():
         section delimiters are added.
 
         Returns:
-            str: string representation of a page, suitable for writing
-            to a file
+            str: string representation of a page, suitable for writing to a file
         """
 
         return '---\n' + yaml.safe_dump(self.meta, default_flow_style=False) + '...\n' + self.body
@@ -149,11 +145,11 @@ class Page():
 
     @property
     def media_dir(self):
-        return self.namespace.media_dir if self.namespace else self.media
+        return self.namespace.config.media_dir if self.namespace else self.media
 
     @property
     def custom_css(self):
-        return self.namespace.custom_css if self.namespace else self.custom
+        return self.namespace.config.custom_css if self.namespace else self.custom
 
     def save(self, file_name=None):
         """Save a page to a file. This uses the string representation.
@@ -165,11 +161,13 @@ class Page():
         """
 
         if not file_name:
-            target = self.namespace.target if self.namespace else ''
-            file_name = os.path.join(target, self.output) + '.md'
+            target = self.namespace.config.target if self.namespace else ''
+            # file_name = os.path.join(target, self.output) + '.md'
+            file_name = Path(target) / self.output
+            file_name = file_name.with_suffix('.md')
 
         try:
-            with open(file_name, 'w', encoding='utf8') as f:
+            with file_name.open('w', encoding='utf8') as f:
                 f.write(str(self))
         except IOError:
             logging.error(f"could not write output file '{file_name}'")
@@ -186,30 +184,30 @@ class Page():
         """
 
         # remove comments
-        self.body = Page.comment_re.sub('', self.body)
+        self.body = Page.CommentRE.sub('', self.body)
 
         # process file includes
-        self.body = Page.file_incl_re.sub(self.process_file_includes, self.body)
+        self.body = Page.FileIncludeRE.sub(self.process_file_includes, self.body)
 
         # process exec commands
-        self.body = Page.exec_cmd_re.sub(self.process_exec_command, self.body)
+        self.body = Page.ExecCommandRE.sub(self.process_exec_command, self.body)
 
         # these directives are not relevant in single file mode (i.e. when namespace == None)
         if self.namespace:
             # process tag directives
-            self.body = Page.tags_repl_re.sub(self.process_tags_directive, self.body)
+            self.body = Page.TagsReplaceRE.sub(self.process_tags_directive, self.body)
 
             # process page links
-            self.body = Page.page_link_re.sub(self.process_page_directives, self.body)
+            self.body = Page.PageLinkRE.sub(self.process_page_directives, self.body)
 
             # convert metadata into links
             self.convert_metadata_links()
 
         # process image links
-        self.body = Page.image_link_re.sub(self.process_image_links, self.body)
+        self.body = Page.ImageLinkRE.sub(self.process_image_links, self.body)
 
         # process custom style
-        self.body = Page.custom_style_re.sub(self.process_custom_style, self.body)
+        self.body = Page.CustomeStyleRE.sub(self.process_custom_style, self.body)
 
     def convert_metadata_links(self):
         """Convert specified metadata fields into links.
@@ -229,10 +227,10 @@ class Page():
 
             return '[[' + name + ']]'
 
-        if not self.namespace.meta_fields:
+        if not self.namespace.config.meta_fields:
             return
 
-        for field in self.namespace.meta_fields:
+        for field in self.namespace.config.meta_fields:
             if field not in self.meta:
                 continue
 
@@ -241,16 +239,16 @@ class Page():
             if isinstance(self.meta[field], list):
                 for item in self.meta[field]:
                     # TODO add the [[ and ]] if not there (for tags really)
-                    new_field = Page.page_link_re.sub(self.process_page_directives, add_page_links(item))
+                    new_field = Page.PageLinkRE.sub(self.process_page_directives, add_page_links(item))
                     new_fields.append(new_field)
 
                 self.meta[field] = new_fields
             else:
                 # string field, only update if not blank
                 if self.meta[field]:
-                    self.meta[field] = Page.page_link_re.sub(self.process_page_directives, add_page_links(self.meta[field]))
+                    self.meta[field] = Page.PageLinkRE.sub(self.process_page_directives, add_page_links(self.meta[field]))
 
-    def process_file_includes(self, path):
+    def process_file_includes(self, include):
         """Reads the content of all files matching the file specification
         (removing YAML metadata blocks if required) for insertion into the
         calling file. Optionally add a separator between each file and/or
@@ -258,11 +256,12 @@ class Page():
         contents of the included file into a block quote).
 
         Args:
-            file (Match): A Match object corresponding to the file
-            specification
+            file (Match): A Match object corresponding to the file specification
+            
+            REALL spec or match
 
         Returns:
-            str: the concatentated contents of the file specification
+            str: the concatenated contents of the file specification
         """
 
         def get_incl_file_contents(file_name, file_sep='', line_prefix=''):
@@ -285,11 +284,6 @@ class Page():
 
             incl_page = Page(file_name, self.namespace, included=True)
 
-            # TODO check this is robust against non-existant files
-            if not incl_page.valid:
-                logging.error(f"error reading file '{file_name}' for inclusion")
-                return ''
-
             # add body prefix, suffix
             incl_page.body = incl_page.meta.get('prefix', '') + incl_page.body + incl_page.meta.get('suffix', '')
 
@@ -306,7 +300,7 @@ class Page():
 
             return incl_page.body + file_sep
 
-        incl_file = str(path.group(1))
+        file_spec = str(include.group(1))
 
         file_sep = ''
         line_prefix = ''
@@ -314,8 +308,8 @@ class Page():
         options = ''
 
         # get file separator etc, if any
-        if '|' in incl_file:
-            incl_file, *options = incl_file.split('|')
+        if '|' in file_spec:
+            file_spec, *options = file_spec.split('|')
 
         if len(options) == 1:
             file_sep = options[0]
@@ -336,10 +330,12 @@ class Page():
             file_sep = '\n\n'
 
         # resolve namespace ref if present
-        if ':' in incl_file:
+        # TODO replace 'ns1:' with path to content, then glob? this would allow ns1:file*.md?
+        # TODO must also account for single page mode
+        if ':' in file_spec:
             # if namespace ref exists list is only one file long
             # in DW terms this will be the path in the 'monster' NS
-            incl_file = self.namespace.wiki.get_page_path_by_link(incl_file)
+            incl_file = self.namespace.wiki.get_page_path_by_link(file_spec)
 
             if not incl_file:
                 return ''
@@ -347,7 +343,8 @@ class Page():
             incl_list = [incl_file]
         else:
             # no namespace ref so create globbed list
-            incl_list = sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), incl_file))))
+            incl_list = sorted(Path(self.namespace.config.content).glob(file_spec))
+            # incl_list = sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), incl_file))))
 
         # if process is defined run it and return
         if process:
@@ -428,9 +425,9 @@ class Page():
 
             elif '@' in tag_name:
                 # if the first tag contains a "@" then list all tags as bracketed span with class='tag' (default)
-                tag_links = f"]{{{self.namespace.tags_css}}}\n\n["
+                tag_links = f"]{{{self.namespace.config.tags_css}}}\n\n["
                 tag_links = tag_links.join(sorted(self.namespace.index.tags.keys()))
-                tag_links = f"[{tag_links}]{{{self.namespace.tags_css}}}"
+                tag_links = f"[{tag_links}]{{{self.namespace.config.tags_css}}}"
 
             elif '#' in tag_name:
                 # if the first tag contains a "#" then return the count of pages
@@ -518,7 +515,7 @@ class Page():
                     page_title = page_name
                 else:
                     logging.error(f"no namespace name or alias found for '{namespace}' in '{self.file}'")
-                    return Page.make_markdown_span(page_title, self.namespace.wiki.broken_css)
+                    return Page.make_markdown_span(page_title, self.namespace.config.broken_css)
         else:
             target_ns = self.namespace
 
@@ -540,7 +537,7 @@ class Page():
             page_link = Page.make_markdown_link(show_name, target_ns.index.title[page_title], ns_path, target_ns.is_root)
         else:
             # if title does not exist in index then turn into bracketed span with class='broken' (default)
-            page_link = Page.make_markdown_span(page_title, target_ns.wiki.broken_css)
+            page_link = Page.make_markdown_span(page_title, target_ns.config.broken_css)
             target_ns.index.broken.add(page_title)
 
         return page_link
@@ -618,15 +615,16 @@ class Page():
 
         if root_ns:
             # if target is root just go up one level
-            return f'[{show_name}]({os.path.join(os.pardir, page_name)}.html)'
+            return f'[{show_name}](../{page_name}.html)'
 
         # otherwise go up and come back down
-        return f'[{show_name}]({os.path.join(os.pardir, ns_path, page_name)}.html)'
+        return f'[{show_name}](../{ns_path}/{page_name}.html)'
 
     @staticmethod
     def make_image_link(image_name, ext='jpg', media_dir=''):
         if media_dir:
-            return f'![{image_name}]({os.path.join(media_dir, Page.slugify(image_name, ext))})'
+            # return f'![{image_name}]({os.path.join(media_dir, Page.slugify(image_name, ext))})'
+            return f'![{image_name}]({media_dir}/{Page.slugify(image_name, ext)})'
 
         return f'![{image_name}]({Page.slugify(image_name, ext)})'
 
@@ -642,7 +640,7 @@ def mwpage(args=None):
     if args is None:
         args = sys.argv[1:]
 
-    parser = argparse.ArgumentParser(description='Convert Markdown file with directives')
+    parser = argparse.ArgumentParser(description='Convert single Markdown file containing directives')
     parser.add_argument('source', help='Source file')
     parser.add_argument('target', help='Target file')
     parser.add_argument('--media', help='Name of media folder', default='images')
@@ -650,7 +648,12 @@ def mwpage(args=None):
 
     args = parser.parse_args(args)
 
-    page = Page(args.source, None, media=args.media, custom=args.custom)
+    try:
+        page = Page(args.source, None, media=args.media, custom=args.custom)
+    except ValueError:
+        print(f"could not create page {args.source}")
+        sys.exit(0)
+    
     page.process_directives()
     page.save(args.target)
 
@@ -674,11 +677,17 @@ def mwmeta(args=None):
         keep_filter = set([f for f in args.filter.split(',') if not f.startswith('!')])
         drop_filter = set([f[1:] for f in args.filter.split(',') if f.startswith('!')])
 
+    files = Path('.') / args.sources
+
     files = sorted(set(glob.glob(os.path.normpath(os.path.join(os.getcwd(), args.sources)), recursive=True)))
 
     for file in files:
-        page = Page(file, None)
-
+        try:
+            page = Page(file, None)
+        except ValueError:
+            print(f"could not create page {file}")
+            continue
+        
         tags = set(page.meta['tags'])
         
         if args.filter and tags:

@@ -1,107 +1,84 @@
 import yaml
-import configparser
+from textwrap import dedent
+from pathlib import Path
+import logging
 
+class Markdown:
+    
+    def __init__(self) -> None:
+        pass
+    
+    @staticmethod
+    def read(path: Path) -> str:
+        with path.open('r', encoding='utf8') as mf:
+            content = mf.read()
+            
+        return Markdown.tidy(content)
+    
+    @staticmethod
+    def write(path: Path, content: str) -> None:
+        with path.open('w', encoding='utf8') as mf:
+            mf.write(Markdown.tidy(content))
+        
+    @staticmethod
+    def compare(md1, md2, what='both') -> bool:
 
-def create_wiki_config(file_name, default, *namespaces):
-    """Create wiki config file for tests
+        if isinstance(md1, str):
+            md1 = Markdown.tidy(md1)
+        else:
+            md1 = Markdown.read(md1)
 
-    Args:
-        file_name ([type]): [description]
-        default (dict): [description]
-    """
+        if isinstance(md2, str):
+            md2 = Markdown.tidy(md2)
+        else:
+            md2 = Markdown.read(md2)
 
-    config = configparser.ConfigParser()
+        meta1, _, body1 = md1.partition('...\n')
+        meta2, _, body2 = md2.partition('...\n')
 
-    if default:
-        config['DEFAULT'] = default
-    else:
-        config['DEFAULT'] = {'name': 'test wiki',
-                             'target': '.',
-                             'media_dir': 'images',
-                             'broken_css': '.broken',
-                             'tags_css': '.tag',
-                             'custom_css': '.smallcaps',
-                             'search_fields': '',
-                             'search_prefix': '',
-                             'meta_fields': '',
-                             'namespaces': 'ns1, ns2'}
+        if what in ['meta', 'both']:
+            try:
+                meta1 = yaml.safe_load(meta1)
+            except yaml.YAMLError:
+                logging.error('Error in metadata for content 1')
+                return False
 
-    if len(namespaces) == 0:
-        config['ns1'] = {'name': 'ns1',
-                         'alias': 'ns1',
-                         'path': 'ns1'}
-    else:
-        for namespace in namespaces:
-            if 'name' not in namespace:
-                continue
+            try:
+                meta2 = yaml.safe_load(meta2)
+            except yaml.YAMLError:
+                logging.error('Error in metadata for content 2')
+                return False
 
-            config[namespace['name']] = {}
+            if meta1 != meta2:
+                return False
 
-            for k, v in namespace.items():
-                config[namespace['name']][k] = v
+        if what in ['body', 'both']:
+            body1 = Markdown.trim(body1)
+            body2 = Markdown.trim(body2)
+        
+            if body1 != body2:
+                return False
 
-    with open(file_name, 'w', encoding='utf8') as fp:
-        config.write(fp)
+        return True
 
+    @staticmethod
+    def tidy(content: str) -> str:
+        """Remove any line indents
+        """        
+        return dedent(content).strip()
 
-def create_markdown_file(file_handle, meta, body):
-    contents = create_markdown_string(meta, body)
+    @staticmethod
+    def trim(content: str) -> str:
+        """Remove all leading and trailing blank lines
+        """
+        
+        content = content.split('\n')
+        
+        for _ in [1, 2]:
+            for _ in content:
+                if content[-1] == '':
+                    content.pop()
+                
+            content.reverse()
 
-    file_handle.write(contents)
-
-
-def create_markdown_string(meta, body):
-
-    contents = '---\n'
-
-    for k, v in meta.items():
-        contents += f'{k}: {v}\n'
-
-    contents += '...\n' + body
-
-    return contents
-
-
-def compare_markdown_content(file1, file2, compare='both'):
-    """Compare Markdown file metadata
-
-    Args:
-        file1 (str): first file contents
-        file2 (str): second file contents
-        compare (str): compare 'meta', 'body' or 'both'
-
-    Returns:
-        True if metadata are logically the same, False otherwise
-    """
-
-    if '...' in file1:
-        meta1, _, body1 = file1.partition('...\n')
-    else:
-        return False
-
-    if '...' in file2:
-        meta2, _, body2 = file2.partition('...\n')
-    else:
-        return False
-
-    if compare in ['meta', 'both']:
-        try:
-            meta1 = yaml.safe_load(meta1)
-        except yaml.YAMLError:
-            print(f'Error in metadata for file 1')
-            return False
-
-        try:
-            meta2 = yaml.safe_load(meta2)
-        except yaml.YAMLError:
-            print(f'Error in metadata for file 2')
-            return False
-
-        if meta1 != meta2:
-            return False
-
-    if compare in ['body', 'both']:
-        if body1 != body2:
-            return False
-
-    return True
+        return '\n'.join(content)

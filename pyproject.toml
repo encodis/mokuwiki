@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "mokuwiki"
+version = "2.0.0"
+description = "Convert a folder of Markdown documents, replacing inter-page link and tag markup with Markdown links and lists"
+authors = ["Philip Hodder <philip.hodder@encodis.com>"]
+license = "MIT"
+readme = "README.md"
+keywords = ["markdown", "wiki", "converter"]
+classifiers = [
+    'License :: OSI Approved :: MIT License',
+    'Programming Language :: Python :: 3.12',
+    'Topic :: Text Processing :: Markup',
+    'Topic :: Utilities'
+]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pyyaml = "^6.0.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.4"
+deepdiff = "^6.7.1"
+
+[tool.poetry.scripts]
+mokuwiki = "mokuwiki.wiki:mokuwiki"
+mwpage = "mokuwiki.page:mwpage"
+mwmeta = "mokuwiki.page:mwmeta"
+
+[tool.pytest.ini_options]
+norecursedirs = "tests/helpers"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

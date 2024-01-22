@@ -1,55 +1,74 @@
-import os
+from pathlib import Path
 
 from mokuwiki.page import Page
 
-from utils import create_markdown_file, create_markdown_string, compare_markdown_content
+from utils import Markdown
 
 
-def test_process_exec_command(tmpdir):
-    source_dir = tmpdir.mkdir('source')
-    target_dir = tmpdir.mkdir('target')
+def test_process_exec_command(tmp_path):
+    
+    source = tmp_path / 'source'
+    source.mkdir()
 
-    create_markdown_file(source_dir.join('file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '%% ls -1 -d "$PWD"/READ* %%')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    page = Page(source_dir.join('file1.md'), None)
+    file1 = source / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   ...
+                   %% ls -1 -d "$PWD"/READ* %%
+                   """)
+
+    page = Page(file1, None)
     page.process_directives()
-    page.save(target_dir.join('file1.md'))
+        
+    page.save(target / 'page_one.md')
 
-    expect = create_markdown_string({'title': 'Page One',
-                                     'tags': '[abc]'},
-                                    f'{os.getcwd()}/README.md\n')
+    actual1 = target / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = f"""
+    ---
+    title: Page One
+    ...
+    {Path('.').absolute() / 'README.md'}
+    """
+    
+    assert Markdown.compare(expect1, actual1)
 
-    assert os.path.exists(target_dir.join('file1.md'))
+def test_process_exec_command_pipe(tmp_path):
+    
+    source = tmp_path / 'source'
+    source.mkdir()
 
-    with open(os.path.join(target_dir, 'file1.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    assert compare_markdown_content(expect, actual)
+    file1 = source / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   ...
+                   %% find "$PWD" -name READ*  | grep -v cache %%
+                   """)
 
-
-def test_process_exec_command_pipe(tmpdir):
-    source_dir = tmpdir.mkdir('source')
-    target_dir = tmpdir.mkdir('target')
-
-    create_markdown_file(source_dir.join('file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '%% find "$PWD" -name READ*  | cat %%')
-
-    page = Page(source_dir.join('file1.md'), None)
+    page = Page(file1, None)
     page.process_directives()
-    page.save(target_dir.join('file1.md'))
+        
+    page.save(target / 'page_one.md')
 
-    expect = create_markdown_string({'title': 'Page One',
-                                     'tags': '[abc]'},
-                                    f'{os.getcwd()}/README.md\n')
-
-    assert os.path.exists(target_dir.join('file1.md'))
-
-    with open(os.path.join(target_dir, 'file1.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert compare_markdown_content(expect, actual)
+    actual1 = target / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = f"""
+    ---
+    title: Page One
+    ...
+    {Path('.').absolute() / 'README.md'}
+    """
+    
+    assert Markdown.compare(expect1, actual1)

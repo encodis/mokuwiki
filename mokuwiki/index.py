@@ -1,19 +1,18 @@
-import os
 import re
 import json
 import datetime
 import logging
+from pathlib import Path
 
 from collections import defaultdict
 
 
-class Index():
-    """A class containing the various indexes required by a
-    namespace.
+class Index:
+    """A class containing the various indexes required by a namespace.
     """
 
     def __init__(self, namespace):
-        """Initialize an Index instamce
+        """Initialize an Index instance
 
         Args:
             namespace (Namespace): the parent namespace.
@@ -21,7 +20,7 @@ class Index():
 
         self.namespace = namespace
 
-        # note: not the name of the exported JSON file!
+        # note: not the name of the exported JSON file! used in save()
         self.name = '_' + self.namespace.name + '.idx'
 
         # TODO check if saved index exists and is older than mtime of ns path
@@ -93,19 +92,16 @@ class Index():
             page (Page): The page to be indexed
         """
 
-        if not page.valid:
-            return
-
         # test for 'noindex' metadata
         if page.meta.get('noindex', False):
             return
 
-        if not self.namespace.search_fields:
+        if not self.namespace.config.search_fields:
             return
 
         terms = ''
 
-        for field in self.namespace.search_fields:
+        for field in self.namespace.config.search_fields:
 
             if field == '_body_':
                 terms += ' ' + page.body
@@ -124,7 +120,7 @@ class Index():
         terms = re.sub('[^a-z0-9 ]', '', terms.lower())
 
         # remove noise words
-        terms = [term for term in terms.split() if term not in self.namespace.noise_words]
+        terms = [term for term in terms.split() if term not in self.namespace.config.noise_words]
 
         # update index of unique terms
         for term in list(set(terms)):
@@ -134,7 +130,7 @@ class Index():
         """Save the search index as a JSON file. The file name is given
         by the 'search_file' configuration option.
         """
-        search_index = self.namespace.search_prefix + json.dumps(self.search, indent=2)
+        search_index = self.namespace.config.search_prefix + json.dumps(self.search, indent=2)
 
-        with open(os.path.join(self.namespace.target, self.namespace.search_file), 'w', encoding='utf8') as jf:
+        with Path(self.namespace.config.target / self.namespace.config.search_file).open('w', encoding='utf8') as jf:
             jf.write(search_index)

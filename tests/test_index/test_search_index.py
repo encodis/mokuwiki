@@ -1,43 +1,66 @@
-import os
 import json
+import yaml
+from pathlib import Path
 
 import deepdiff
 
 from mokuwiki.wiki import Wiki
 
-from utils import create_wiki_config, create_markdown_file
+from utils import Markdown
 
 
-def test_search_index(tmpdir):
+def test_search_index(tmp_path):
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         'A link to [[Page Two]]')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc]'},
-                         'A link to [[Page One]]')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   A link to [[Page Two]]
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   ...
+                   A link to [[Page One]]
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+              search_fields: ['title', 'tags']
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir),
-                        'search_fields': 'title,tags'})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-    assert os.path.exists(target_dir.join('ns1', '_index.json'))
-
+    page1 = Path(target) / 'ns1' / 'page_one.md'
+    assert page1.exists()
+    
+    page2 = Path(target) / 'ns1' / 'page_two.md'
+    assert page2.exists()
+    
+    index1 = Path(target) / 'ns1' / '_index.json'
+    assert index1.exists()
+    
     expect = {
         "page": [
             ["page_one", "Page One"],
@@ -55,45 +78,69 @@ def test_search_index(tmpdir):
         ]
     }
 
-    with open(target_dir.join('ns1', '_index.json'), 'r', encoding='utf8') as fh:
+    with index1.open('r', encoding='utf8') as fh:
         index = fh.read()
 
     actual = json.loads(index)
+
+    assert len(actual) > 0
 
     # use DeepDiff to compare structures
     assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
 
 
-def test_search_index_prefix(tmpdir):
+def test_search_index_prefix(tmp_path):
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         'A link to [[Page Two]]')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc]'},
-                         'A link to [[Page One]]')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   A link to [[Page Two]]
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   ...
+                   A link to [[Page One]]
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+              search_fields: ['title', 'tags']
+              search_prefix: 'var MW = MW || {{}}; MW.searchIndex = '
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir),
-                        'search_fields': 'title,alias,tags,summary,keywords',
-                        'search_prefix': 'var MW = MW || {};\nMW.searchIndex = '})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
-
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-    assert os.path.exists(target_dir.join('ns1', '_index.json'))
+    
+    page1 = Path(target) / 'ns1' / 'page_one.md'
+    assert page1.exists()
+    
+    page2 = Path(target) / 'ns1' / 'page_two.md'
+    assert page2.exists()
+    
+    index1 = Path(target) / 'ns1' / '_index.json'
+    assert index1.exists()
 
     expect = {
         "page": [
@@ -112,47 +159,69 @@ def test_search_index_prefix(tmpdir):
         ]
     }
 
-    with open(target_dir.join('ns1', '_index.json'), 'r', encoding='utf8') as fh:
+    with index1.open('r', encoding='utf8') as fh:
         index = fh.read()
 
-    assert index.startswith('var MW = MW || {};\nMW.searchIndex =')
+    assert index.startswith('var MW = MW || {}; MW.searchIndex =')
 
     actual = json.loads('{' + index.split('{', 2)[2])
-
+     
     # use DeepDiff to compare structures
     assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
 
 
-def test_search_index_noindex(tmpdir):
+def test_search_index_noindex(tmp_path):
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         'A link to [[Page Two]]')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc]',
-                          'noindex': 'true'},
-                         'A link to [[Page One]]')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   A link to [[Page Two]]
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   noindex: true
+                   ...
+                   A link to [[Page One]]
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+              search_fields: ['title', 'tags']
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir),
-                        'search_fields': 'title,alias,tags,summary,keywords'})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-    assert os.path.exists(target_dir.join('ns1', '_index.json'))
+    page1 = Path(target) / 'ns1' / 'page_one.md'
+    assert page1.exists()
+    
+    page2 = Path(target) / 'ns1' / 'page_two.md'
+    assert page2.exists()
+    
+    index1 = Path(target) / 'ns1' / '_index.json'
+    assert index1.exists()
 
     expect = {
         "page": [
@@ -166,45 +235,66 @@ def test_search_index_noindex(tmpdir):
         ]
     }
 
-    with open(target_dir.join('ns1', '_index.json'), 'r', encoding='utf8') as fh:
+    with index1.open('r', encoding='utf8') as fh:
         index = fh.read()
 
     actual = json.loads(index)
-
+     
     # use DeepDiff to compare structures
     assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
 
+def test_search_index_fields(tmp_path):
 
-def test_search_index_fields(tmpdir):
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'alias': 'First Page',
-                          'tags': '[abc]'},
-                         'A link to [[Page Two]]')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   alias: 'First Page'
+                   tags: [abc]
+                   ...
+                   A link to [[Page Two]]
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   ...
+                   A link to [[Page One]]
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+              search_fields: ['title', 'alias', 'tags']
+        """
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc]'},
-                         'A link to [[Page One]]')
-
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir),
-                        'search_fields': 'title,alias,tags'})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-    assert os.path.exists(target_dir.join('ns1', '_index.json'))
+    page1 = Path(target) / 'ns1' / 'page_one.md'
+    assert page1.exists()
+    
+    page2 = Path(target) / 'ns1' / 'page_two.md'
+    assert page2.exists()
+    
+    index1 = Path(target) / 'ns1' / '_index.json'
+    assert index1.exists()
 
     expect = {
         "page": [
@@ -226,44 +316,65 @@ def test_search_index_fields(tmpdir):
         ]
     }
 
-    with open(target_dir.join('ns1', '_index.json'), 'r', encoding='utf8') as fh:
+    with index1.open('r', encoding='utf8') as fh:
         index = fh.read()
 
     actual = json.loads(index)
-
+     
     # use DeepDiff to compare structures
     assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
 
+def test_search_index_content(tmp_path):
 
-def test_search_index_content(tmpdir):
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         'A link to [[Page Two]]')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   A link to [[Page Two]]
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   ...
+                   Text
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+              search_fields: ['title', 'tags', '_body_']
+        """
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc]'},
-                         'Text')
-
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir),
-                        'search_fields': 'title,tags,_body_'})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-    assert os.path.exists(target_dir.join('ns1', '_index.json'))
+    page1 = Path(target) / 'ns1' / 'page_one.md'
+    assert page1.exists()
+    
+    page2 = Path(target) / 'ns1' / 'page_two.md'
+    assert page2.exists()
+    
+    index1 = Path(target) / 'ns1' / '_index.json'
+    assert index1.exists()
 
     expect = {
         "page": [
@@ -289,45 +400,66 @@ def test_search_index_content(tmpdir):
         ]
     }
 
-    with open(target_dir.join('ns1', '_index.json'), 'r', encoding='utf8') as fh:
+    with index1.open('r', encoding='utf8') as fh:
         index = fh.read()
 
     actual = json.loads(index)
-
+     
     # use DeepDiff to compare structures
     assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
 
+def test_search_index_noise_words_none(tmp_path):
 
-def test_search_index_noise_words_none(tmpdir):
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         'A link to [[Page Two]]')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   A link to [[Page Two]]
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   ...
+                   A link to [[Page One]]
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+              search_fields: ['title', 'tags', '_body_']
+              noise_words: 
+        """
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc]'},
-                         'A link to [[Page One]]')
-
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir),
-                        'search_fields': 'title,tags,_body_',
-                        'noise_words': '_'})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-    assert os.path.exists(target_dir.join('ns1', '_index.json'))
+    page1 = Path(target) / 'ns1' / 'page_one.md'
+    assert page1.exists()
+    
+    page2 = Path(target) / 'ns1' / 'page_two.md'
+    assert page2.exists()
+    
+    index1 = Path(target) / 'ns1' / '_index.json'
+    assert index1.exists()
 
     expect = {
         "page": [
@@ -360,47 +492,68 @@ def test_search_index_noise_words_none(tmpdir):
         ]
     }
 
-    with open(target_dir.join('ns1', '_index.json'), 'r', encoding='utf8') as fh:
+    with index1.open('r', encoding='utf8') as fh:
         index = fh.read()
 
     actual = json.loads(index)
-
+     
     # use DeepDiff to compare structures
     assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
 
+def test_search_index_noise_words_list(tmp_path):
 
-def test_search_index_noise_words_string(tmpdir):
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'alias': 'First Apple',
-                          'tags': '[abc]'},
-                         'A link to [[Page Two]]')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   alias: First Page
+                   tags: [abc]
+                   ...
+                   A link to [[Page Two]]
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   alias: Second Page
+                   tags: [abc]
+                   ...
+                   A link to [[Page One]]
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+              search_fields: ['title', 'tags', 'alias', '_body_']
+              noise_words: ['first', 'link', 'a', 'to']
+        """
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'alias': 'Second',
-                          'tags': '[abc]'},
-                         'A link to [[Page One]]')
-
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir),
-                        'search_fields': 'title,alias,tags',
-                        'noise_words': 'first, apple'})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-    assert os.path.exists(target_dir.join('ns1', '_index.json'))
+    page1 = Path(target) / 'ns1' / 'page_one.md'
+    assert page1.exists()
+
+    page2 = Path(target) / 'ns1' / 'page_two.md'
+    assert page2.exists()
+    
+    index1 = Path(target) / 'ns1' / '_index.json'
+    assert index1.exists()
 
     expect = {
         "page": [
@@ -412,9 +565,11 @@ def test_search_index_noise_words_string(tmpdir):
             ["page_two", "Page Two"]
         ],
         "one": [
-            ["page_one", "Page One"]
+            ["page_one", "Page One"],
+            ["page_two", "Page Two"]
         ],
         "two": [
+            ["page_one", "Page One"],
             ["page_two", "Page Two"]
         ],
         "second": [
@@ -422,7 +577,7 @@ def test_search_index_noise_words_string(tmpdir):
         ]
     }
 
-    with open(target_dir.join('ns1', '_index.json'), 'r', encoding='utf8') as fh:
+    with index1.open('r', encoding='utf8') as fh:
         index = fh.read()
 
     actual = json.loads(index)
@@ -430,42 +585,63 @@ def test_search_index_noise_words_string(tmpdir):
     # use DeepDiff to compare structures
     assert not deepdiff.DeepDiff(expect, actual, ignore_order=True)
 
+def test_search_index_noise_file(tmp_path):
 
-def test_search_index_noise_file(tmpdir):
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'alias': 'First Apple',
-                          'tags': '[abc]'},
-                         'A link to [[Page Two]]')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   alias: First Page
+                   tags: [abc]
+                   ...
+                   A link to [[Page Two]]
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   alias: Second Page
+                   tags: [abc]
+                   ...
+                   A link to [[Page One]]
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'alias': 'Second',
-                          'tags': '[abc]'},
-                         'A link to [[Page One]]')
+    noise = source / 'noise.txt'
+    noise.write_text('first\nlink\na\nto')
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+              search_fields: ['title', 'tags', 'alias', '_body_']
+              noise_words: {noise}
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir),
-                        'search_fields': 'title,alias,tags',
-                        'noise_words': f'file:{source_dir.join("noise.txt")}'})
-
-    nf = source_dir.join('noise.txt')
-    nf.write('first\napple\n')
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-    assert os.path.exists(target_dir.join('ns1', '_index.json'))
+    page1 = Path(target) / 'ns1' / 'page_one.md'
+    assert page1.exists()
+
+    page2 = Path(target) / 'ns1' / 'page_two.md'
+    assert page2.exists()
+    
+    index1 = Path(target) / 'ns1' / '_index.json'
+    assert index1.exists()
 
     expect = {
         "page": [
@@ -477,9 +653,11 @@ def test_search_index_noise_file(tmpdir):
             ["page_two", "Page Two"]
         ],
         "one": [
-            ["page_one", "Page One"]
+            ["page_one", "Page One"],
+            ["page_two", "Page Two"]
         ],
         "two": [
+            ["page_one", "Page One"],
             ["page_two", "Page Two"]
         ],
         "second": [
@@ -487,7 +665,7 @@ def test_search_index_noise_file(tmpdir):
         ]
     }
 
-    with open(target_dir.join('ns1', '_index.json'), 'r', encoding='utf8') as fh:
+    with index1.open('r', encoding='utf8') as fh:
         index = fh.read()
 
     actual = json.loads(index)

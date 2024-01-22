@@ -1,32 +1,40 @@
-import os
-
 from mokuwiki.page import Page
 
-from utils import create_markdown_file, create_markdown_string, compare_markdown_content
+from utils import Markdown
 
+def test_process_custom_style(tmp_path):
+    
+    source = tmp_path / 'source'
+    source.mkdir()
 
-def test_process_custom_style(tmpdir):
-    source_dir = tmpdir.mkdir('source')
-    target_dir = tmpdir.mkdir('target')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         'A ^^custom^^ style')
+    file1 = source / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   ...
+                   A ^^custom style^^ in a line
+                   """)
 
-    page = Page(source_dir.join('file1.md'), None)
+    page = Page(file1, None)
     page.process_directives()
-    page.save(target_dir.join('file1.md'))
+        
+    page.save(target / 'page_one.md')
 
-    expect = create_markdown_string({'title': 'Page One',
-                                     'tags': '[abc]'},
-                                    'A [custom]{.smallcaps} style')
-
-    assert os.path.exists(target_dir.join('file1.md'))
-
-    with open(target_dir.join('file1.md'), 'r', encoding='utf8') as fh:
-        actual = fh.read()
-
-    assert compare_markdown_content(expect, actual)
+    actual1 = target / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    A [custom style]{.smallcaps} in a line
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+    
 
 # TODO test a link that has custom styling, but will need two pages in a namespace

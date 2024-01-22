@@ -1,312 +1,479 @@
 import os
+from pathlib import Path
+
+import yaml
 
 from mokuwiki.wiki import Wiki
 
-from utils import create_wiki_config, create_markdown_file, create_markdown_string, compare_markdown_content
+from utils import Markdown
 
 
-def test_process_file_includes(tmpdir):
+def test_process_file_includes(tmp_path):
+    
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One'},
-                         f'<<{source_dir.join("ns1", "file2.md")}>>')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   f"""
+                   ---
+                   title: Page One
+                   ...
+                   <<file2.md>>
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   ...
+                   Included Text
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two'},
-                         'Included Text')
-
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    expect1 = create_markdown_string({'title': 'Page One'},
-                                     '''Included Text''')
+    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    assert actual1.exists()
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    Included Text
+    """
+    
+    assert Markdown.compare(expect1, actual1)
 
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
+def test_process_file_includes_globbing(tmp_path):
 
-    assert compare_markdown_content(expect1, actual1)
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
+    target = tmp_path / 'target'
+    target.mkdir()
 
-def test_process_file_includes_globbing(tmpdir):
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   f"""
+                   ---
+                   title: Page One
+                   ...
+                   <<fileX*.md>>
+                   """)
+    
+    file2 = ns1 / 'fileX2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   ...
+                   Included Two
+                   """)
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    file3 = ns1 / 'fileX3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [abc]
+                   ...
+                   Included Three
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One'},
-                         f'<<{source_dir.join("ns1", "fileX*.md")}>>')
-
-    create_markdown_file(source_dir.join('ns1', 'fileX2.md'),
-                         {'title': 'Page Two'},
-                         'Included Text 2')
-
-    create_markdown_file(source_dir.join('ns1', 'fileX3.md'),
-                         {'title': 'Page Three'},
-                         'Included Text 3')
-
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    expect1 = create_markdown_string({'title': 'Page One'},
-                                     '''Included Text 2
+    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    assert actual1.exists()
 
-Included Text 3''')
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    Included Two
+    
+    Included Three
+    """
+        
+    assert Markdown.compare(expect1, actual1)
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+def test_process_file_includes_separator(tmp_path):
 
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    assert compare_markdown_content(expect1, actual1)
+    target = tmp_path / 'target'
+    target.mkdir()
 
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   f"""
+                   ---
+                   title: Page One
+                   ...
+                   <<fileX*.md|* * *>>
+                   """)
+    
+    file2 = ns1 / 'fileX2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   ...
+                   Included Two
+                   """)
 
-def test_process_file_includes_separator(tmpdir):
+    file3 = ns1 / 'fileX3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [abc]
+                   ...
+                   Included Three
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
-
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One'},
-                         f'<<{source_dir.join("ns1", "fileX*.md|* * *")}>>')
-
-    create_markdown_file(source_dir.join('ns1', 'fileX2.md'),
-                         {'title': 'Page Two'},
-                         'Included Text 2')
-
-    create_markdown_file(source_dir.join('ns1', 'fileX3.md'),
-                         {'title': 'Page Three'},
-                         'Included Text 3')
-
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    expect1 = create_markdown_string({'title': 'Page One'},
-                                     '''Included Text 2
+    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    assert actual1.exists()
 
-* * *
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    Included Two
+    
+    * * *
+    
+    Included Three
+    """
+        
+    assert Markdown.compare(expect1, actual1)
 
-Included Text 3''')
-
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
+def test_process_file_includes_different_namespace(tmp_path):
+    pass
 
 
-def test_process_file_includes_line_prefix(tmpdir):
+def test_process_file_includes_line_prefix(tmp_path):
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One'},
-                         f'<<{source_dir.join("ns1", "file2.md")}||> >>')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two'},
-                         '''Included Text''')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   f"""
+                   ---
+                   title: Page One
+                   ...
+                   <<file2.md||> >>
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   ...
+                   Included Text
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    expect1 = create_markdown_string({'title': 'Page One'},
-                                     '''> Included Text''')
+    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    assert actual1.exists()
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    > Included Text
+    """
+        
+    assert Markdown.compare(expect1, actual1)
 
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
+def test_process_file_includes_separator_and_line_prefix(tmp_path):
 
-    assert compare_markdown_content(expect1, actual1)
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
+    target = tmp_path / 'target'
+    target.mkdir()
 
-def test_process_file_includes_separator_and_line_prefix(tmpdir):
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   f"""
+                   ---
+                   title: Page One
+                   ...
+                   <<fileX*.md|* * *|> >>
+                   """)
+    
+    file2 = ns1 / 'fileX2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   ...
+                   Included Two
+                   """)
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    file3 = ns1 / 'fileX3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [abc]
+                   ...
+                   Included Three
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One'},
-                         f'<<{source_dir.join("ns1", "fileX*.md")}|* * *|> >>')
-
-    create_markdown_file(source_dir.join('ns1', 'fileX2.md'),
-                         {'title': 'Page Two'},
-                         'Included Text 2')
-
-    create_markdown_file(source_dir.join('ns1', 'fileX3.md'),
-                         {'title': 'Page Three'},
-                         'Included Text 3')
-
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    expect1 = create_markdown_string({'title': 'Page One'},
-                                     '''> Included Text 2
+    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    assert actual1.exists()
 
-* * *
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    > Included Two
+    
+    * * *
+    
+    > Included Three
+    """
+        
+    assert Markdown.compare(expect1, actual1)
 
-> Included Text 3''')
+def test_process_file_includes_prefix_and_suffix(tmp_path):
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    assert compare_markdown_content(expect1, actual1)
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   f"""
+                   ---
+                   title: Page One
+                   ...
+                   <<file2.md>>
+                   """)
 
-
-def test_process_file_includes_prefix_and_suffix(tmpdir):
-
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
-
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One'},
-                         f'<<{source_dir.join("ns1", "file2.md")}>>')
-
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'prefix': '"The prefix line\n\n"',
-                          'suffix': '"\n\nThe suffix line"'},
-                         'Included Text')
-
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
-    wiki.process_namespaces()
-
-    expect1 = create_markdown_string({'title': 'Page One'},
-                                     '''The prefix line
+    # note: 'Included Text' is left justifed because the \n in the prefix messes up dedent()
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Three
+                   prefix: 'The prefix line\n\n'
+                   suffix: '\n\nThe suffix line'
+                   ...
 Included Text
-The suffix line''')
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
-
-
-def test_process_file_includes_metadata_replace(tmpdir):
-
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
-
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One'},
-                         f'<<{source_dir.join("ns1", "file2.md")}>>')
-
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two'},
-                         'Included page is ?{title}')
-
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    expect1 = create_markdown_string({'title': 'Page One'},
-                                     '''Included page is Page Two''')
+    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    assert actual1.exists()
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    The prefix line
+    Included Text
+    The suffix line
+    """
+        
+    assert Markdown.compare(expect1, actual1)
 
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
+def test_process_file_includes_metadata_replace(tmp_path):
 
-    assert compare_markdown_content(expect1, actual1)
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
+    target = tmp_path / 'target'
+    target.mkdir()
 
-def test_process_file_includes_metadata_replace_multi(tmpdir):
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   f"""
+                   ---
+                   title: Page One
+                   ...
+                   <<file2.md>>
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   ...
+                   Included page is ?{title}
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
-
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One'},
-                         f'<<{source_dir.join("ns1", "file2.md")}>>')
-
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'subtitle': 'Second Page'},
-                         'Included page is ?{title} with subtitle ?{subtitle}')
-
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    expect1 = create_markdown_string({'title': 'Page One'},
-                                     '''Included page is Page Two with subtitle Second Page''')
+    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    assert actual1.exists()
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    Included page is Page Two
+    """
+    
+    assert Markdown.compare(expect1, actual1)
 
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
+def test_process_file_includes_metadata_replace_multi(tmp_path):
 
-    assert compare_markdown_content(expect1, actual1)
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
+
+    target = tmp_path / 'target'
+    target.mkdir()
+
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   f"""
+                   ---
+                   title: Page One
+                   ...
+                   <<file2.md>>
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   subtitle: Second Page
+                   ...
+                   Included page is ?{title} with subtitle ?{subtitle}
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
+
+    wiki = Wiki(yaml.safe_load(wiki_config))
+    wiki.process_namespaces()
+
+    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    assert actual1.exists()
+
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    Included page is Page Two with subtitle Second Page
+    """
+    
+    assert Markdown.compare(expect1, actual1)

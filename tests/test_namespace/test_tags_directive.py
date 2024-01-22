@@ -1,557 +1,816 @@
-import os
+import yaml
+from pathlib import Path
 
 from mokuwiki.wiki import Wiki
 
-from utils import create_wiki_config, create_markdown_file, create_markdown_string, compare_markdown_content
+
+from utils import Markdown
 
 
-def test_process_tags_directive(tmpdir):
+def test_process_tags_directive(tmp_path):
     """Test that the directive '{{tag}}' produces a list of pages with that tag,
     and that pages without those tags are not included in the list
     """
+   
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '{{abc}}')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{abc}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   ...
+                   Text 2
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc]'},
-                         'Text')
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   ...
+                   {{xyz}}
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file3.md'),
-                         {'title': 'Page Three',
-                          'tags': '[xyz]'},
-                         '{{xyz}}')
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    # assert page 3 not in list as it is not tagged 'abc'
-    expect1 = create_markdown_string({'title': 'Page One',
-                                      'tags': '[abc]'},
-                                     '''[Page One](page_one.html)
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    [Page One](page_one.html)
 
-[Page Two](page_two.html)
+    [Page Two](page_two.html)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+    
+    actual3 = Path(target) / 'ns1' / 'page_three.md'
+    assert actual3.exists()
+    
+    expect3 = """
+    ---
+    title: Page Three
+    tags: [xyz]
+    ...
+    [Page Three](page_three.html)
+    """
+    
+    assert Markdown.compare(expect3, actual3)
 
-''')
-
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    # assert page 3 only contains itself, as only it is tagged 'xyz'
-    assert compare_markdown_content(expect1, actual1)
-
-    expect3 = create_markdown_string({'title': 'Page Three',
-                                      'tags': '[xyz]'},
-                                     '''[Page Three](page_three.html)
-
-''')
-
-    assert os.path.exists(target_dir.join('ns1', 'page_three.md'))
-
-    with open(target_dir.join('ns1', 'page_three.md'), 'r', encoding='utf8') as fh:
-        actual3 = fh.read()
-
-    assert compare_markdown_content(expect3, actual3)
-
-
-def test_process_tags_directive_or(tmpdir):
+def test_process_tags_directive_or(tmp_path):
     """Test OR
     """
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '{{abc def}}')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{abc def}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [def]
+                   ...
+                   Text 2
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[def]'},
-                         'Text')
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   ...
+                   {{xyz}}
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file3.md'),
-                         {'title': 'Page Three',
-                          'tags': '[xyz]'},
-                         '{{xyz}}')
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    # assert page 3 not in list as it is not tagged 'abc'
-    expect1 = create_markdown_string({'title': 'Page One',
-                                      'tags': '[abc]'},
-                                     '''[Page One](page_one.html)
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    [Page One](page_one.html)
 
-[Page Two](page_two.html)
+    [Page Two](page_two.html)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+    
+    actual3 = Path(target) / 'ns1' / 'page_three.md'
+    assert actual3.exists()
+    
+    expect3 = """
+    ---
+    title: Page Three
+    tags: [xyz]
+    ...
+    [Page Three](page_three.html)
+    """
+    
+    assert Markdown.compare(expect3, actual3)
 
-''')
-
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
-
-
-def test_process_tags_directive_and(tmpdir):
+def test_process_tags_directive_and(tmp_path):
     """Test AND
     """
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '{{abc +def}}')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc, def]'},
-                         'Text')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{abc +def}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc, def]
+                   ...
+                   Text 2
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file3.md'),
-                         {'title': 'Page Three',
-                          'tags': '[xyz]'},
-                         '{{xyz}}')
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   ...
+                   {{xyz}}
+                   """)
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    # assert page 3 not in list as it is not tagged 'abc'
-    expect1 = create_markdown_string({'title': 'Page One',
-                                      'tags': '[abc]'},
-                                     '''[Page Two](page_two.html)
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    # only page two has both tags abc and def
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    [Page Two](page_two.html)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+    
+    actual3 = Path(target) / 'ns1' / 'page_three.md'
+    assert actual3.exists()
+    
+    expect3 = """
+    ---
+    title: Page Three
+    tags: [xyz]
+    ...
+    [Page Three](page_three.html)
+    """
+    
+    assert Markdown.compare(expect3, actual3)
 
-''')
-
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
-
-
-def test_process_tags_directive_and_three(tmpdir):
+def test_process_tags_directive_and_three(tmp_path):
     """Test AND
     """
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '{{abc +def +ghi}}')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc, def]'},
-                         'Text')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{abc +def +ghi}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc, def]
+                   ...
+                   Text 2
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file3.md'),
-                         {'title': 'Page Three',
-                          'tags': '[xyz]'},
-                         '{{xyz}}')
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   ...
+                   {{xyz}}
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file4.md'),
-                         {'title': 'Page Four',
-                          'tags': '[abc, def, ghi]'},
-                         'Text')
+    file4 = ns1 / 'file4.md'
+    Markdown.write(file4,
+                   """
+                   ---
+                   title: Page Four
+                   tags: [abc, def, ghi]
+                   ...
+                   Text Four
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    # assert page 4 only one with all three tags
-    expect1 = create_markdown_string({'title': 'Page One',
-                                      'tags': '[abc]'},
-                                     '''[Page Four](page_four.html)
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    # only page four has all tags abc, def and ghi
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    [Page Four](page_four.html)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
 
-''')
-
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
-
-
-def test_process_tags_directive_not(tmpdir):
+def test_process_tags_directive_not(tmp_path):
     """Test NOT
     """
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '{{abc -def}}')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc, def]'},
-                         'Text')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{abc -def}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc, def]
+                   ...
+                   Text 2
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file3.md'),
-                         {'title': 'Page Three',
-                          'tags': '[xyz]'},
-                         '{{xyz}}')
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   ...
+                   {{xyz}}
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    # assert page 3 not in list as it is not tagged 'abc'
-    expect1 = create_markdown_string({'title': 'Page One',
-                                      'tags': '[abc]'},
-                                     '''[Page One](page_one.html)
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    # only page four has all tags abc, def and ghi
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    [Page One](page_one.html)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
 
-''')
-
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
-
-
-def test_process_tags_directive_not_and(tmpdir):
+def test_process_tags_directive_not_and(tmp_path):
     """Test NOT
     """
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '{{abc +def -ghi}}')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc, def]'},
-                         'Text')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{abc +def -ghi}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc, def]
+                   ...
+                   Text 2
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file3.md'),
-                         {'title': 'Page Three',
-                          'tags': '[abc, def, ghi, jkl]'},
-                         'Text')
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [abc, def, ghi, jkl]
+                   ...
+                   Text 3
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    # assert page 4 not in list, has def but also ghi
-    expect1 = create_markdown_string({'title': 'Page One',
-                                      'tags': '[abc]'},
-                                     '''[Page Two](page_two.html)
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    # only page two has tags abc and def but not ghi
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    [Page Two](page_two.html)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
 
-''')
-
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
-
-
-def test_process_tags_directive_list_all(tmpdir):
+def test_process_tags_directive_list_all(tmp_path):
     """Test LIST ALL
     """
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '{{*}}')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[def]'},
-                         'Text')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{*}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc, def]
+                   ...
+                   Text 2
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file3.md'),
-                         {'title': 'Page Three',
-                          'tags': '[xyz]'},
-                         '{{xyz}}')
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [abc, def, ghi, jkl]
+                   ...
+                   Text 3
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    # assert all pages are listed. NOTE: list is alphabetical (Three before Two!)
-    expect1 = create_markdown_string({'title': 'Page One',
-                                      'tags': '[abc]'},
-                                     '''[Page One](page_one.html)
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    # all pages in alphabetical order
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    [Page One](page_one.html)
+    
+    [Page Three](page_three.html)
 
-[Page Three](page_three.html)
+    [Page Two](page_two.html)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
 
-[Page Two](page_two.html)''')
-
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
-
-
-def test_process_tags_directive_count_all(tmpdir):
+def test_process_tags_directive_count_all(tmp_path):
     """Test COUNT ALL
     """
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '{{#}}')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[def]'},
-                         'Text')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{#}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [def]
+                   ...
+                   Text 2
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file3.md'),
-                         {'title': 'Page Three',
-                          'tags': '[xyz]'},
-                         '{{xyz}}')
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   ...
+                   Text 3
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    # assert all pages are counted
-    expect1 = create_markdown_string({'title': 'Page One',
-                                      'tags': '[abc]'},
-                                     '''3''')
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    # all pages in alphabetical order
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    3
+    """
+    
+    assert Markdown.compare(expect1, actual1)
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
-
-
-def test_process_tags_directive_count_tag(tmpdir):
+def test_process_tags_directive_count_tag(tmp_path):
     """Test COUNT TAG
     """
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '{{#abc}}')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc, def]'},
-                         'Text')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{#abc}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc, def]
+                   ...
+                   Text 2
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file3.md'),
-                         {'title': 'Page Three',
-                          'tags': '[xyz]'},
-                         '{{xyz}}')
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   ...
+                   Text 3
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    # assert all pages are counted
-    expect1 = create_markdown_string({'title': 'Page One',
-                                      'tags': '[abc]'},
-                                     '''2''')
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    # all pages in alphabetical order
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    2
+    """
+    
+    assert Markdown.compare(expect1, actual1)
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
-
-
-def test_process_tags_directive_list_tags(tmpdir):
+def test_process_tags_directive_list_tags(tmp_path):
     """Test LIST TAGS
     """
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '{{@}}')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc, def]'},
-                         'Text')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{@}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc, def]
+                   ...
+                   Text 2
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file3.md'),
-                         {'title': 'Page Three',
-                          'tags': '[xyz]'},
-                         '{{xyz}}')
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   ...
+                   Text 3
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir)})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    # assert all pages are counted
-    expect1 = create_markdown_string({'title': 'Page One',
-                                      'tags': '[abc]'},
-                                     '''[abc]{.tag}
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    # all pages in alphabetical order
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    [abc]{.tag}
 
-[def]{.tag}
+    [def]{.tag}
 
-[xyz]{.tag}''')
+    [xyz]{.tag}"""
+    
+    assert Markdown.compare(expect1, actual1)
 
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
-
-def test_process_tags_directive_noise(tmpdir):
+def test_process_tags_directive_noise(tmp_path):
     """Test LIST TAGS
     """
 
-    source_dir = tmpdir.mkdir('source')
-    source_dir.mkdir('ns1')
-    target_dir = tmpdir.mkdir('target')
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file1.md'),
-                         {'title': 'Page One',
-                          'tags': '[abc]'},
-                         '{{@}}')
+    target = tmp_path / 'target'
+    target.mkdir()
 
-    create_markdown_file(source_dir.join('ns1', 'file2.md'),
-                         {'title': 'Page Two',
-                          'tags': '[abc, def]'},
-                         'Text')
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{@}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc, def]
+                   ...
+                   Text 2
+                   """)
 
-    create_markdown_file(source_dir.join('ns1', 'file3.md'),
-                         {'title': 'Page Three',
-                          'tags': '[xyz]'},
-                         '{{xyz}}')
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   ...
+                   Text 3
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+              noise_tags: [xyz]
+        """
 
-    create_wiki_config(str(source_dir.join('test.cfg')),
-                       None,
-                       {'name': 'ns1',
-                        'path': f'{source_dir.join("ns1")}',
-                        'target': str(target_dir),
-                        'noise_tags': 'xyz'})
-
-    wiki = Wiki(source_dir.join('test.cfg'))
-
+    wiki = Wiki(yaml.safe_load(wiki_config))
     wiki.process_namespaces()
 
-    # assert all pages are counted
-    expect1 = create_markdown_string({'title': 'Page One',
-                                      'tags': '[abc]'},
-                                     '''[abc]{.tag}
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    # all pages in alphabetical order
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    [abc]{.tag}
 
-[def]{.tag}''')
-
-    assert os.path.exists(target_dir.join('ns1', 'page_one.md'))
-
-    with open(target_dir.join('ns1', 'page_one.md'), 'r', encoding='utf8') as fh:
-        actual1 = fh.read()
-
-    assert compare_markdown_content(expect1, actual1)
+    [def]{.tag}"""
+    
+    assert Markdown.compare(expect1, actual1)
