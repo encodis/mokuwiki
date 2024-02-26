@@ -1,9 +1,14 @@
 from pathlib import Path
 import logging
+from typing import TYPE_CHECKING
 
-import mokuwiki.page as p
+from mokuwiki.page import Page
 from mokuwiki.config import NamespaceConfig
-from mokuwiki.index import Index
+import mokuwiki.index as idx
+from mokuwiki.utils import make_markdown_link, make_markdown_span
+
+if TYPE_CHECKING:
+    from mokuwiki.wiki import Wiki
 
 
 class Namespace:
@@ -15,7 +20,7 @@ class Namespace:
     "single file" mode).
     """
 
-    def __init__(self, name, config, wiki):
+    def __init__(self, name, config: dict, wiki: 'Wiki') -> None:
         """Initialize a Namespace instance. The main 'config' parameter is intended
         to be a ConfigParser section object, which behaves in a similar way to
         a dictionary. If, for any reason, a configuration option causes the
@@ -42,17 +47,16 @@ class Namespace:
         self.name = self.config.name
         self.alias = self.config.alias
 
-        if not self.config.content or not Path(self.config.content).is_dir():
-            logging.warning(f"namespace path '{self.config.content}' does not exist, skipping")
+        if not self.config.content_dir or not Path(self.config.content_dir).is_dir():
+            logging.warning(f"namespace path '{self.config.content_dir}' does not exist, skipping")
             raise ValueError
 
         self.is_root = self.config.is_root
 
         # create target path
-        self.config.target.mkdir(parents=True, exist_ok=True)
-        # os.makedirs(self.config.target, exist_ok=True)
+        self.config.target_dir.mkdir(parents=True, exist_ok=True)
         
-        self.index = Index(self)
+        self.index = idx.Index(self)
 
         # TODO test support for '**' in glob spec, with recursive=True
         # titles must be unique? or allow path to be multivalued
@@ -61,23 +65,28 @@ class Namespace:
 
         self.pages = []
         
-        for page_path in self.config.content.glob('*.md'):
-        # for page_file in glob.glob(os.path.join(os.path.normpath(self.config.content), '*.md')):
+        for page_path in self.config.content_dir.glob('*.md'):
             # pass in ref to namespace
             try:
-                page = p.Page(page_path, self)
+                page = Page(page_path, self)
             except ValueError:
-                logging.error(f"page {page_path} could not be created")
+                logging.error(f"page '{page_path}' could not be created")
+                continue
+            
+            try:
+                self.index.add_page(page)
+            except ValueError:
+                logging.warning(f"page '{page.title}' or elements already exists in index")
                 continue
             
             self.pages.append(page)
 
         # self.modified = os.path.getmtime(self.config.target)
-        self.modified = self.config.target.stat().st_mtime
+        self.modified = self.config.target_dir.stat().st_mtime
 
         logging.info(f"created namespace '{self.name}'")
 
-    def __len__(self):
+    def __len__(self) -> int:
         """The 'size' of the namespace is the number of pages.
 
         Returns:
@@ -85,7 +94,7 @@ class Namespace:
         """
         return len(self.pages)
 
-    def get_page_by_title(self, page_title):
+    def get_page(self, page_title) -> Page|None:
         """Get a reference to a page given the page title.
         If no titles match then try aliases.
 
@@ -101,25 +110,78 @@ class Namespace:
         for page in page.alias:
             if page.alias == page_title:
                 return page
+            
+        return None
 
-    def update_index(self):
-        """Update the Index instance for this namespace. This should
-        be called before processing the pages.
+    def generate_toc(self):
+        """Generate ToC
         """
-
+        
+        if self.config.toc == 0:
+            return
+        
+        self.home_page = None
+        
+        # get home page
         for page in self.pages:
+            if page.meta.get('home', False):
+                if self.home_page:
+                    logging.error(f"Ignoring duplicate home page {page.title}")
+                else:
+                    self.home_page = page
+        
+        if not self.home_page:
+            logging.warning("No home page for ToC generation")
+            return
+        
+        # set home page for metadata, overwrite boolean value in actual home page
+        for page in self.pages:
+            page.meta['home'] = make_markdown_link(self.home_page.title)
 
-            self.index.update_title(page)
-            self.index.update_alias(page)
-            self.index.update_tags(page)
+        # get ordering, starting from home
+        toc_pages = []
+        
+        toc_pages.append(self.home_page)
 
-            if self.config.search_fields:
-                self.index.update_search(page)
+        last = self.home_page
 
-    def process_pages(self):
+        for page1 in self.pages:
+            
+            for page2 in self.pages:
+                if not page2.toc_include or page1.title == page2.title:
+                    continue
+            
+                if last.meta.get('next', '') == page2.title:
+                    toc_pages.append(page2)
+                    page2.meta['prev'] = last.title
+                    
+                    last = page2
+                    break
+            
+        # format toc with CSS as string, using toc-level for each page
+        toc = '\n'.join([make_markdown_span(make_markdown_link(p.title), f"toc{p.toc_level}") for p in toc_pages])
+            
+        # insert ToC as metadata into each page
+        for page in self.pages:
+            if not page.toc_display:
+                continue
+            
+            page.meta['ns-toc'] = toc
+    
+            if 'next' in page.meta:
+                page.meta['next'] = make_markdown_link(page.meta['next'])
+
+            if 'prev' in page.meta:
+                page.meta['prev'] = make_markdown_link(page.meta['prev'])
+
+
+    def process_pages(self) -> None:
         """Process each page, first processing any embedded directives,
         then outputting the result to the namespace's target.
         """
+
+        if self.config.toc > 0:
+            self.generate_toc()
 
         for page in self.pages:
             page.process_directives()

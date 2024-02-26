@@ -191,7 +191,7 @@ def test_process_tags_directive_and(tmp_path):
                    title: Page One
                    tags: [abc]
                    ...
-                   {{abc +def}}
+                   {{abc &def}}
                    """)
     
     file2 = ns1 / 'file2.md'
@@ -272,7 +272,7 @@ def test_process_tags_directive_and_three(tmp_path):
                    title: Page One
                    tags: [abc]
                    ...
-                   {{abc +def +ghi}}
+                   {{abc &def &ghi}}
                    """)
     
     file2 = ns1 / 'file2.md'
@@ -350,7 +350,7 @@ def test_process_tags_directive_not(tmp_path):
                    title: Page One
                    tags: [abc]
                    ...
-                   {{abc -def}}
+                   {{abc !def}}
                    """)
     
     file2 = ns1 / 'file2.md'
@@ -418,7 +418,7 @@ def test_process_tags_directive_not_and(tmp_path):
                    title: Page One
                    tags: [abc]
                    ...
-                   {{abc +def -ghi}}
+                   {{abc &def !ghi}}
                    """)
     
     file2 = ns1 / 'file2.md'
@@ -813,4 +813,68 @@ def test_process_tags_directive_noise(tmp_path):
 
     [def]{.tag}"""
     
+    assert Markdown.compare(expect1, actual1)
+
+def test_process_tags_other_namespace(tmp_path):
+    # two pages in same namespace, still need a wiki
+
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns2 = source / 'ns2'
+    ns1.mkdir()
+    ns2.mkdir()
+
+    target = tmp_path / 'target'
+    target.mkdir()
+
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: ['a1']
+                   ...
+                   {{ns2:b2}}
+                   """)
+    
+    file2 = ns2 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: ['b2']
+                   ...
+                   A link to [[ns1:Page One]]
+                   """)
+
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+          ns2:
+              content: {ns2}
+        """
+
+    wiki = Wiki(yaml.safe_load(wiki_config))
+    wiki.process_namespaces()
+
+    assert len(wiki) == 2
+    assert len(wiki.namespaces['ns1']) == 1
+    assert len(wiki.namespaces['ns2']) == 1
+
+    expect1 = """
+    ---
+    title: Page One
+    tags: ['a1']
+    ...
+    [Page Two](../ns2/page_two.html)
+    """
+
+    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    
+    assert actual1.exists()
     assert Markdown.compare(expect1, actual1)

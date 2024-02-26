@@ -19,7 +19,7 @@ class Wiki:
 
     # NOTE should be singleton?
 
-    def __init__(self, config, reindex=False, nosearch=False, verbose=1):
+    def __init__(self, config: dict | str, verbose: int = 1) -> str:
         """Initialize a Wiki instance.
 
         Args:
@@ -38,10 +38,10 @@ class Wiki:
 
         self.root_ns = None
         
-        for name, config in self.config.namespaces.items():
+        for name, ns_config in self.config.namespaces.items():
             
             try:
-                namespace = Namespace(name, config, self)
+                namespace = Namespace(name, ns_config, self)
             except ValueError:
                 logging.error(f"namespace {name} could not be created")
                 continue
@@ -56,7 +56,7 @@ class Wiki:
                 logging.warning(f"namespace '{namespace.name}' already exists, skipping")
                 continue
 
-            if self.get_ns_by_alias(namespace.alias):
+            if self.get_namespace(namespace.alias):
                 logging.warning(f"namespace alias '{namespace.alias}' already exists, skipping")
                 continue
 
@@ -68,7 +68,7 @@ class Wiki:
         if len(self.namespaces) == 0:
             logging.error(f"no valid namespaces found")
 
-    def __len__(self):
+    def __len__(self) -> int:
         """The 'size' of the wiki is the number of namespaces.
 
         Returns:
@@ -78,7 +78,7 @@ class Wiki:
 
     # getitem for namespace lookup, by name or alias? ditto namespaces for pages?
 
-    def _set_reporting_level(self, verbose):
+    def _set_reporting_level(self, verbose: int) -> None:
         if not verbose:
             verbose = self.config.verbose
 
@@ -95,30 +95,25 @@ class Wiki:
         else:
             pass
 
-    def get_ns_by_name(self, name):
+    def get_namespace(self, name: str) -> str|None:
+        
+        if name in self.namespaces:
+            return self.namespaces[name]
 
-        # [ns[namespace] for ns in self.namespaces if name == ns.name]
-
+        # now check aliases        
         for namespace in self.namespaces:
-            if name == self.namespaces[namespace].name:
+            if name == self.namespaces[namespace].alias:
                 return self.namespaces[namespace]
-
+            
         return None
 
-    def get_ns_by_alias(self, alias):
-
-        for namespace in self.namespaces:
-            if alias == self.namespaces[namespace].alias:
-                return self.namespaces[namespace]
-
-        return None
-
-    def get_page_path_by_link(self, page_link):
+    def get_page_by_link(self, page_link: str) -> str:
+        # TODO should return Path?
         """Get a page from a namespace by looking up
         the namespace alias and title.
 
-        Example: "a:Foo" will return "aa/bb/foo.md" if the
-        namespace alias "a" maps to the path "aa/bb"
+        Example: "a:Foo" will return "aa/foo.md" if the
+        namespace alias "a" maps to the path "aa/"
 
         Args:
             page_link (str): Page link in format "a:Foo"
@@ -129,38 +124,33 @@ class Wiki:
             return None
 
         ns_alias, page_title = page_link.split(':', 1)
-        namespace = self.get_ns_by_alias(ns_alias)
+        namespace = self.get_namespace(ns_alias)
         
         if not namespace:
             logging.error(f"no namespace found for alias '{ns_alias}'")
             return None
         
-        page = namespace.get_page_by_title(page_title)
+        page = namespace.get_page(page_title)
 
         if not page:
             logging.error(f"no page titled '{page_title}' in namespace '{namespace.name}'")
             return None
 
-        return page.file
+        return page
 
-    def process_namespaces(self):
+    def process_namespaces(self) -> None:
         """Process each namespace. First the namespaces are indexed,
         then the pages are processed.
         """
 
         for namespace in self.namespaces:
-            self.namespaces[namespace].update_index()
-
-        for namespace in self.namespaces:
             self.namespaces[namespace].process_pages()
 
-    def report_broken_links(self):
+    def report_broken_links(self) -> None:
         """Report broken links. If the verbose level is set
         to 3 then report broken links.
         """
-
-        # if logging.getLogger().getEffectiveLevel() < logging.ERROR:
-        #     return
+        # TODO should call ns.report_broken_links()
 
         for namespace in self.namespaces:
             if len(self.namespaces[namespace].index.broken) == 0:

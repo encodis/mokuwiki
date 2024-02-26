@@ -1,7 +1,11 @@
 from pathlib import Path
 import logging
+from typing import TYPE_CHECKING
 
 import yaml
+
+if TYPE_CHECKING:
+    from mokuwiki.wiki import Wiki
 
 DEFAULT_WIKINAME = 'Wiki'
 DEFAULT_TARGET = 'build'
@@ -13,6 +17,7 @@ DEFAULT_CUSTOM_CSS = '.smallcaps'
 DEFAULT_CONTENT_DIR = 'content'
 DEFAULT_PAGES_DIR = 'pages'
 DEFAULT_MEDIA_DIR = 'images'
+DEFAULT_TOC_LEVEL = 0
 DEFAULT_SEARCH_FIELDS = ['title', 'alias', 'tags', 'summary', 'keywords']
 DEFAULT_SEARCH_PREFIX = ''
 DEFAULT_SEARCH_FILE = '_index.json'
@@ -22,9 +27,10 @@ DEFAULT_NOISE_WORDS = ['a', 'an', 'and', 'are', 'as', 'at', 'be', 'but', 'by', '
                        'or', 'such', 'that', 'the', 'their', 'then', 'there', 'these',
                        'they', 'this', 'to', 'was', 'will', 'with']
 
+
 class WikiConfig:
     
-    def __init__(self, config):
+    def __init__(self, config: dict | str) -> None:
         
         if isinstance(config, dict):
             self.config = config
@@ -54,10 +60,11 @@ class WikiConfig:
         return namespaces
     
     @property
-    def target(self) -> Path:
-        target = self.config.get('target', DEFAULT_TARGET)
+    def target_dir(self) -> Path:
+        target = self.config.get('target', None)
         
-        if target == DEFAULT_TARGET:
+        if not target:
+            target == DEFAULT_TARGET
             logging.warning(f"No target directory set, assuming {target}")
             
         return Path(target)
@@ -74,7 +81,7 @@ class WikiConfig:
         return reindex
     
     @property
-    def verbose(self):
+    def verbose(self) -> int:
         return self.config.get('verbose', DEFAULT_VERBOSITY)
     
     @property
@@ -130,7 +137,7 @@ class WikiConfig:
 class NamespaceConfig:
     
     
-    def __init__(self, name, config, wiki):
+    def __init__(self, name, config: dict, wiki: 'Wiki') -> None:
         # config is a WikiConfig object
         
         self.name = name.lower()
@@ -148,7 +155,7 @@ class NamespaceConfig:
         return self.config.get('alias', self.name)
     
     @property
-    def content(self) -> Path:
+    def content_dir(self) -> Path:
         content = self.config.get('content', None)
         
         if content:
@@ -159,9 +166,9 @@ class NamespaceConfig:
         # return self.config.get('content', f"{self.wiki_config.content_dir}/{self.name}/{self.wiki_config.pages_dir}")
     
     @property
-    def target(self) -> Path:
+    def target_dir(self) -> Path:
         # target is always relative to wiki target
-        return Path(self.wiki_config.target) / self.name
+        return Path(self.wiki_config.target_dir) / self.name
         # return os.path.join(self.wiki_config.target, self.name)
     
     @property
@@ -175,6 +182,17 @@ class NamespaceConfig:
     @property
     def custom_css(self) -> str:
         return self.config.get('custom_css', self.wiki_config.custom_css)
+    
+    @property
+    def toc(self) -> int:
+        toc = self.config.get('toc', DEFAULT_TOC_LEVEL)
+        
+        try:
+            return int(toc)
+        except TypeError:
+            logging.warning(f"Invalid value for 'toc' ({toc}), assuming 0")
+            
+        return 0
     
     @property
     def search_fields(self) -> str:
@@ -214,7 +232,7 @@ class NamespaceConfig:
         if isinstance(noise_words, list):
             return noise_words
         
-        return read_noise_words(self.content / noise_words)
+        return read_noise_words(self.content_dir / noise_words)
         
     @property
     def noise_tags(self) -> list[str]:

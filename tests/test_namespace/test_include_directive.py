@@ -143,7 +143,7 @@ def test_process_file_includes_separator(tmp_path):
                    ---
                    title: Page One
                    ...
-                   <<fileX*.md|* * *>>
+                   <<fileX*.md --sep "\\n* * *\\n">>
                    """)
     
     file2 = ns1 / 'fileX2.md'
@@ -214,7 +214,7 @@ def test_process_file_includes_line_prefix(tmp_path):
                    ---
                    title: Page One
                    ...
-                   <<file2.md||> >>
+                   <<file2.md --indent "> " >>
                    """)
     
     file2 = ns1 / 'file2.md'
@@ -266,7 +266,7 @@ def test_process_file_includes_separator_and_line_prefix(tmp_path):
                    ---
                    title: Page One
                    ...
-                   <<fileX*.md|* * *|> >>
+                   <<fileX*.md --sep "\\n* * *\\n" --indent "> ">>
                    """)
     
     file2 = ns1 / 'fileX2.md'
