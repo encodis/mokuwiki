@@ -3,7 +3,7 @@ from mokuwiki.page import Page
 from utils import Markdown
 
 
-def test_process_image_links(tmp_path):
+def test_image_links(tmp_path):
     
     source = tmp_path / 'source'
     source.mkdir()
@@ -37,7 +37,7 @@ def test_process_image_links(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
     
-def test_process_image_links_format(tmp_path):
+def test_image_links_format(tmp_path):
     
     source = tmp_path / 'source'
     source.mkdir()

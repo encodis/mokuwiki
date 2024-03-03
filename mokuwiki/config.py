@@ -18,6 +18,7 @@ DEFAULT_CONTENT_DIR = 'content'
 DEFAULT_PAGES_DIR = 'pages'
 DEFAULT_MEDIA_DIR = 'images'
 DEFAULT_TOC_LEVEL = 0
+DEFAULT_META_FIELDS = ['home', 'next', 'prev']
 DEFAULT_SEARCH_FIELDS = ['title', 'alias', 'tags', 'summary', 'keywords']
 DEFAULT_SEARCH_PREFIX = ''
 DEFAULT_SEARCH_FILE = '_index.json'
@@ -209,12 +210,7 @@ class NamespaceConfig:
     @property
     def meta_fields(self) -> list[str]:
         # meta fields are not set at wiki level
-        meta_fields = self.config.get('meta_fields', False)
-
-        if meta_fields:
-            return [f.strip() for f in meta_fields.split(',')]
-        
-        return meta_fields
+        return self.config.get('meta_fields', DEFAULT_META_FIELDS)
     
     @property
     def noise_words(self) -> str:

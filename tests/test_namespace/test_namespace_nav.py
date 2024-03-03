@@ -6,7 +6,7 @@ from mokuwiki.wiki import Wiki
 from utils import Markdown
 
 
-def test_namespace_nav(tmp_path):
+def test_namespace_story(tmp_path):
     
     source = tmp_path / 'source'
     source.mkdir()
@@ -133,3 +133,12 @@ def test_namespace_nav(tmp_path):
     """
     
     assert Markdown.compare(expect3, actual3)
+    
+def test_namespace_multi_stories():
+    pass
+
+def test_namespace_ns_toc():
+    pass
+
+def test_namespace_story_and_ns_toc():
+    pass

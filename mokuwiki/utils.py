@@ -31,12 +31,17 @@ class FileIncludeParser(OptionsParser):
         self._parser.add_argument('files')
         self._parser.add_argument('--sort', action='store_true', default=True)
         self._parser.add_argument('--sep', default='')
-        self._parser.add_argument('--shift', default=0)
+        self._parser.add_argument('--shift', default=0, type=int)
         self._parser.add_argument('--indent', default='')
         self._parser.add_argument('--before', default='\n')
         self._parser.add_argument('--after', default='\n')
+        self._parser.add_argument('--header', default='')
+        self._parser.add_argument('--format', default='')
+        self._parser.add_argument('--repeat', default=1, type=int)
     
-    
+        # TODO limit repeat to +ve integers
+        # TODO limit shift
+            
 class TagListParser(OptionsParser):
     
     def __init__(self) -> None:

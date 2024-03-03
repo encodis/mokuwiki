@@ -113,8 +113,88 @@ class Namespace:
             
         return None
 
+    def generate_stories(self) -> None:
+        """basically, just insert next/prev
+        
+        and return home page
+        """
+        
+        self.home_page = None
+        
+        # get home page
+        for page in self.pages:
+            if page.meta.get('home', False):
+                if self.home_page:
+                    logging.error(f"Ignoring duplicate home page {page.title}")
+                else:
+                    self.home_page = page
+        
+        if not self.home_page:
+            logging.warning("No home page for story generation")
+            return
+
+        self.home_page.meta['home'] = self.home_page.title
+
+        last_page = self.home_page
+
+        for page1 in self.pages:
+            
+            for page2 in self.pages:
+                if not page2.toc_include or page1.title == page2.title:
+                    continue
+            
+                if last_page.meta.get('next', '') == page2.title:
+                    page2.meta['prev'] = last_page.title
+                    page2.meta['home'] = self.home_page.title
+                    last_page = page2
+                    break
+    
+        # TODO return dict of lists of home pages, keyed by title
+    
+    def generate_story_toc(self) -> None:
+        toc_pages = []
+        
+        toc_pages.append(self.home_page)
+        
+        current_page = self.home_page
+        guard_count = 0
+        
+        while True:
+            next_page = current_page.meta.get('next', False)
+            
+            # TODO for individual stories use len(story)
+            if not next_page or guard_count > len(self):
+                break
+
+            guard_count += 1
+            
+            # get actual page from title
+            next_page = self.get_page(next_page)
+            toc_pages.append(next_page)            
+            current_page = next_page
+            
+        # format toc with CSS as string, using toc-level for each page
+        toc = '\n'.join([make_markdown_span(make_markdown_link(p.title), f"toc{p.toc_level}") for p in toc_pages])
+            
+        # insert ToC as metadata into each page
+        for page in toc_pages:
+            if not page.toc_display:
+                continue
+            
+            page.meta['ns-toc'] = toc
+            
+    def generate_ns_toc(self) -> None:
+        """i.e. for pages that are not in a story, also obey sort order"""
+        pass
+        
     def generate_toc(self):
         """Generate ToC
+        
+        TODO
+        - generate stories first
+        - then generate story ToCs
+        - then get NS ToC from non-story pages
+        - then order NS ToC
         """
         
         if self.config.toc == 0:
@@ -168,6 +248,7 @@ class Namespace:
             
             page.meta['ns-toc'] = toc
     
+            # CHECK is this done by convert_metadata_links()? No but they could be with suitable defaults
             if 'next' in page.meta:
                 page.meta['next'] = make_markdown_link(page.meta['next'])
 
@@ -180,8 +261,16 @@ class Namespace:
         then outputting the result to the namespace's target.
         """
 
+        # TODO if stories then ignore config.toc, this is only for ns toc OR is it up to each page to display?
+        # so don't need that conf option
         if self.config.toc > 0:
-            self.generate_toc()
+            # TODO gen_stories() returns dict of list, keyed by story home
+            self.generate_stories()
+            # TODO loop over this to gen each story toc
+            self.generate_story_toc()
+            
+            # TODO then generate NS toc for all pages that DON'T have a story toc (i.e. a home)
+            # self.generate_toc()
 
         for page in self.pages:
             page.process_directives()

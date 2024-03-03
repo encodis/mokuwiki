@@ -7,7 +7,7 @@ from mokuwiki.wiki import Wiki
 from utils import Markdown
 
 
-def test_process_page_links(tmp_path):
+def test_page_links(tmp_path):
 
     source = tmp_path / 'source'
     source.mkdir()
@@ -71,7 +71,7 @@ def test_process_page_links(tmp_path):
     
     assert Markdown.compare(expect2, actual2)
 
-def test_process_page_links_alias(tmp_path):
+def test_page_links_alias(tmp_path):
 
     source = tmp_path / 'source'
     source.mkdir()
@@ -137,7 +137,7 @@ def test_process_page_links_alias(tmp_path):
     
     assert Markdown.compare(expect2, actual2)
 
-def test_process_page_links_display(tmp_path):
+def test_page_links_display(tmp_path):
     
     source = tmp_path / 'source'
     source.mkdir()
@@ -201,7 +201,7 @@ def test_process_page_links_display(tmp_path):
     
     assert Markdown.compare(expect2, actual2)   
 
-def test_process_page_links_broken(tmp_path):
+def test_page_links_broken(tmp_path):
     
     source = tmp_path / 'source'
     source.mkdir()
@@ -247,7 +247,7 @@ def test_process_page_links_broken(tmp_path):
 # TODO alternate CSS for broken link ?
 
 
-def test_process_page_links_metadata_string(tmp_path):
+def test_page_links_metadata_string(tmp_path):
     
     source = tmp_path / 'source'
     source.mkdir()
@@ -283,7 +283,7 @@ def test_process_page_links_metadata_string(tmp_path):
         namespaces:
           ns1:
               content: {ns1}
-              meta_fields: subtitle
+              meta_fields: ['subtitle']
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
@@ -302,7 +302,7 @@ def test_process_page_links_metadata_string(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
 
-def test_process_page_links_metadata_list(tmp_path):
+def test_page_links_metadata_list(tmp_path):
     
     source = tmp_path / 'source'
     source.mkdir()
@@ -347,7 +347,7 @@ def test_process_page_links_metadata_list(tmp_path):
         namespaces:
           ns1:
               content: {ns1}
-              meta_fields: tags
+              meta_fields: ['tags']
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))

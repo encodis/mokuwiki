@@ -5,7 +5,7 @@ from mokuwiki.page import Page
 from utils import Markdown
 
 
-def test_process_exec_command(tmp_path):
+def test_exec_command(tmp_path):
     
     source = tmp_path / 'source'
     source.mkdir()
@@ -39,7 +39,7 @@ def test_process_exec_command(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
 
-def test_process_exec_command_pipe(tmp_path):
+def test_exec_command_pipe(tmp_path):
     
     source = tmp_path / 'source'
     source.mkdir()

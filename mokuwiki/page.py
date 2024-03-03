@@ -94,17 +94,12 @@ class Page:
             logging.error(f"could not read file '{page_path}'")
             raise ValueError
 
-        if '...' in contents:
+        if '...\n' in contents:
             self.meta, _, self.body = contents.partition('...\n')
         else:
             if included:
-                # TODO included pages do not need to be MD files so may not have meta with titles etc
-                # TODO so init() may need option to allow that no_meta_allowed=True but then properties have to accoutn for it
-                # option "plain" to not include meta?
-                ### diff between a Page and a File, i.e. a File is just text, a Page has meta
-                ### or "inc_meta=False"
-                # if the file was an include directive AND has no YAML marker, then
-                # then set meta as empty dict and body to contents of whole file
+                # if the page is being created as part of an include directive, plain files
+                # with missing metadata are allowed
                 self.meta = {}
                 self.body = contents
             else:
@@ -141,7 +136,6 @@ class Page:
         self.media = media
         self.custom = custom
 
-        # self.modified = os.path.getmtime(page_file)
         self.modified = page_path.stat().st_mtime
 
         logging.debug(f"created page '{self.source}'")
@@ -174,7 +168,7 @@ class Page:
 
     @property
     def toc_level(self) -> int:
-        return self.meta.get('toc-level', 0)
+        return self.meta.get('toc-level', 1)
     
     @property
     def toc_include(self) -> bool:
@@ -184,10 +178,10 @@ class Page:
     @property
     def toc_display(self) -> bool:
         return self.meta.get('toc-display', True)
-
+    
     @property
-    def toc_level(self) -> str:
-        return str(self.meta.get('toc-level', ''))
+    def toc_order(self) -> int:
+        return self.meta.get('toc-order', 99999)
     
     @property
     def noindex(self) -> bool:
@@ -203,7 +197,7 @@ class Page:
         # for mwpage...
         return self.namespace.config.custom_css if self.namespace else self.custom
 
-    def content(self, indent:str = '') -> str:
+    def content(self, indent: str = '', shift: int = 0) -> str:
         """Fully processed body with prefix, suffix and metadata replacement
         Used really on file includes, not on save (because the pandoc template and other
         code will process prefix/suffix etc)
@@ -212,18 +206,34 @@ class Page:
         #TODO test for empty body
         
         """
+        
+        def shift_heading(heading: str, shift: int = 0) -> str:
+            
+            if '#' not in heading:
+                return heading
+            
+            level, _, text = heading.partition(' ')
+            
+            level = len(level) + shift
+            
+            if level < 0 or level > 6:
+                return heading
+            
+            return f"{'#' * level} {text}"
+        
+        
         content = self.meta.get('prefix', '') + self.body + self.meta.get('suffix', '')
         
         # replace ?{value} strings in content with appropriate metadata values
         content = MetadataReplace(content).safe_substitute(self.meta)
-            
+        
+        if shift != 0:
+            content = re.sub(r"^(#.*)", lambda x: shift_heading(x.group(), shift), content)
+                
         if indent:
             content = re.sub('^(.*)', indent + r'\1', content, flags=re.MULTILINE)
 
         return content
-
-    def apply_metadata(self) -> None:
-        self.body = MetadataReplace(self.body).safe_substitute(self.meta)
 
     def save(self, file_name: str = None) -> None:
         """Save a page to a file. This uses the string representation.
@@ -306,15 +316,9 @@ class Page:
             if field not in self.meta:
                 continue
 
-            new_fields = []
-
             if isinstance(self.meta[field], list):
-                for item in self.meta[field]:
-                    # TODO add the [[ and ]] if not there (for tags really)
-                    new_field = re.sub(PAGE_LINK_RE, self.process_page_directives, add_page_links(item))
-                    new_fields.append(new_field)
+                self.meta[field] = [re.sub(PAGE_LINK_RE, self.process_page_directives, add_page_links(f)) for f in self.meta[field]]
 
-                self.meta[field] = new_fields
             else:
                 # string field, only update if not blank
                 if self.meta[field]:
@@ -345,42 +349,40 @@ class Page:
         if ':' in options['files']:
             # if namespace ref exists list is only one file long
             # in DW terms this will be the path in the 'monster' NS
-            incl_file = self.namespace.wiki.get_page_by_link(options['files'])
+            page_list = self.namespace.wiki.get_page_by_link(options['files'])
 
-            if not incl_file:
+            if not page_list:
                 return ''
 
-            incl_list = [incl_file.source]
+            page_list = [page_list.source for _ in range(options['repeat'])]
         else:
             # no namespace ref so create globbed list
-            incl_list = Path(self.namespace.config.content_dir).glob(options['files'])
-            
+            page_list = list(Path(self.namespace.config.content_dir).glob(options['files']))
+
             if options['sort']:
-                incl_list = sorted(incl_list)
-            
-            # incl_list = sorted(glob.glob(os.path.normpath(os.path.join(os.getcwd(), incl_file))))
-
-        # if process is defined run it and return
-        # if options['exec']:
-        #     process_output = subprocess.run(process + ' ' + incl_file, shell=True, capture_output=True, universal_newlines=True, encoding='utf-8')
-
-        #     return process_output.stdout
-
-        # create list of files
-        incl_contents = ''
-
-        if len(incl_list) == 0:
-            return incl_contents
+                # sort by filename
+                page_list = sorted(page_list)
 
         # TODO need to test plain text files
-        
-        incl_contents = options['sep'].join([options['before'] + 
-                                             Page(f, self.namespace, included=True).content(options['indent']) +
-                                             options['after']
-                                             for f in incl_list])
 
-        # return contents of all matched files
-        return incl_contents
+        # create text
+        if len(page_list) == 0:
+            return ''
+
+        if options['format']:
+            page_list = [Page(p, self.namespace, included=True) for p in page_list]
+
+            incl_text = [MetadataReplace(options['format']).safe_substitute(p.meta) for p in page_list]
+
+        else:
+            incl_text = [Page(p, self.namespace, included=True).content(options['indent'], options['shift']) for p in page_list]
+            
+        incl_text = options['sep'].join([options['before'] + 
+                                         t +
+                                         options['after']
+                                         for t in incl_text])
+
+        return options['header'] + incl_text
 
     def process_exec_command(self, command: Match) -> str:
         """Execute a shell command and return the output as a string for inclusion
@@ -405,8 +407,8 @@ class Page:
 
         -  `{{tag}}`: list all pages with 'tag'
         -  `{{tag1 tag2}}`: list all pages with 'tag1' or 'tag2'
-        -  `{{tag1 +tag2}}`: list all pages with 'tag1' and 'tag2'
-        -  `{{tag1 -tag2}}`: list all pages with 'tag1' but not 'tag2'
+        -  `{{tag1 &tag2}}`: list all pages with 'tag1' and 'tag2'
+        -  `{{tag1 !tag2}}`: list all pages with 'tag1' but not 'tag2'
         -  `{{*}}`: list all pages in the namespace
         -  `{{@}}`: list all tags as bracketed spans with the CSS class given by
         the 'tag_css' configuration option
@@ -432,12 +434,14 @@ class Page:
         options = Page.TagListParser.parse(tag_list)
         
         tag_list = options['tags']
-        # tag_list = tag_list.split()
 
         # get initial category
         # CHECK why the replace, tags are now lists of str in metadata aren't they?
         tag_name = tag_list[0].replace('_', ' ').lower()
-        tag_links = ''
+        tag_text = ''
+
+        # TODO if using format, then tag_text are the things that will go in there
+        # default format is '' which means make, format does not apply to #, @ etc
 
         own_ns = False if ':' in tag_name else True
         
@@ -450,23 +454,24 @@ class Page:
             tag_ns = self.namespace.wiki.get_namespace(tag_ns)
             
             if not tag_ns:
-                return tag_links
+                return tag_text
 
         if tag_name == '*':
-            tag_links = [make_wiki_link(t, tag_ns.alias) for t in tag_ns.index.get_titles()]
+            tag_text = [make_wiki_link(t, tag_ns.alias) for t in tag_ns.index.get_titles()]
 
         elif tag_name == '@':
-            tag_links = [make_markdown_span(t, tag_ns.config.tags_css) for t in tag_ns.index.get_tags()]
+            tag_text = [make_markdown_span(t, tag_ns.config.tags_css) for t in tag_ns.index.get_tags()]
 
         elif tag_name.startswith('#'):
 
             if tag_name == '#':
-                tag_links = str(len(list(tag_ns.index.get_titles())))
+                tag_text = str(len(list(tag_ns.index.get_titles())))
             else:
-                tag_links = str(len(tag_ns.index.get_tagged_pages(tag_name[1:])))
+                tag_text = str(len(tag_ns.index.get_tagged_pages(tag_name[1:])))
             
         elif tag_ns.index.has_tag(tag_name):
                 # copy first tag set, which must exist
+                # THIS returns page.title... NEEDS to be page so can get meta for format
                 page_set = tag_ns.index.get_tagged_pages(tag_name)
 
                 # add/del/combine other tagged categories
@@ -487,22 +492,27 @@ class Page:
 
                 ns_alias = '' if own_ns else tag_ns.alias
                 
-                tag_links = [make_markdown_link(p, '', ns_alias) for p in page_set]
+                if not options['format']:
+                    tag_text = [make_markdown_link(p, '', ns_alias) for p in page_set]
+                else:
+                    # turn titles back into pages
+                    page_set = [self.namespace.get_page(p) for p in page_set]
+
+                    tag_text = [MetadataReplace(options['format']).safe_substitute(p.meta) for p in page_set]
 
         else:
             pass
-
-        # return list of tag links
         
         if options['sort']:
-            tag_links = sorted(tag_links)
+            # sort by content (e.g. title)
+            tag_text = sorted(tag_text)
+                
+        tag_text = options['sep'].join([options['before'] + 
+                                        t + 
+                                        options['after'] 
+                                        for t in tag_text])
         
-        tag_links = options['sep'].join([options['before'] + 
-                                         t + 
-                                         options['after'] 
-                                         for t in tag_links])
-        
-        return tag_links
+        return options['header'] + tag_text
 
     def process_page_directives(self, page: Match) -> str:
         """Convert a page title in double square brackets into an inter-page link.
