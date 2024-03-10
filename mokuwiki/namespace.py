@@ -94,6 +94,9 @@ class Namespace:
         """
         return len(self.pages)
 
+    def __eq__(self, other) -> bool:
+        return True if self.title == other.title else False
+
     def get_page(self, page_title) -> Page|None:
         """Get a reference to a page given the page title.
         If no titles match then try aliases.
@@ -113,79 +116,110 @@ class Namespace:
             
         return None
 
+    def report_broken_links(self) -> None:
+        """Report broken links. If the verbose level is set
+        to 3 then report broken links.
+        """
+        
+        for page_name in self.index.get_broken():
+            logging.info(f'broken link: {self.name}:{page_name}')
+
     def generate_stories(self) -> None:
         """basically, just insert next/prev
         
         and return home page
         """
-        
-        self.home_page = None
+                
+        self.home_pages = []
         
         # get home page
         for page in self.pages:
             if page.meta.get('home', False):
-                if self.home_page:
-                    logging.error(f"Ignoring duplicate home page {page.title}")
-                else:
-                    self.home_page = page
+                self.home_pages.append(page)
         
-        if not self.home_page:
-            logging.warning("No home page for story generation")
+        if not self.home_pages:
+            logging.info("No home pages for story generation")
             return
 
-        self.home_page.meta['home'] = self.home_page.title
+        for home_page in self.home_pages:
 
-        last_page = self.home_page
+            home_page.meta['home'] = home_page.title
 
-        for page1 in self.pages:
+            last_page = home_page
+
+            for page1 in self.pages:
+                
+                for page2 in self.pages:
+                    if not page2.toc_include or page1.title == page2.title:
+                        continue
             
-            for page2 in self.pages:
-                if not page2.toc_include or page1.title == page2.title:
+                    if last_page.meta.get('next', '') == page2.title:
+                        page2.meta['prev'] = last_page.title
+                        page2.meta['home'] = home_page.title
+                        last_page = page2
+                        break
+        
+    def generate_story_tocs(self) -> None:
+        
+        for home_page in self.home_pages:
+            
+            toc_pages = []
+        
+            toc_pages.append(home_page)
+        
+            current_page = home_page
+            guard_count = 0
+        
+            while True:
+                next_page = current_page.meta.get('next', False)
+            
+                if not next_page or guard_count > len(self):
+                    break
+
+                guard_count += 1
+            
+                # get actual page from title
+                next_page = self.get_page(next_page)
+                toc_pages.append(next_page)            
+                current_page = next_page
+            
+            # format toc with CSS as string, using toc-level for each page
+            toc = '\n'.join([make_markdown_span(make_markdown_link(p.title), f"toc{p.toc_level}") for p in toc_pages])
+            
+            # insert ToC as metadata into each page
+            for page in toc_pages:
+                if not page.toc_display:
                     continue
             
-                if last_page.meta.get('next', '') == page2.title:
-                    page2.meta['prev'] = last_page.title
-                    page2.meta['home'] = self.home_page.title
-                    last_page = page2
-                    break
-    
-        # TODO return dict of lists of home pages, keyed by title
-    
-    def generate_story_toc(self) -> None:
+                page.meta['ns-toc'] = toc
+            
+    def generate_ns_toc(self) -> None:
+        """i.e. for pages that are not in a story, also obey sort order
+        Should be run AFTER story ToC generation"""
+        
         toc_pages = []
         
-        toc_pages.append(self.home_page)
+        for page in self.pages:
+            
+            # skip pages with a story ToC
+            if page.meta.get('home', False):
+                continue
         
-        current_page = self.home_page
-        guard_count = 0
+            toc_pages.append(page)
+            
+        if len(toc_pages) == 0:
+            return
         
-        while True:
-            next_page = current_page.meta.get('next', False)
-            
-            # TODO for individual stories use len(story)
-            if not next_page or guard_count > len(self):
-                break
-
-            guard_count += 1
-            
-            # get actual page from title
-            next_page = self.get_page(next_page)
-            toc_pages.append(next_page)            
-            current_page = next_page
-            
-        # format toc with CSS as string, using toc-level for each page
+        # use tuple for nested sort
+        toc_pages = sorted(toc_pages, key=lambda p: (p.toc_order, p.title))
+        
         toc = '\n'.join([make_markdown_span(make_markdown_link(p.title), f"toc{p.toc_level}") for p in toc_pages])
-            
-        # insert ToC as metadata into each page
+
         for page in toc_pages:
             if not page.toc_display:
                 continue
             
-            page.meta['ns-toc'] = toc
-            
-    def generate_ns_toc(self) -> None:
-        """i.e. for pages that are not in a story, also obey sort order"""
-        pass
+            page.meta['ns-toc'] = toc        
         
     def generate_toc(self):
         """Generate ToC
@@ -261,16 +295,11 @@ class Namespace:
         then outputting the result to the namespace's target.
         """
 
-        # TODO if stories then ignore config.toc, this is only for ns toc OR is it up to each page to display?
         # so don't need that conf option
         if self.config.toc > 0:
-            # TODO gen_stories() returns dict of list, keyed by story home
             self.generate_stories()
-            # TODO loop over this to gen each story toc
-            self.generate_story_toc()
-            
-            # TODO then generate NS toc for all pages that DON'T have a story toc (i.e. a home)
-            # self.generate_toc()
+            self.generate_story_tocs()
+            self.generate_ns_toc()
 
         for page in self.pages:
             page.process_directives()

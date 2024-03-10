@@ -113,6 +113,9 @@ class Index:
 
     def add_broken(self, broken_name: str) -> None:
         self._broken.add(broken_name)
+        
+    def get_broken(self) -> set:
+        return self._broken
 
     def _update_search_index(self, page: Page) -> None:
         """Update the search index with strings extracted from metadata in a

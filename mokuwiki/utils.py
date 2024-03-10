@@ -14,13 +14,15 @@ class OptionsParser:
     
     def parse(self, line) -> dict:
         try:
-            options = vars(self._parser.parse_args(re.findall(r"(?:\".*?\"|\S)+", line)))
+            options = self._parser.parse_args(re.findall(r"(?:\".*?\"|\S)+", line))
         except (argparse.ArgumentError, argparse.ArgumentTypeError):
             logging.error("Error parsing file include directive")
             return {}
-        
-        # double quotes will have been preserved and must be removed
-        options = {k: v.replace('"', '').replace('\\n', '\n') if isinstance(v, str) else v for k, v in options.items()}
+
+        # double quotes will have been preserved and must be removed        
+        for attr in vars(options):
+            if isinstance(getattr(options, attr), str):
+                setattr(options, attr, getattr(options, attr).replace('"', '').replace('\\n', '\n'))
         
         return options
 
@@ -39,8 +41,6 @@ class FileIncludeParser(OptionsParser):
         self._parser.add_argument('--format', default='')
         self._parser.add_argument('--repeat', default=1, type=int)
     
-        # TODO limit repeat to +ve integers
-        # TODO limit shift
             
 class TagListParser(OptionsParser):
     
@@ -103,7 +103,10 @@ def make_markdown_link(show_name: str, page_name: str = '', ns_path: str = '', r
     return f'[{show_name}](../{ns_path}/{page_name}.html)'
 
 def make_wiki_link(title: str, namespace: str = ''):
-    # CHECK may have to check not already has [[ ]]
+    """Make a wiki link from a title and optional namespace alias"""
+    if title.startswith('[[') and title.endswith(']]'):
+        return title
+    
     if namespace:
         title = f"{namespace}:{title}"
         

@@ -1,11 +1,3 @@
-"""
-Page module.
-
-This module contains the definition of the Page class,
-as well as a number of useful methods for processing
-a page.
-"""
-
 import os
 import re
 from re import Match
@@ -37,6 +29,10 @@ TAGS_REPLACE_RE = r"^\{\{(.*)\}\}$"
 PAGE_LINK_RE = r"\[\[(.*)\]\]"
 IMAGE_LINK_RE = r"!!(.*)!!"
 CUSTOM_STYLE_RE = r"\^\^(.*)\^\^"
+
+MIN_REPEAT_COUNT = 1
+MAX_REPEAT_COUNT = 999
+
 
 class MetadataReplace(Template):
     """Subclass of Template to allow for different template character.
@@ -86,7 +82,7 @@ class Page:
             raise ValueError
 
         # read file
-        # TODO should be in self.load()
+        # TODO should be in self.load(), returns (meta, body)
         try:
             with page_path.open('r', encoding='utf8') as f:
                 contents = f.read().strip()
@@ -209,14 +205,14 @@ class Page:
         
         def shift_heading(heading: str, shift: int = 0) -> str:
             
-            if '#' not in heading:
+            if not heading.startswith('#'):
                 return heading
             
             level, _, text = heading.partition(' ')
             
             level = len(level) + shift
             
-            if level < 0 or level > 6:
+            if not 1 <= level <= 6:
                 return heading
             
             return f"{'#' * level} {text}"
@@ -346,20 +342,22 @@ class Page:
         # resolve namespace ref if present
         # TODO replace 'ns1:' with path to content, then glob? this would allow ns1:file*.md?
         # TODO must also account for single page mode
-        if ':' in options['files']:
+        if ':' in options.files:
             # if namespace ref exists list is only one file long
             # in DW terms this will be the path in the 'monster' NS
-            page_list = self.namespace.wiki.get_page_by_link(options['files'])
+            page_list = self.namespace.wiki.get_page_by_link(options.files)
 
             if not page_list:
                 return ''
 
-            page_list = [page_list.source for _ in range(options['repeat'])]
+            repeat = min(max(options.repeat, MIN_REPEAT_COUNT), MAX_REPEAT_COUNT)
+
+            page_list = [page_list.source for _ in range(repeat)]
         else:
             # no namespace ref so create globbed list
-            page_list = list(Path(self.namespace.config.content_dir).glob(options['files']))
+            page_list = list(Path(self.namespace.config.content_dir).glob(options.files))
 
-            if options['sort']:
+            if options.sort:
                 # sort by filename
                 page_list = sorted(page_list)
 
@@ -369,20 +367,20 @@ class Page:
         if len(page_list) == 0:
             return ''
 
-        if options['format']:
+        if options.format:
             page_list = [Page(p, self.namespace, included=True) for p in page_list]
 
-            incl_text = [MetadataReplace(options['format']).safe_substitute(p.meta) for p in page_list]
+            incl_text = [MetadataReplace(options.format).safe_substitute(p.meta) for p in page_list]
 
         else:
-            incl_text = [Page(p, self.namespace, included=True).content(options['indent'], options['shift']) for p in page_list]
+            incl_text = [Page(p, self.namespace, included=True).content(options.indent, options.shift) for p in page_list]
             
-        incl_text = options['sep'].join([options['before'] + 
-                                         t +
-                                         options['after']
-                                         for t in incl_text])
+        incl_text = options.sep.join([options.before + 
+                                      t +
+                                      options.after
+                                      for t in incl_text])
 
-        return options['header'] + incl_text
+        return options.header + incl_text
 
     def process_exec_command(self, command: Match) -> str:
         """Execute a shell command and return the output as a string for inclusion
@@ -433,7 +431,7 @@ class Page:
         
         options = Page.TagListParser.parse(tag_list)
         
-        tag_list = options['tags']
+        tag_list = options.tags
 
         # get initial category
         # CHECK why the replace, tags are now lists of str in metadata aren't they?
@@ -492,27 +490,27 @@ class Page:
 
                 ns_alias = '' if own_ns else tag_ns.alias
                 
-                if not options['format']:
+                if not options.format:
                     tag_text = [make_markdown_link(p, '', ns_alias) for p in page_set]
                 else:
                     # turn titles back into pages
                     page_set = [self.namespace.get_page(p) for p in page_set]
 
-                    tag_text = [MetadataReplace(options['format']).safe_substitute(p.meta) for p in page_set]
+                    tag_text = [MetadataReplace(options.format).safe_substitute(p.meta) for p in page_set]
 
         else:
             pass
         
-        if options['sort']:
+        if options.sort:
             # sort by content (e.g. title)
             tag_text = sorted(tag_text)
                 
-        tag_text = options['sep'].join([options['before'] + 
-                                        t + 
-                                        options['after'] 
-                                        for t in tag_text])
+        tag_text = options.sep.join([options.before + 
+                                     t + 
+                                     options.after
+                                     for t in tag_text])
         
-        return options['header'] + tag_text
+        return options.header + tag_text
 
     def process_page_directives(self, page: Match) -> str:
         """Convert a page title in double square brackets into an inter-page link.

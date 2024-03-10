@@ -10,7 +10,6 @@ if TYPE_CHECKING:
 DEFAULT_WIKINAME = 'Wiki'
 DEFAULT_TARGET = 'build'
 DEFAULT_VERBOSITY = 1
-DEFAULT_REINDEX = False
 DEFAULT_BROKEN_CSS = '.broken'
 DEFAULT_TAGS_CSS = '.tag'
 DEFAULT_CUSTOM_CSS = '.smallcaps'
@@ -41,10 +40,9 @@ class WikiConfig:
                     self.config = yaml.safe_load(cf)
                 except yaml.YAMLError:
                     # might occur for duplicated namespace names
-                    logging.error(f"Error reading config file {config}")
-                    return
+                    raise ValueError(f"Error reading config file {config}")
         else:
-            logging.error(f"Bad configuration {config}")
+            raise ValueError(f"Bad configuration {config}")
     
     @property
     def name(self) -> str:
@@ -69,17 +67,6 @@ class WikiConfig:
             logging.warning(f"No target directory set, assuming {target}")
             
         return Path(target)
-    
-    @property
-    def reindex(self) -> bool:
-        reindex = self.config.get('reindex', DEFAULT_REINDEX)
-        
-        if not isinstance(reindex, bool):
-            logging.error(f"Reindex is not a boolean, assuming {DEFAULT_REINDEX}")
-            
-            reindex = DEFAULT_REINDEX
-            
-        return reindex
     
     @property
     def verbose(self) -> int:

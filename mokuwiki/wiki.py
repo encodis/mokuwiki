@@ -3,6 +3,7 @@ import argparse
 
 from mokuwiki.config import WikiConfig
 from mokuwiki.namespace import Namespace
+from mokuwiki.page import Page
 
 import logging
 logging.basicConfig(format='mokuwiki: %(levelname)s %(message)s', level=logging.WARNING)
@@ -16,9 +17,7 @@ class Wiki:
         the Wiki instance controls the creation of all namespaces, which, in
         turn, control the reading and creation of individual pages.
     """
-
-    # NOTE should be singleton?
-
+    
     def __init__(self, config: dict | str, verbose: int = 1) -> str:
         """Initialize a Wiki instance.
 
@@ -29,8 +28,11 @@ class Wiki:
             verbose (int, optional): Increase verbose level. Defaults to 1.
         """
         
-        self.config = WikiConfig(config)
-        
+        try:
+            self.config = WikiConfig(config)
+        except ValueError:
+            raise ValueError("Could not initialize wiki")
+                
         self._set_reporting_level(verbose)
         
         # create namespaces
@@ -52,7 +54,7 @@ class Wiki:
                 
             self.root_ns = namespace.name
             
-            if namespace.name in self.namespaces:
+            if self.get_namespace(namespace.name):
                 logging.warning(f"namespace '{namespace.name}' already exists, skipping")
                 continue
 
@@ -96,6 +98,8 @@ class Wiki:
             pass
 
     def get_namespace(self, name: str) -> str|None:
+        """Get a namespace from its full name or alias.
+        """
         
         if name in self.namespaces:
             return self.namespaces[name]
@@ -107,23 +111,23 @@ class Wiki:
             
         return None
 
-    def get_page_by_link(self, page_link: str) -> str:
-        # TODO should return Path?
-        """Get a page from a namespace by looking up
-        the namespace alias and title.
+    def get_page_by_link(self, page_link: str) -> Page|None:
+        """Get a page from a namespace by looking up the namespace alias and title.
 
-        Example: "a:Foo" will return "aa/foo.md" if the
-        namespace alias "a" maps to the path "aa/"
+        Example: "a:Foo" will return "aa/foo.md" if the namespace alias "a" maps to the path "aa/"
 
         Args:
             page_link (str): Page link in format "a:Foo"
+            
+        Returns:
+            Page: the relevant Page object, or None if not found
         """
 
         if ':' not in page_link:
             logging.warning(f"no namespace alias in '{page_link}'")
             return None
 
-        ns_alias, page_title = page_link.split(':', 1)
+        ns_alias, _, page_title = page_link.partition(':')
         namespace = self.get_namespace(ns_alias)
         
         if not namespace:
@@ -139,25 +143,19 @@ class Wiki:
         return page
 
     def process_namespaces(self) -> None:
-        """Process each namespace. First the namespaces are indexed,
-        then the pages are processed.
+        """Tell the namespaces to process their pages. Note that the namespaces were
+        indexed during creation.
         """
 
         for namespace in self.namespaces:
             self.namespaces[namespace].process_pages()
 
     def report_broken_links(self) -> None:
-        """Report broken links. If the verbose level is set
-        to 3 then report broken links.
+        """Report broken links in namespaces.
         """
-        # TODO should call ns.report_broken_links()
 
         for namespace in self.namespaces:
-            if len(self.namespaces[namespace].index.broken) == 0:
-                continue
-
-            for page_name in self.namespaces[namespace].index.broken:
-                logging.info(f'broken link: {self.namespaces[namespace].name}:{page_name}')
+            self.namespaces[namespace].report_broken_links()
 
 
 def mokuwiki(args=None):
@@ -166,14 +164,11 @@ def mokuwiki(args=None):
 
     parser = argparse.ArgumentParser(description='Convert folder of Markdown files to support interpage linking and tags')
     parser.add_argument('config', help='Wiki configuration file')
-    parser.add_argument('--target', help='Target directory root')
-    parser.add_argument('--reindex', help='Force reindex', action='store_true')
-    parser.add_argument('--nosearch', help='Do not produce a search index (JSON)', action='store_true')
     parser.add_argument('-v', '--verbose', help='Set logging verbosity', action='count')
 
     args = parser.parse_args(args)
 
-    wiki = Wiki(args.config, target=args.target, reindex=args.reindex, nosearch=args.nosearch, verbose=args.verbose)
+    wiki = Wiki(args.config, verbose=args.verbose)
 
     if len(wiki) == 0:
         logging.error(f"wiki '{wiki.name}' has no valid namespaces")
