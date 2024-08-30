@@ -110,6 +110,10 @@ class WikiConfig:
         return self.config.get('search_file', DEFAULT_SEARCH_FILE)
     
     @property
+    def templates(self) -> dict:
+        return self.config.get('templates', {})
+    
+    @property
     def noise_words(self) -> list[str]:
         
         if 'noise_words' not in self.config:
@@ -123,7 +127,6 @@ class WikiConfig:
         return []
 
 class NamespaceConfig:
-    
     
     def __init__(self, name, config: dict, wiki: 'Wiki') -> None:
         # config is a WikiConfig object
@@ -150,14 +153,19 @@ class NamespaceConfig:
             return Path(content)
         
         return Path(self.wiki_config.content_dir) / self.name / self.wiki_config.pages_dir
-        
-        # return self.config.get('content', f"{self.wiki_config.content_dir}/{self.name}/{self.wiki_config.pages_dir}")
+            
+    @property
+    def media_dir(self) -> str:
+        return self.config.get('media_dir', self.wiki_config.media_dir)
+
+    @property
+    def pages_dir(self) -> str:
+        return self.config.get('pages_dir', self.wiki_config.pages_dir)
     
     @property
     def target_dir(self) -> Path:
         # target is always relative to wiki target
         return Path(self.wiki_config.target_dir) / self.name
-        # return os.path.join(self.wiki_config.target, self.name)
     
     @property
     def broken_css(self) -> str:
@@ -193,6 +201,10 @@ class NamespaceConfig:
     @property
     def search_file(self) -> str:
         return self.config.get('search_file', self.wiki_config.search_file)
+    
+    @property
+    def templates(self) -> dict:
+        return self.config.get('templates', self.wiki_config.templates)
     
     @property
     def meta_fields(self) -> list[str]:

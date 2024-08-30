@@ -23,15 +23,17 @@ logging.basicConfig(format='mokuwiki: %(levelname)s %(message)s', level=logging.
 MARKDOWN_PARA_SEP = "\n\n"
 
 COMMENT_RE = r"\/\/\s(.*)$"
-FILE_INCLUDE_RE = r"^<<(.*)>>$"
-EXEC_COMMAND_RE = r"%%(.*)%%"
-TAGS_REPLACE_RE = r"^\{\{(.*)\}\}$"
-PAGE_LINK_RE = r"\[\[(.*)\]\]"
-IMAGE_LINK_RE = r"!!(.*)!!"
-CUSTOM_STYLE_RE = r"\^\^(.*)\^\^"
+FILE_INCLUDE_RE = r"<<(.*?)>>"
+EXEC_COMMAND_RE = r"%%(.*?)%%"
+TAGS_REPLACE_RE = r"\{\{(.*?)\}\}"
+PAGE_LINK_RE = r"\[\[(.*?)\]\]"
+IMAGE_LINK_RE = r"!!(.*?)!!"
+CUSTOM_STYLE_RE = r"\^\^(.*?)\^\^"
 
 MIN_REPEAT_COUNT = 1
 MAX_REPEAT_COUNT = 999
+MIN_HEADING_LEVEL = 1
+MAX_HEADING_LEVEL = 6
 
 
 class MetadataReplace(Template):
@@ -53,7 +55,7 @@ class Page:
     FileIncludeParser = FileIncludeParser()
     TagListParser = TagListParser()
 
-    def __init__(self, page_path: Path, namespace: 'Namespace', included: bool = False, media: str = 'images', custom: str = '.smallcaps') -> None:
+    def __init__(self, page_path: Path | str, namespace: 'Namespace', included: bool = False, media: str = 'images', custom: str = '.smallcaps') -> None:
         """Initialize a Page object by reading a Markdown file and
         splitting the contents into metadata and body components.
 
@@ -84,14 +86,14 @@ class Page:
         # read file
         # TODO should be in self.load(), returns (meta, body)
         try:
-            with page_path.open('r', encoding='utf8') as f:
+            with Path(page_path).open('r', encoding='utf8') as f:
                 contents = f.read().strip()
         except IOError:
             logging.error(f"could not read file '{page_path}'")
             raise ValueError
-
-        if '...\n' in contents:
-            self.meta, _, self.body = contents.partition('...\n')
+        
+        if '...' in contents:
+            self.meta, _, self.body = contents.partition('...')
         else:
             if included:
                 # if the page is being created as part of an include directive, plain files
@@ -101,6 +103,8 @@ class Page:
             else:
                 logging.warning(f"incorrect metadata specification in '{page_path}'")
                 raise ValueError
+
+        self.body = self.body.strip()
 
         if self.meta:
             try:
@@ -112,9 +116,12 @@ class Page:
         try:
             self.target = make_file_name(self.meta['title'])
         except KeyError:
-            logging.error(f"page '{page_path}' must have a title")
-            raise ValueError
-
+            # included files do not need a target, as they will never be saved
+            if included:
+                self.target = None
+            else:
+                raise ValueError(f"page {page_path} has no title")
+        
         self.source = page_path        
         self.namespace = namespace
 
@@ -160,7 +167,7 @@ class Page:
 
     @property
     def tags(self) -> list[str]:
-        return self.meta.get('tags', [])
+        return [t.lower() for t in self.meta.get('tags', [])]
 
     @property
     def toc_level(self) -> int:
@@ -208,12 +215,8 @@ class Page:
             if not heading.startswith('#'):
                 return heading
             
-            level, _, text = heading.partition(' ')
-            
-            level = len(level) + shift
-            
-            if not 1 <= level <= 6:
-                return heading
+            level, _, text = heading.partition(' ')            
+            level = min(MAX_HEADING_LEVEL, max(MIN_HEADING_LEVEL, len(level) + shift))
             
             return f"{'#' * level} {text}"
         
@@ -224,7 +227,7 @@ class Page:
         content = MetadataReplace(content).safe_substitute(self.meta)
         
         if shift != 0:
-            content = re.sub(r"^(#.*)", lambda x: shift_heading(x.group(), shift), content)
+            content = re.sub(r"^(#.*)", lambda h: shift_heading(h.group(), shift), content)
                 
         if indent:
             content = re.sub('^(.*)', indent + r'\1', content, flags=re.MULTILINE)
@@ -239,6 +242,11 @@ class Page:
             default one (which is a slugified version of the page title).
             Defaults to None.
         """
+
+        if not self.target:
+            # if no target then plain file that was included, cannot save
+            logging.error(f"tried to save included file {self.source}")
+            return
 
         if not file_name:
             target = self.namespace.config.target_dir if self.namespace else ''
@@ -299,6 +307,11 @@ class Page:
         which would then be processed as usual (e.g. into
         '[apple](apple.html)')
         """
+        
+        """ 
+        TODO Can we look up page in wiki get_page_by_name get NS and add the right
+        wiki links here? then  process page directives?
+        """
 
         # TODO add to utils
         def add_page_links(name: str) -> str:
@@ -315,10 +328,8 @@ class Page:
             if isinstance(self.meta[field], list):
                 self.meta[field] = [re.sub(PAGE_LINK_RE, self.process_page_directives, add_page_links(f)) for f in self.meta[field]]
 
-            else:
-                # string field, only update if not blank
-                if self.meta[field]:
-                    self.meta[field] = re.sub(PAGE_LINK_RE, self.process_page_directives, add_page_links(self.meta[field]))
+            if isinstance(self.meta[field], str) and self.meta[field]:
+                self.meta[field] = re.sub(PAGE_LINK_RE, self.process_page_directives, add_page_links(self.meta[field]))
 
     def process_file_includes(self, include: Match) -> str:
         """Reads the content of all files matching the file specification
@@ -335,9 +346,18 @@ class Page:
         Returns:
             str: the concatenated contents of the file specification
         """
-        
+        # breakpoint()
         include = str(include.group(1))
         options = Page.FileIncludeParser.parse(include)
+
+        # replace format. header if in template, else retain
+        if options.format:
+            options.format = self.namespace.config.templates.get(options.format, options.format)
+            
+        if options.header:
+            options.header = self.namespace.config.templates.get(options.header, options.header)
+
+        # TODO add -pipe option to e.g. include monster and pipe through monster + adhoc 
 
         # resolve namespace ref if present
         # TODO replace 'ns1:' with path to content, then glob? this would allow ns1:file*.md?
@@ -353,28 +373,34 @@ class Page:
             repeat = min(max(options.repeat, MIN_REPEAT_COUNT), MAX_REPEAT_COUNT)
 
             page_list = [page_list.source for _ in range(repeat)]
-        else:
-            # no namespace ref so create globbed list
-            page_list = list(Path(self.namespace.config.content_dir).glob(options.files))
+        elif '*' in options.files:
+            # no NS ref but needs globbing
+            page_list = list(self.namespace.config.content_dir.glob(options.files))
 
             if options.sort:
                 # sort by filename
                 page_list = sorted(page_list)
-
-        # TODO need to test plain text files
-
+        else:
+            # single file
+            page_list = self.namespace.config.content_dir / options.files
+            page_list = [page_list]
+            
         # create text
         if len(page_list) == 0:
             return ''
 
-        if options.format:
-            page_list = [Page(p, self.namespace, included=True) for p in page_list]
+        try:
+            if options.format:
+                page_list = [Page(p, self.namespace, included=True) for p in page_list]
 
-            incl_text = [MetadataReplace(options.format).safe_substitute(p.meta) for p in page_list]
-
-        else:
-            incl_text = [Page(p, self.namespace, included=True).content(options.indent, options.shift) for p in page_list]
-            
+                incl_text = [MetadataReplace(options.format).safe_substitute(p.meta) for p in page_list]
+            else:
+                incl_text = [Page(p, self.namespace, included=True).content(options.indent, options.shift) for p in page_list]
+        except ValueError:
+            # catch Page() errors due to path issues
+            logging.warning(f"missing files in include directive '{options.files}'")
+            return ''
+        
         incl_text = options.sep.join([options.before + 
                                       t +
                                       options.after
@@ -426,15 +452,21 @@ class Page:
             str: Markdown formatted link to page(s) whose tag match the
             specification
         """
-
+        
         tag_list = str(tags.group(1))
         
         options = Page.TagListParser.parse(tag_list)
-        
+
+        # replace format. header if in template, else retain
+        if options.format:
+            options.format = self.namespace.config.templates.get(options.format, options.format)
+            
+        if options.header:
+            options.header = self.namespace.config.templates.get(options.header, options.header)
+
         tag_list = options.tags
 
         # get initial category
-        # CHECK why the replace, tags are now lists of str in metadata aren't they?
         tag_name = tag_list[0].replace('_', ' ').lower()
         tag_text = ''
 
@@ -478,19 +510,19 @@ class Page:
                     tag_name = tag[1:] if tag.startswith(('&', '!')) else tag
 
                     # normalise tag name
-                    # CHECK need this? tagged_pages() should lower case
-                    tag_name = tag_name.replace('_', ' ').lower()
+                    tag_name = tag_name.lower()
 
                     if tag[0] == '&':
-                        page_set &= tag_ns.index.get_tagged_pages(tag_name)
+                        page_set = page_set & tag_ns.index.get_tagged_pages(tag_name)
                     elif tag[0] == '!':
-                        page_set -= tag_ns.index.get_tagged_pages(tag_name)
+                        page_set = page_set - tag_ns.index.get_tagged_pages(tag_name)
                     else:
-                        page_set |= tag_ns.index.get_tagged_pages(tag_name)
+                        page_set = page_set | tag_ns.index.get_tagged_pages(tag_name)
 
                 ns_alias = '' if own_ns else tag_ns.alias
                 
                 if not options.format:
+                    # TODO can't we just make a wiki link, as will be processed next?
                     tag_text = [make_markdown_link(p, '', ns_alias) for p in page_set]
                 else:
                     # turn titles back into pages
@@ -513,6 +545,7 @@ class Page:
         return options.header + tag_text
 
     def process_page_directives(self, page: Match) -> str:
+        # TODO should be called process_link_directives
         """Convert a page title in double square brackets into an inter-page link.
         Typically this will be `[[Page name]]` or `[[Display name|Page name]]`,
         or with namespaces `[[ns:Page name]]` or `[[Display name|ns:Page name]]`.

@@ -64,6 +64,8 @@ class Wiki:
 
             self.namespaces[namespace.name] = namespace
             
+            logging.info(f"Successfully created namespace '{namespace.name}'")
+            
         if not self.root_ns:
             logging.error(f"no namespace has been marked as root")
             

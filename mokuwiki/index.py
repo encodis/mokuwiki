@@ -68,10 +68,8 @@ class Index:
         self._titles[page.title] = page.target
         self._aliases[page.alias] = page.title
 
-        # TODO need a consistent function to remove [] and lower case etc, slugify?
-        # TODO should tags be lowercased for these purposes???
         for tag in page.tags:
-            self._tags[tag.replace('[', '').replace(']', '').lower()].add(page.title)
+            self._tags[tag].add(page.title)
 
         self._update_search_index(page)
 
@@ -81,10 +79,8 @@ class Index:
     def has_alias(self, page_name: str) -> bool:
         return True if page_name in self._aliases.keys() else False
 
-    def has_tag(self, tag_name: str) -> bool:
-        tag_name = tag_name.replace('[', '').replace(']', '').lower()
-        
-        return True if tag_name in self._tags.keys() else False
+    def has_tag(self, tag_name: str) -> bool:        
+        return True if tag_name.lower() in self._tags.keys() else False
     
     def has_target(self, target: str) -> bool:
         return True if target in self._titles.values() else False
@@ -103,7 +99,6 @@ class Index:
     
     def get_tags(self) -> list[str]:
         return self._tags.keys()
-
 
     def get_tagged_pages(self, tag_name: str) -> set|None:
         if not self.has_tag(tag_name):

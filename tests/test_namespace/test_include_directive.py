@@ -61,6 +61,58 @@ def test_file_includes(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
 
+def test_file_includes_plain(tmp_path):
+    
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
+
+    target = tmp_path / 'target'
+    target.mkdir()
+
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   f"""
+                   ---
+                   title: Page One
+                   ...
+                   <<file2.md>>
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   Included Text line 1
+                   Included Text line 2
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
+
+    wiki = Wiki(yaml.safe_load(wiki_config))
+    wiki.process_namespaces()
+
+    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    assert actual1.exists()
+
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    Included Text line 1
+    Included Text line 2
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+
+
 def test_file_includes_globbing(tmp_path):
 
     source = tmp_path / 'source'
@@ -331,6 +383,84 @@ def test_file_includes_format(tmp_path):
         
     assert Markdown.compare(expect1, actual1)
 
+def test_file_includes_format_template(tmp_path):
+
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
+
+    target = tmp_path / 'target'
+    target.mkdir()
+
+    file1 = ns1 / 'fileX1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   foo: Text 1
+                   bar: 12
+                   ...
+                   <<fileX*.md --format foobar>>
+                   """)
+    
+    file2 = ns1 / 'fileX2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   foo: Text 2
+                   bar: 36                   
+                   ...
+                   Included Two
+                   """)
+
+    file3 = ns1 / 'fileX3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   foo: Text 3
+                   bar: 822
+                   ...
+                   Included Three
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
+
+    wiki_config = wiki_config + """
+        templates:
+          foobar: "X ?{foo} is ?{bar}"
+        """
+
+    wiki = Wiki(yaml.safe_load(wiki_config))
+    wiki.process_namespaces()
+
+    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    assert actual1.exists()
+
+    expect1 = """
+    ---
+    title: Page One
+    foo: Text 1
+    bar: 12
+    ...
+    X Text 1 is 12
+    
+    X Text 2 is 36
+    
+    X Text 3 is 822
+    """
+        
+    assert Markdown.compare(expect1, actual1)
+
 def test_file_includes_format_table(tmp_path):
 
     source = tmp_path / 'source'
@@ -404,6 +534,7 @@ def test_file_includes_format_table(tmp_path):
     """
         
     assert Markdown.compare(expect1, actual1)
+    
 def test_file_includes_by_namespace(tmp_path):
     source = tmp_path / 'source'
     source.mkdir()

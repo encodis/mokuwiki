@@ -96,6 +96,10 @@ In some cases it is useful to convert some metadata fields into page links. A go
 
 A comma separated list of words to ignore when building the search index. If the value of this options starts with the string "file:" then the remainder of the string will be assumed to be a plain text file containing a list of noise words (one word per line). If so this file will be read and used instead. The default is a list of common noise words.
 
+### templates
+
+TODO for file includes/tags - can have NS level too 
+
 # How it works
 
 MokuWiki makes two key assumptions about the files that it processes:
@@ -186,9 +190,36 @@ Page names can contain references to namespaces, again based on the MoukWiki mod
 
 > NOTE: MokuWiki does **not** recursively process folders and keep track of namespaces. This functionality merely makes it easier to create links between pages in different folders. Note also that this functionality may change in future versions...
 
-### Tag links
+### Image links
 
-Tags that have been can be referenced in a page using the following syntax: `{{tag1}}`. This will produce a list of page links that have the "tag1" tag. So, for example, a source fragment:
+The image link directive provides an easier way to link to images: the syntax `!!A Nice Image!!` will be converted to `![A Nice Image](images/a_nice_image.jpg)`. Some points to note include:
+
+1.  The name of the link ('A Nice Image' in the example) is also the name of the image's caption.
+2.  The default assumes that all images are in an `images` folder which is a child of the folder the referencing file is in. The folder name can be changed with the `--media` command line option. 
+3.  The default file format assumed is JPEG, therefore the extension is '.jpg'. This can be changed using the following syntax: `!!Another Picture|png!!`.
+4.  MoukWiki will not check for the existence of the 'image' folder or move any images into the target folder.
+
+### Exec directives
+
+The 'exec' directive allows the output of a command can be inserted into the document using the following syntax: `%% ls -l test/*.dat %%`. The command must be in the user's PATH and any file specifications that the directive is to glob must be the last element of the command line (as shown here). Multiple, semi-colon separated commands are supported.
+
+1.  This directive uses the [subprocess.run()](https://docs.python.org/3/library/subprocess.html#subprocess.run) function. Therefore [standard security considerations](https://docs.python.org/3.6/library/subprocess.html#security-considerations) should be borne in mind when using this feature.
+2.  This feature has not been checked on Windows machines, but should work if executed in the appropriate shell (e.g. Git Bash).
+3.  The output of the command should be text suitable for a Markdown file.
+
+### Custom style
+
+The custom style directive provides a way to wrap text in a custom style using Pandoc's [bracketed span](https://pandoc.org/MANUAL.html#divs-and-spans) feature: the syntax `^^styled text^^` will give an output of `[styled text]{.smallcaps}`, i.e. the default Pandoc command for small caps. The style can be changed using the `--custom` flag on the command line. The text of this argument is copied directly into CSS portion of the span, so should include the leading "dot" if it is to be a CSS class. 
+
+Note that this directive is processed last, so it will apply the custom style to links (e.g. `^^[[Page One]]^^` will work as expected).
+
+### Comment directives
+
+Single line comments can be included in a source file: any characters on the line that occur after a double slash followed by a space (`// `) will be removed. There are no block comments. 
+
+### Tag directives
+
+Tags that have been created by a page can be referenced in any page using the following syntax: `{{tag1}}`. This will produce a list of page links that have the "tag1" tag. So, for example, a source fragment:
 
 ```
 Pages containing tag 'abc':
@@ -218,9 +249,44 @@ Tags can be combined using various operators:
 6.  `{{#tag1}}` represents the number of pages that have the tag 'tag1'
 7.  `{{@}}` will return a list of all tags defined in the source folder as a series of bracketed spans with the class name 'tag'. This can be used to style tag lists. The class name can be changed using the `--tag` command line option.
 
+By default, the list of pages returned is restricted to the current namespace. A different namespace can be specified using the following format: `{{ns1:tag1}}`. Only the first tag can have a namespace specified. For example, to include all pages in the namespace `ns1` with `tag1` and `tag2` you would use `{{ns1:tag1 +tag2}}`.
+
+The tag directives supports a number of options. These can be added (in any order) after the last tag specification, for example `{{tag1 -tag2 --sort}}`
+
+The options available are:
+
+-  `--sort`: Sort the included page list alphabetically
+-  `--sep S`: Add the string S between each page. Default is ''.
+-  `--format T`: Instead of a link to the page being output, the string T is used as a template for the output text. 
+-  `--header T`: Output this string or template before any page information. This is useful when making a Markdown table.
+-  `--before S`: Add the string S before each page output. Default is `\n`
+-  `--after S`: Add the string S after each page output. Default is `\n`
+
+Note that templating (see below) can be applied to the `format` and `header` options
+
+
 ### Include directives
 
-Include one file in another using the following markup: `<<include_me.md>>`. Any YAML data blocks will be removed from the included file before inclusion. This pattern actually supports globbing, so you can do `<<include_X*Y.dat>>` and so on. The path is assumed to be relative to the directory that the module was invoked from.
+Include the contents of one file in another using the following markup: `<<include_me.md>>`. Any YAML data blocks (i.e. metadata) will be removed from the included file before inclusion (although they *will* be parsed, so metdata elements can be used in format and header templates). This pattern actually supports globbing, so you can do `<<include_X*Y.dat>>` and so on. The path is assumed to be relative to the directory that the module was invoked from.
+
+The include directive supports a number of options. These can be added (in any order) after the path specification, for example `<<fileX*.md --sort>>`.
+
+The available options are:
+
+-  `--sort`: Sort the included page list alphabetically
+-  `--sep S`: Add the string S between each page. Default is ''.
+-  `--shift N`: Shift all headers in the included page "up" by one (so that "# Heading" becomes "## Heading"). The default is 0, and negative numbers are supported.
+-  `--indent S`: Add the string S before each line of the included content. For example, `<<fileX.md --indent "> ">>` would transform the included content from "fileX.md" into a block quote.
+-  `--format T`: Instead the page content being output, the string T is used as a template for the output text. 
+-  `--header T`: Output this string or template before any page content. This is useful when making a Markdown table.
+-  `--before S`: Add the string S before each page output. Default is `\n`
+-  `--after S`: Add the string S after each page output. Default is `\n`
+-  `--repeat N`: Add the content N times. Default is 1, the maximum is 999.
+
+
+### Templating and metadata substitution
+
+The tag and include directives are actually very similar, the main differenmt beign that the former includes ocnmtent by tga and the latter by file name/path. Also the default content for tags is a liong to the page, but for includes it is the page conettm. Both directives suppoert the format and header options, whihc can make extensivbe use of templates specified in the Wiki config.
 
 Blank lines will be inserted between the contents of each file, and separators can be inserted between each one by using the syntax `<<include_X*Y.dat|* * *>>`. (The default is no separator, but "* * *" is a useful one as it becomes a horizontal rule when processed by `pandoc`. )
 
@@ -232,32 +298,20 @@ Two specific metadata fields are also recognized. If either (or both) of the fie
 
 EXAMPLES OF PREFIX, SUFFIX
 
-### Image links
+options are
 
-The image link directive provides an easier way to link to images: the syntax `!!A Nice Image!!` will be converted to `![A Nice Image](images/a_nice_image.jpg)`. Some points to note include:
+sort
+sep
+shift
+indent
+before: before and after each file
+after
+header: at start of whole include
+format
+repeat
 
-1.  The name of the link ('A Nice Image' in the example) is also the name of the image's caption.
-2.  The default assumes that all images are in an `images` folder which is a child of the folder the referencing file is in. The folder name can be changed with the `--media` command line option. 
-3.  The default file format assumed is JPEG, therefore the extension is '.jpg'. This can be changed using the following syntax: `!!Another Picture|png!!`.
-4.  MoukWiki will not check for the existence of the 'image' folder or move any images into the target folder.
+### Paths etc
 
-### Exec directives
-
-The 'exec' directive allows the output of a command can be inserted into the document using the following syntax: `%% ls -l test/*.dat %%`. The command must be in the user's PATH and any file specifications that the directive is to glob must be the last element of the command line (as shown here). Multiple, semi-colon separated commands are supported.
-
-1.  This directive uses the [subprocess.run()](https://docs.python.org/3/library/subprocess.html#subprocess.run) function. Therefore [standard security considerations](https://docs.python.org/3.6/library/subprocess.html#security-considerations) should be borne in mind when using this feature.
-2.  This feature has not been checked on Windows machines, but should work if executed in the appropriate shell (e.g. Git Bash).
-3.  The output of the command should be text suitable for a Markdown file.
-
-### Custom style
-
-The custom style directive provides a way to wrap text in a custom style using Pandoc's [bracketed span](https://pandoc.org/MANUAL.html#divs-and-spans) feature: the syntax `^^styled text^^` will give an output of `[styled text]{.smallcaps}`, i.e. the default Pandoc command for small caps. The style can be changed using the `--custom` flag on the command line. The text of this argument is copied directly into CSS portion of the span, so should include the leading "dot" if it is to be a CSS class. 
-
-Note that this directive is processed last, so it will apply the custom style to links (e.g. `^^[[Page One]]^^` will work as expected).
-
-### Comment directives
-
-Single line comments can be included in a source file: any characters on the line that occur after a double slash followed by a space (`// `) will be removed. There are no block comments. 
 
 ## Other features
 

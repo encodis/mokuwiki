@@ -8,9 +8,13 @@ MARKDOWN_PARA_SEP = "\n\n"
 
 
 class OptionsParser:
-    
+    # TODO when these error they report they are mokuwiki, not something else!
     def __init__(self) -> None:
         self._parser = argparse.ArgumentParser(exit_on_error=False)
+    
+    """ See this https://stackoverflow.com/questions/5943249/python-argparse-and-controlling-overriding-the-exit-status-code
+    because exit_on_error has bugs
+    """
     
     def parse(self, line) -> dict:
         try:
@@ -40,6 +44,8 @@ class FileIncludeParser(OptionsParser):
         self._parser.add_argument('--header', default='')
         self._parser.add_argument('--format', default='')
         self._parser.add_argument('--repeat', default=1, type=int)
+        
+        logging.debug("FileIncludeParser initialized")
     
             
 class TagListParser(OptionsParser):
@@ -53,6 +59,8 @@ class TagListParser(OptionsParser):
         self._parser.add_argument('--header', default='')
         self._parser.add_argument('--before', default='\n')
         self._parser.add_argument('--after', default='\n')
+        
+        logging.debug("TagListParser initialized")
 
 
 def make_file_name(name: str, ext: str = '') -> str:

@@ -122,12 +122,19 @@ class Namespace:
         """
         
         for page_name in self.index.get_broken():
-            logging.info(f'broken link: {self.name}:{page_name}')
+            logging.debug(f'broken link: {self.name}:{page_name}')
 
     def generate_stories(self) -> None:
         """basically, just insert next/prev
         
         and return home page
+        
+        TODO: may want to use a story prefix for filenames e.g. in rules we would have core-intro.md, eberron-intro.md
+        and so on
+        
+        As all HF/content/**/rules/*.m is going into same folder maybe each story does need a string
+        that can be used to uniquify a filename, i.e. auto gets added in slugify...
+        
         """
                 
         self.home_pages = []
@@ -219,76 +226,7 @@ class Namespace:
             if not page.toc_display:
                 continue
             
-            page.meta['ns-toc'] = toc        
-        
-    def generate_toc(self):
-        """Generate ToC
-        
-        TODO
-        - generate stories first
-        - then generate story ToCs
-        - then get NS ToC from non-story pages
-        - then order NS ToC
-        """
-        
-        if self.config.toc == 0:
-            return
-        
-        self.home_page = None
-        
-        # get home page
-        for page in self.pages:
-            if page.meta.get('home', False):
-                if self.home_page:
-                    logging.error(f"Ignoring duplicate home page {page.title}")
-                else:
-                    self.home_page = page
-        
-        if not self.home_page:
-            logging.warning("No home page for ToC generation")
-            return
-        
-        # set home page for metadata, overwrite boolean value in actual home page
-        for page in self.pages:
-            page.meta['home'] = make_markdown_link(self.home_page.title)
-
-        # get ordering, starting from home
-        toc_pages = []
-        
-        toc_pages.append(self.home_page)
-
-        last = self.home_page
-
-        for page1 in self.pages:
-            
-            for page2 in self.pages:
-                if not page2.toc_include or page1.title == page2.title:
-                    continue
-            
-                if last.meta.get('next', '') == page2.title:
-                    toc_pages.append(page2)
-                    page2.meta['prev'] = last.title
-                    
-                    last = page2
-                    break
-            
-        # format toc with CSS as string, using toc-level for each page
-        toc = '\n'.join([make_markdown_span(make_markdown_link(p.title), f"toc{p.toc_level}") for p in toc_pages])
-            
-        # insert ToC as metadata into each page
-        for page in self.pages:
-            if not page.toc_display:
-                continue
-            
             page.meta['ns-toc'] = toc
-    
-            # CHECK is this done by convert_metadata_links()? No but they could be with suitable defaults
-            if 'next' in page.meta:
-                page.meta['next'] = make_markdown_link(page.meta['next'])
-
-            if 'prev' in page.meta:
-                page.meta['prev'] = make_markdown_link(page.meta['prev'])
-
 
     def process_pages(self) -> None:
         """Process each page, first processing any embedded directives,

@@ -36,7 +36,7 @@ def test_tags_directive(tmp_path):
                    """
                    ---
                    title: Page Two
-                   tags: [abc]
+                   tags: [ABC]
                    ...
                    Text 2
                    """)
@@ -89,7 +89,166 @@ def test_tags_directive(tmp_path):
     """
     
     assert Markdown.compare(expect3, actual3)
+    
+def test_tags_directive_spaces(tmp_path):
+    """Test that the directive '{{tag}}' produces a list of pages with that tag,
+    and that pages without those tags are not included in the list
+    """
+   
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
 
+    target = tmp_path / 'target'
+    target.mkdir()
+
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [a bc]
+                   ...
+                   {{a_bc}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [a bc]
+                   ...
+                   Text 2
+                   """)
+
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   ...
+                   {{xyz}}
+                   """)
+
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
+
+    wiki = Wiki(yaml.safe_load(wiki_config))
+    wiki.process_namespaces()
+
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    tags: [a bc]
+    ...
+    [Page One](page_one.html)
+
+    [Page Two](page_two.html)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+    
+    actual3 = Path(target) / 'ns1' / 'page_three.md'
+    assert actual3.exists()
+    
+    expect3 = """
+    ---
+    title: Page Three
+    tags: [xyz]
+    ...
+    [Page Three](page_three.html)
+    """
+    
+    assert Markdown.compare(expect3, actual3)
+
+def test_tags_directive_multi(tmp_path):
+    """Test that the directive '{{tag}}' produces a list of pages with that tag,
+    and that pages without those tags are not included in the list
+    """
+   
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
+
+    target = tmp_path / 'target'
+    target.mkdir()
+
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   ...
+                   {{abc}}
+                   
+                   {{xyz}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   ...
+                   Text 2
+                   """)
+
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   ...
+                   {{xyz}}
+                   """)
+
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
+
+    wiki = Wiki(yaml.safe_load(wiki_config))
+    wiki.process_namespaces()
+
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    ...
+    [Page One](page_one.html)
+
+    [Page Two](page_two.html)
+    
+    
+    
+    [Page Three](page_three.html)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+    
 def test_tags_directive_or(tmp_path):
     """Test OR
     """
@@ -418,7 +577,7 @@ def test_tags_directive_not_and(tmp_path):
                    title: Page One
                    tags: [abc]
                    ...
-                   {{abc &def !ghi}}
+                   {{abc &def !ghi !xyz}}
                    """)
     
     file2 = ns1 / 'file2.md'
@@ -953,7 +1112,87 @@ def test_tags_format(tmp_path):
     """
     
     assert Markdown.compare(expect1, actual1)
+
+def test_tags_format_template(tmp_path):
+    """Test that the directive '{{tag}}' produces a list of pages with that tag,
+    and that pages without those tags are not included in the list
+    """
+   
+    source = tmp_path / 'source'
+    source.mkdir()
     
+    ns1 = source / 'ns1'
+    ns1.mkdir()
+
+    target = tmp_path / 'target'
+    target.mkdir()
+
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   foo: bar one
+                   ...
+                   {{abc --format foobar}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   foo: bar two
+                   ...
+                   Text 2
+                   """)
+
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [xyz]
+                   foo: bar three
+                   ...
+                   {{xyz}}
+                   """)
+
+    wiki_config = f"""
+        name: test
+        target: {target}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
+
+    wiki_config = wiki_config + """
+        templates:
+          foobar: "X ?{foo} X"
+        """
+
+    wiki = Wiki(yaml.safe_load(wiki_config))
+    wiki.process_namespaces()
+
+    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    foo: bar one
+    ...
+    X bar one X
+    
+    X bar two X
+    
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+
 def test_tags_format_table(tmp_path):
     """Test that the directive '{{tag}}' produces a list of pages with that tag,
     and that pages without those tags are not included in the list
