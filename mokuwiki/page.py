@@ -285,7 +285,7 @@ class Page:
             self.body = re.sub(TAGS_REPLACE_RE, self.process_tags_directive, self.body)
             
             # process page links
-            self.body = re.sub(PAGE_LINK_RE, self.process_page_directives, self.body)
+            self.body = re.sub(PAGE_LINK_RE, self.process_link_directives, self.body)
 
             # convert metadata into links
             self.convert_metadata_links()
@@ -313,11 +313,6 @@ class Page:
         wiki links here? then  process page directives?
         """
 
-        # TODO add to utils
-        def add_page_links(name: str) -> str:
-            return name if name.startswith('[[') else '[[' + name + ']]'
-
-
         if not self.namespace.config.meta_fields:
             return
 
@@ -326,10 +321,10 @@ class Page:
                 continue
 
             if isinstance(self.meta[field], list):
-                self.meta[field] = [re.sub(PAGE_LINK_RE, self.process_page_directives, add_page_links(f)) for f in self.meta[field]]
+                self.meta[field] = [re.sub(PAGE_LINK_RE, self.process_link_directives, make_wiki_link(f)) for f in self.meta[field]]
 
             if isinstance(self.meta[field], str) and self.meta[field]:
-                self.meta[field] = re.sub(PAGE_LINK_RE, self.process_page_directives, add_page_links(self.meta[field]))
+                self.meta[field] = re.sub(PAGE_LINK_RE, self.process_link_directives, make_wiki_link(self.meta[field]))
 
     def process_file_includes(self, include: Match) -> str:
         """Reads the content of all files matching the file specification
@@ -365,7 +360,7 @@ class Page:
         if ':' in options.files:
             # if namespace ref exists list is only one file long
             # in DW terms this will be the path in the 'monster' NS
-            page_list = self.namespace.wiki.get_page_by_link(options.files)
+            page_list = self.namespace.wiki.get_page_by_name(options.files)
 
             if not page_list:
                 return ''
@@ -544,8 +539,7 @@ class Page:
         
         return options.header + tag_text
 
-    def process_page_directives(self, page: Match) -> str:
-        # TODO should be called process_link_directives
+    def process_link_directives(self, page: Match) -> str:
         """Convert a page title in double square brackets into an inter-page link.
         Typically this will be `[[Page name]]` or `[[Display name|Page name]]`,
         or with namespaces `[[ns:Page name]]` or `[[Display name|ns:Page name]]`.
@@ -582,7 +576,7 @@ class Page:
         else:
             page_title = page_name
 
-        # resolve namespace names or aliases
+        # resolve namespace names or aliases to get target NS for the link
         if namespace:
             # lookup namespace alias
             target_ns = self.namespace.wiki.get_namespace(namespace)
@@ -596,6 +590,8 @@ class Page:
                     logging.error(f"no namespace name or alias found for '{namespace}' in '{self.file}'")
                     return make_markdown_span(page_title, self.namespace.config.broken_css)
         else:
+            # here you COULD look up using wiki.get_page_by_name() -> page -> page.namespace.alias
+            # could FORCE current with ".:Foo"
             target_ns = self.namespace
 
         # set show name if not already done

@@ -108,11 +108,15 @@ class Namespace:
         for page in self.pages:
             if page.title == page_title:
                 return page
-
-        # if still here try aliases
-        for page in page.alias:
+            
             if page.alias == page_title:
                 return page
+
+        # if still here try aliases
+        # TODO this will not be a list, alias is a string
+        # for page in page.alias:
+        #     if page.alias == page_title:
+        #         return page
             
         return None
 

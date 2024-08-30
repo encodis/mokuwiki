@@ -113,33 +113,46 @@ class Wiki:
             
         return None
 
-    def get_page_by_link(self, page_link: str) -> Page|None:
+    def get_page_by_name(self, page_name: str) -> Page|None:
         """Get a page from a namespace by looking up the namespace alias and title.
 
         Example: "a:Foo" will return "aa/foo.md" if the namespace alias "a" maps to the path "aa/"
 
         Args:
-            page_link (str): Page link in format "a:Foo"
+            page_naem (str): Page name in format "a:Foo" or just "Foo" (to search all namespaces)
             
         Returns:
             Page: the relevant Page object, or None if not found
         """
 
-        if ':' not in page_link:
-            logging.warning(f"no namespace alias in '{page_link}'")
+        if ':' not in page_name:
+            # search all namespaces, return first match
+            # TODO what about same page title in diff NS, how to select?
+            
+            for namespace in self.namespaces:
+                page = namespace.get_page(page_name)
+                
+                if page:
+                    return page
+            
+            logging.error(f"no page titled '{page_name}' in any namespace")
             return None
 
-        ns_alias, _, page_title = page_link.partition(':')
+        # if ':' not in page_link:
+        #     logging.warning(f"no namespace alias in '{page_link}'")
+        #     return None
+
+        ns_alias, _, page_name = page_name.partition(':')
         namespace = self.get_namespace(ns_alias)
         
         if not namespace:
             logging.error(f"no namespace found for alias '{ns_alias}'")
             return None
         
-        page = namespace.get_page(page_title)
+        page = namespace.get_page(page_name)
 
         if not page:
-            logging.error(f"no page titled '{page_title}' in namespace '{namespace.name}'")
+            logging.error(f"no page titled '{page_name}' in namespace '{namespace.name}'")
             return None
 
         return page
