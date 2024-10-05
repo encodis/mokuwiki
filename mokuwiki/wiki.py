@@ -119,7 +119,7 @@ class Wiki:
         Example: "a:Foo" will return "aa/foo.md" if the namespace alias "a" maps to the path "aa/"
 
         Args:
-            page_naem (str): Page name in format "a:Foo" or just "Foo" (to search all namespaces)
+            page_name (str): Page name in format "a:Foo" or just "Foo" (to search all namespaces)
             
         Returns:
             Page: the relevant Page object, or None if not found
@@ -129,13 +129,12 @@ class Wiki:
             # search all namespaces, return first match
             # TODO what about same page title in diff NS, how to select?
             
-            for namespace in self.namespaces:
+            for _, namespace in self.namespaces.items():
                 page = namespace.get_page(page_name)
                 
                 if page:
                     return page
             
-            logging.error(f"no page titled '{page_name}' in any namespace")
             return None
 
         # if ':' not in page_link:
@@ -157,9 +156,26 @@ class Wiki:
 
         return page
 
+    def process_wiki(self) -> None:
+        
+        for namespace in self.namespaces:
+            self.namespaces[namespace].preprocess()
+            self.namespaces[namespace].load_pages()
+
+        for namespace in self.namespaces:
+            self.namespaces[namespace].process_pages()
+            
+        for namespace in self.namespaces:
+            self.namespaces[namespace].postprocess()
+
     def process_namespaces(self) -> None:
         """Tell the namespaces to process their pages. Note that the namespaces were
         indexed during creation.
+        
+        ns.preprocess
+        ns.load_pages
+        ns.postprocess
+        
         """
 
         for namespace in self.namespaces:
@@ -189,5 +205,5 @@ def mokuwiki(args=None):
         logging.error(f"wiki '{wiki.name}' has no valid namespaces")
         exit(1)
 
-    wiki.process_namespaces()
+    wiki.process_wiki()
     wiki.report_broken_links()

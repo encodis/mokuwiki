@@ -1,11 +1,15 @@
-from pathlib import Path
 import logging
+import yaml
+
+from copy import deepcopy
+from pathlib import Path
+from string import Template
 from typing import TYPE_CHECKING
 
-import yaml
 
 if TYPE_CHECKING:
     from mokuwiki.wiki import Wiki
+
 
 DEFAULT_WIKINAME = 'Wiki'
 DEFAULT_TARGET = 'build'
@@ -14,10 +18,15 @@ DEFAULT_BROKEN_CSS = '.broken'
 DEFAULT_TAGS_CSS = '.tag'
 DEFAULT_CUSTOM_CSS = '.smallcaps'
 DEFAULT_CONTENT_DIR = 'content'
+DEFAULT_BUILD_DIR = 'build'
 DEFAULT_PAGES_DIR = 'pages'
 DEFAULT_MEDIA_DIR = 'images'
 DEFAULT_TOC_LEVEL = 0
-DEFAULT_META_FIELDS = ['home', 'next', 'prev']
+DEFAULT_META_HOME = "home"
+DEFAULT_META_PREV = "prev"
+DEFAULT_META_NEXT = "next"
+DEFAULT_META_LINKS = [DEFAULT_META_HOME, DEFAULT_META_NEXT, DEFAULT_META_PREV]
+DEFAULT_META_LINKS_BROKEN = False
 DEFAULT_SEARCH_FIELDS = ['title', 'alias', 'tags', 'summary', 'keywords']
 DEFAULT_SEARCH_PREFIX = ''
 DEFAULT_SEARCH_FILE = '_index.json'
@@ -58,23 +67,23 @@ class WikiConfig:
         
         return namespaces
     
-    @property
-    def target_dir(self) -> Path:
-        target = self.config.get('target', None)
+    # @property
+    # def target_dir(self) -> Path:
+    #     target = self.config.get('target', None)
         
-        if not target:
-            target == DEFAULT_TARGET
-            logging.warning(f"No target directory set, assuming {target}")
+    #     if not target:
+    #         target == DEFAULT_TARGET
+    #         logging.warning(f"No target directory set, assuming {target}")
             
-        return Path(target)
+    #     return Path(target)
     
     @property
     def verbose(self) -> int:
         return self.config.get('verbose', DEFAULT_VERBOSITY)
-    
+
     @property
-    def content_dir(self) -> str:
-        return self.config.get('content_dir', DEFAULT_CONTENT_DIR)
+    def build_dir(self) -> Path:
+        return Path(self.config.get('build_dir', DEFAULT_BUILD_DIR))
 
     @property
     def media_dir(self) -> str:
@@ -110,8 +119,26 @@ class WikiConfig:
         return self.config.get('search_file', DEFAULT_SEARCH_FILE)
     
     @property
+    def preprocessing(self) -> str:
+        # default pre-processing is null
+        return self.config.get('preprocessing', [])
+
+    @property
+    def postprocessing(self) -> str:
+        # default post-processing is null
+        return self.config.get('postprocessing', [])
+    
+    @property
     def templates(self) -> dict:
         return self.config.get('templates', {})
+
+    @property
+    def meta_links(self) -> list[str]:
+        return DEFAULT_META_LINKS + self.config.get('meta_links', [])
+    
+    @property
+    def meta_links_broken(self) -> bool:
+        return self.config.get('meta_links_broken', DEFAULT_META_LINKS_BROKEN)
     
     @property
     def noise_words(self) -> list[str]:
@@ -136,6 +163,28 @@ class NamespaceConfig:
         self.wiki_config = wiki.config
         
         self.config = config
+        
+        # namespace is for the end folder
+        self.namespace = self.name if not self.is_root else ''
+    
+    def asdict(self):
+        """Return a dictionary of attributes/properties.
+        Used for template substitution. Not all properties
+        are included.
+        """
+    
+        return {'name': self.name,
+                'namespace': self.namespace,
+                'alias': self.alias,
+                'is_root': self.is_root,
+                'build_dir': self.build_dir,
+                'media_dir': self.media_dir,
+                'pages_dir': self.pages_dir,
+                'target_dir': self.target_dir,
+                'broken_css': self.broken_css,
+                'tags_css': self.tags_css,
+                'custom_css': self.custom_css
+                }
     
     @property
     def is_root(self) -> bool:
@@ -146,14 +195,25 @@ class NamespaceConfig:
         return self.config.get('alias', self.name)
     
     @property
-    def content_dir(self) -> Path:
+    def build_dir(self) -> Path:
+        """This is the base build dir for all the processes, including the "internal" MW process
+        """
+        return self.wiki_config.build_dir / self.name
+    
+    @property
+    def content_dirs(self) -> list[Path]:
+        """content_dirs are Path objects so use this as base for all NS operations
+        """
         content = self.config.get('content', None)
         
-        if content:
-            return Path(content)
+        if isinstance(content, str):
+            return [Path(Template(content).substitute(self.asdict()))]
         
-        return Path(self.wiki_config.content_dir) / self.name / self.wiki_config.pages_dir
-            
+        if isinstance(content, list):
+            return [Path(Template(c).substitute(self.asdict())) for c in content]
+        
+        logging.error(f"No content defined for namespace {self.name}")
+    
     @property
     def media_dir(self) -> str:
         return self.config.get('media_dir', self.wiki_config.media_dir)
@@ -164,8 +224,9 @@ class NamespaceConfig:
     
     @property
     def target_dir(self) -> Path:
-        # target is always relative to wiki target
-        return Path(self.wiki_config.target_dir) / self.name
+        """This is where the internal process has to send the wikified MD files for processing by pandoc
+        By default this will be ./build/$NS/mokuwiki, as 'mokuwiki' represents the internal process"""
+        return self.build_dir / "mokuwiki"
     
     @property
     def broken_css(self) -> str:
@@ -186,9 +247,9 @@ class NamespaceConfig:
         try:
             return int(toc)
         except TypeError:
-            logging.warning(f"Invalid value for 'toc' ({toc}), assuming 0")
+            logging.warning(f"Invalid value for 'toc' ({toc}), assuming {DEFAULT_TOC_LEVEL}")
             
-        return 0
+        return DEFAULT_TOC_LEVEL
     
     @property
     def search_fields(self) -> str:
@@ -207,9 +268,18 @@ class NamespaceConfig:
         return self.config.get('templates', self.wiki_config.templates)
     
     @property
-    def meta_fields(self) -> list[str]:
-        # meta fields are not set at wiki level
-        return self.config.get('meta_fields', DEFAULT_META_FIELDS)
+    def meta_links(self) -> list[str]:
+        
+        meta_links = self.config.get('meta_links', [])
+        
+        if meta_links:
+            return DEFAULT_META_LINKS + meta_links
+        else:
+            return self.wiki_config.meta_links
+    
+    @property
+    def meta_links_broken(self) -> bool:
+        return self.config.get('meta_links_broken', self.wiki_config.meta_links_broken)
     
     @property
     def noise_words(self) -> str:
@@ -227,12 +297,60 @@ class NamespaceConfig:
         if isinstance(noise_words, list):
             return noise_words
         
-        return read_noise_words(self.content_dir / noise_words)
+        # otherwise, if a string assume it refers to a file path
+        return read_noise_words(Path(noise_words))
         
     @property
     def noise_tags(self) -> list[str]:
         return self.config.get('noise_tags', None)
 
+    @property
+    def preprocessing(self) -> list:
+        # do namespace and vars subst here, for each NS before returning
+        # which you might get from wiki...
+        ### NO only do var subst here - up to process() to work out args
+        
+        # TODO need to get default from wiki and combine with namespace
+        
+        preprocessors: list = self.config.get('preprocessing', deepcopy(self.wiki_config.preprocessing))
+        
+        if not preprocessors:
+            return []
+
+        return self._param_substitution(preprocessors)
+
+    @property
+    def postprocessing(self) -> list:
+        
+        postprocessors: list = self.config.get('postprocessing', deepcopy(self.wiki_config.postprocessing))
+        
+        if not postprocessors:
+            return []
+
+        return self._param_substitution(postprocessors)
+
+    def _param_substitution(self, processors: dict) -> list:
+        
+        for processor in processors:
+            
+            for exec, config in processor.items():
+            
+                for arg, val in config.items():
+                
+                    if isinstance(val, str):
+                        config[arg] = Template(val).substitute(self.asdict())
+                        continue
+                
+                    if isinstance(val, list):
+                        config[arg] = [Template(v).substitute(self.asdict()) for v in val]
+                        continue
+                
+                    if isinstance(val, dict):
+                        for k, v in val.items():
+                            val[k] = Template(v).substitute(self.asdict())
+        
+        return processors
+        
 
 def read_noise_words(path:Path) -> list[str]:
     """Read a file of noise words This file

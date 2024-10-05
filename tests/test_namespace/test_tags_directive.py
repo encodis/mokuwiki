@@ -3,8 +3,9 @@ from pathlib import Path
 
 from mokuwiki.wiki import Wiki
 
-
 from utils import Markdown
+
+PROCESS = 'mokuwiki'
 
 
 def test_tags_directive(tmp_path):
@@ -17,9 +18,6 @@ def test_tags_directive(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -53,16 +51,16 @@ def test_tags_directive(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -77,7 +75,7 @@ def test_tags_directive(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
     
-    actual3 = Path(target) / 'ns1' / 'page_three.md'
+    actual3 = tmp_path / 'ns1' / PROCESS / 'page_three.md'
     assert actual3.exists()
     
     expect3 = """
@@ -100,9 +98,6 @@ def test_tags_directive_spaces(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -136,16 +131,16 @@ def test_tags_directive_spaces(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -160,7 +155,7 @@ def test_tags_directive_spaces(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
     
-    actual3 = Path(target) / 'ns1' / 'page_three.md'
+    actual3 = tmp_path / 'ns1' / PROCESS / 'page_three.md'
     assert actual3.exists()
     
     expect3 = """
@@ -183,9 +178,6 @@ def test_tags_directive_multi(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -221,16 +213,16 @@ def test_tags_directive_multi(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -257,9 +249,6 @@ def test_tags_directive_or(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -293,16 +282,16 @@ def test_tags_directive_or(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -317,7 +306,7 @@ def test_tags_directive_or(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
     
-    actual3 = Path(target) / 'ns1' / 'page_three.md'
+    actual3 = tmp_path / 'ns1' / PROCESS / 'page_three.md'
     assert actual3.exists()
     
     expect3 = """
@@ -339,9 +328,6 @@ def test_tags_directive_and(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -375,16 +361,16 @@ def test_tags_directive_and(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     # only page two has both tags abc and def
@@ -398,7 +384,7 @@ def test_tags_directive_and(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
     
-    actual3 = Path(target) / 'ns1' / 'page_three.md'
+    actual3 = tmp_path / 'ns1' / PROCESS / 'page_three.md'
     assert actual3.exists()
     
     expect3 = """
@@ -420,9 +406,6 @@ def test_tags_directive_and_three(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -466,16 +449,16 @@ def test_tags_directive_and_three(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     # only page four has all tags abc, def and ghi
@@ -498,9 +481,6 @@ def test_tags_directive_not(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -534,16 +514,16 @@ def test_tags_directive_not(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     # only page four has all tags abc, def and ghi
@@ -566,9 +546,6 @@ def test_tags_directive_not_and(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -602,16 +579,16 @@ def test_tags_directive_not_and(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     # only page two has tags abc and def but not ghi
@@ -634,9 +611,6 @@ def test_tags_directive_list_all(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -670,16 +644,16 @@ def test_tags_directive_list_all(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     # all pages in alphabetical order
@@ -706,9 +680,6 @@ def test_tags_directive_count_all(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -742,16 +713,16 @@ def test_tags_directive_count_all(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     # all pages in alphabetical order
@@ -774,9 +745,6 @@ def test_tags_directive_count_tag(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -810,16 +778,16 @@ def test_tags_directive_count_tag(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     # all pages in alphabetical order
@@ -842,9 +810,6 @@ def test_tags_directive_list_tags(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -878,16 +843,16 @@ def test_tags_directive_list_tags(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     # all pages in alphabetical order
@@ -914,9 +879,6 @@ def test_tags_directive_noise(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
@@ -949,7 +911,7 @@ def test_tags_directive_noise(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -957,9 +919,9 @@ def test_tags_directive_noise(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     # all pages in alphabetical order
@@ -985,9 +947,6 @@ def test_tags_other_namespace(tmp_path):
     ns1.mkdir()
     ns2.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
@@ -1010,7 +969,7 @@ def test_tags_other_namespace(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -1019,7 +978,7 @@ def test_tags_other_namespace(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
     assert len(wiki) == 2
     assert len(wiki.namespaces['ns1']) == 1
@@ -1033,7 +992,7 @@ def test_tags_other_namespace(tmp_path):
     [Page Two](../ns2/page_two.html)
     """
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     
     assert actual1.exists()
     assert Markdown.compare(expect1, actual1)
@@ -1048,9 +1007,6 @@ def test_tags_format(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -1087,16 +1043,16 @@ def test_tags_format(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -1123,9 +1079,6 @@ def test_tags_format_template(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -1162,7 +1115,7 @@ def test_tags_format_template(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -1174,9 +1127,9 @@ def test_tags_format_template(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -1203,9 +1156,6 @@ def test_tags_format_table(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -1245,16 +1195,16 @@ def test_tags_format_table(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     expect1 = """

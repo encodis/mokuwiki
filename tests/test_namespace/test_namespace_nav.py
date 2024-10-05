@@ -5,6 +5,8 @@ from mokuwiki.wiki import Wiki
 
 from utils import Markdown
 
+PROCESS = 'mokuwiki'
+
 
 def test_namespace_story(tmp_path):
     
@@ -13,9 +15,6 @@ def test_namespace_story(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -52,14 +51,14 @@ def test_namespace_story(tmp_path):
                    tags: [xyz]
                    toc-include: true
                    toc-level: 3
-                   prev: Some Other Page?
+                   prev: Some Other Page
                    ...
                    Text 3
                    """)
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -67,9 +66,9 @@ def test_namespace_story(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()    
+    wiki.process_wiki()    
     
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -90,7 +89,7 @@ def test_namespace_story(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
     
-    actual2 = Path(target) / 'ns1' / 'page_two.md'    
+    actual2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'    
     assert actual2.exists()
     
     expect2 = """
@@ -112,7 +111,7 @@ def test_namespace_story(tmp_path):
     
     assert Markdown.compare(expect2, actual2)
     
-    actual3 = Path(target) / 'ns1' / 'page_three.md'    
+    actual3 = tmp_path / 'ns1' / PROCESS / 'page_three.md'    
     assert actual3.exists()
     
     expect3 = """
@@ -143,9 +142,6 @@ def test_namespace_multi_stories(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -201,7 +197,7 @@ def test_namespace_multi_stories(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -209,9 +205,9 @@ def test_namespace_multi_stories(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()    
+    wiki.process_wiki()    
     
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -231,7 +227,7 @@ def test_namespace_multi_stories(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
     
-    actual2 = Path(target) / 'ns1' / 'page_two.md'    
+    actual2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'    
     assert actual2.exists()
     
     expect2 = """
@@ -251,7 +247,7 @@ def test_namespace_multi_stories(tmp_path):
     
     assert Markdown.compare(expect2, actual2)
     
-    actual3 = Path(target) / 'ns1' / 'page_three.md'
+    actual3 = tmp_path / 'ns1' / PROCESS / 'page_three.md'
     assert actual3.exists()
     
     expect3 = """
@@ -271,7 +267,7 @@ def test_namespace_multi_stories(tmp_path):
     
     assert Markdown.compare(expect3, actual3)
 
-    actual4 = Path(target) / 'ns1' / 'page_four.md'
+    actual4 = tmp_path / 'ns1' / PROCESS / 'page_four.md'
     assert actual4.exists()
     
     expect4 = """
@@ -297,9 +293,6 @@ def test_namespace_ns_toc(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -342,7 +335,7 @@ def test_namespace_ns_toc(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -350,9 +343,9 @@ def test_namespace_ns_toc(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()    
+    wiki.process_wiki()    
     
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -372,7 +365,7 @@ def test_namespace_ns_toc(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
     
-    actual2 = Path(target) / 'ns1' / 'page_two.md'    
+    actual2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'    
     assert actual2.exists()
     
     expect2 = """
@@ -392,7 +385,7 @@ def test_namespace_ns_toc(tmp_path):
     
     assert Markdown.compare(expect2, actual2)
     
-    actual3 = Path(target) / 'ns1' / 'page_three.md'    
+    actual3 = tmp_path / 'ns1' / PROCESS / 'page_three.md'    
     assert actual3.exists()
     
     expect3 = """

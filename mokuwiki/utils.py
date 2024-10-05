@@ -14,6 +14,8 @@ class OptionsParser:
     
     """ See this https://stackoverflow.com/questions/5943249/python-argparse-and-controlling-overriding-the-exit-status-code
     because exit_on_error has bugs
+    
+    or just do parse_known_args() and ignore errors?
     """
     
     def parse(self, line) -> dict:
@@ -82,9 +84,8 @@ def make_file_name(name: str, ext: str = '') -> str:
         
     return name + ext
 
-
-def make_markdown_span(span_text: str, css_class: str = '', sep: str = '\n') -> str:
-    # CHECK can we have empty css for spans?
+def make_markdown_span(span_text: str, css_class: str = '') -> str:
+    # CHECK can we have empty css for spans? what to do if blank
     if css_class:
         if css_class.startswith('.'):
             css_class = f"{{{css_class}}}"

@@ -6,6 +6,8 @@ from mokuwiki.wiki import Wiki
 
 from utils import Markdown
 
+PROCESS = 'mokuwiki'
+
 
 def test_page_links(tmp_path):
 
@@ -14,9 +16,6 @@ def test_page_links(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -38,16 +37,16 @@ def test_page_links(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
     
     expect1 = """
@@ -59,7 +58,7 @@ def test_page_links(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
 
-    actual2 = Path(target) / 'ns1' / 'page_two.md'    
+    actual2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'    
     assert actual2.exists()
     
     expect2 = """
@@ -78,9 +77,6 @@ def test_page_links_alias(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -103,16 +99,16 @@ def test_page_links_alias(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS /  'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -124,7 +120,7 @@ def test_page_links_alias(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
 
-    actual2 = Path(target) / 'ns1' / 'page_two.md'    
+    actual2 = tmp_path / 'ns1' / PROCESS /  'page_two.md'    
     assert actual2.exists()
     
     expect2 = """
@@ -144,9 +140,6 @@ def test_page_links_display(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -168,16 +161,16 @@ def test_page_links_display(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS /  'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -189,7 +182,7 @@ def test_page_links_display(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
 
-    actual2 = Path(target) / 'ns1' / 'page_two.md'    
+    actual2 = tmp_path / 'ns1' / PROCESS /  'page_two.md'    
     assert actual2.exists()
     
     expect2 = """
@@ -209,9 +202,6 @@ def test_page_links_broken(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
@@ -223,16 +213,16 @@ def test_page_links_broken(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS /  'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -253,9 +243,6 @@ def test_page_links_paragraph(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -293,16 +280,16 @@ def test_page_links_paragraph(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 =  tmp_path / 'ns1' / PROCESS /  'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -329,15 +316,12 @@ def test_page_links_metadata_string(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
                    ---
                    title: Page One
-                   subtitle: Page Two
+                   subtitle: '[[Page Two]]'
                    ...
                    Text 1
                    """)
@@ -353,17 +337,17 @@ def test_page_links_metadata_string(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
-              meta_fields: ['subtitle']
+              meta_links: ['subtitle']
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS /  'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
@@ -383,21 +367,21 @@ def test_page_links_metadata_list(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
+    
+    ns2 = source / 'ns2'
+    ns2.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
                    ---
                    title: Page One
-                   tags: [Page Two, Page Three]
+                   tags: ['[[Page Two]]', '[[Page Three]]', '[[Not Found]]']
                    ...
                    Text 1
                    """)
     
-    file2 = ns1 / 'file2.md'
+    file2 = ns2 / 'file2.md'
     Markdown.write(file2,
                    """
                    ---
@@ -417,23 +401,85 @@ def test_page_links_metadata_list(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
-              content: {ns1}
-              meta_fields: ['tags']
+            meta_links: ['tags']
+            meta_links_broken: false
+            content: {ns1}
+          ns2:
+            content: {ns2}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'    
+    actual1 = tmp_path / 'ns1' / PROCESS /  'page_one.md'    
     assert actual1.exists()
     
     expect1 = """
     ---
     title: Page One
-    tags: ['[Page Two](page_two.html)', '[Page Three](page_three.html)']
+    tags: ['[Page Two](../ns2/page_two.html)', '[Page Three](page_three.html)', Not Found]
+    ...
+    Text 1
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+
+def test_page_links_metadata_namespace_lookup(tmp_path):
+    """Force MW to find the page in the link
+    """
+    
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
+
+    ns2 = source / 'ns2'
+    ns2.mkdir()
+
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   subtitle: '[[Page Two]]'
+                   ...
+                   Text 1
+                   """)
+    
+    file2 = ns2 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   ...
+                   Text 2
+                   """)
+
+    wiki_config = f"""
+        name: test
+        build_dir: {tmp_path}
+        namespaces:
+          ns1:
+              content: {ns1}
+              meta_links: ['subtitle']
+          ns2:
+              content: {ns2}
+        """
+
+    wiki = Wiki(yaml.safe_load(wiki_config))
+    wiki.process_wiki()
+
+    actual1 = tmp_path / 'ns1' / PROCESS /  'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    subtitle: '[Page Two](../ns2/page_two.html)'
     ...
     Text 1
     """

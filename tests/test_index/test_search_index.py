@@ -8,6 +8,8 @@ from mokuwiki.wiki import Wiki
 
 from utils import Markdown
 
+PROCESS = 'mokuwiki'
+
 
 def test_search_index(tmp_path):
 
@@ -16,9 +18,6 @@ def test_search_index(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -42,7 +41,7 @@ def test_search_index(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -50,15 +49,15 @@ def test_search_index(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    page1 = Path(target) / 'ns1' / 'page_one.md'
+    page1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert page1.exists()
     
-    page2 = Path(target) / 'ns1' / 'page_two.md'
+    page2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'
     assert page2.exists()
     
-    index1 = Path(target) / 'ns1' / '_index.json'
+    index1 = tmp_path / 'ns1' / PROCESS / '_index.json'
     assert index1.exists()
     
     expect = {
@@ -97,9 +96,6 @@ def test_search_index_prefix(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
@@ -122,7 +118,7 @@ def test_search_index_prefix(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -131,15 +127,15 @@ def test_search_index_prefix(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
     
-    page1 = Path(target) / 'ns1' / 'page_one.md'
+    page1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert page1.exists()
     
-    page2 = Path(target) / 'ns1' / 'page_two.md'
+    page2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'
     assert page2.exists()
     
-    index1 = Path(target) / 'ns1' / '_index.json'
+    index1 = tmp_path / 'ns1' / PROCESS / '_index.json'
     assert index1.exists()
 
     expect = {
@@ -178,9 +174,6 @@ def test_search_index_noindex(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
@@ -204,7 +197,7 @@ def test_search_index_noindex(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -212,15 +205,15 @@ def test_search_index_noindex(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    page1 = Path(target) / 'ns1' / 'page_one.md'
+    page1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert page1.exists()
     
-    page2 = Path(target) / 'ns1' / 'page_two.md'
+    page2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'
     assert page2.exists()
     
-    index1 = Path(target) / 'ns1' / '_index.json'
+    index1 = tmp_path / 'ns1' / PROCESS / '_index.json'
     assert index1.exists()
 
     expect = {
@@ -251,9 +244,6 @@ def test_search_index_fields(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
@@ -277,7 +267,7 @@ def test_search_index_fields(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -285,15 +275,15 @@ def test_search_index_fields(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    page1 = Path(target) / 'ns1' / 'page_one.md'
+    page1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert page1.exists()
     
-    page2 = Path(target) / 'ns1' / 'page_two.md'
+    page2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'
     assert page2.exists()
     
-    index1 = Path(target) / 'ns1' / '_index.json'
+    index1 = tmp_path / 'ns1' / PROCESS / '_index.json'
     assert index1.exists()
 
     expect = {
@@ -332,9 +322,6 @@ def test_search_index_content(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
@@ -357,7 +344,7 @@ def test_search_index_content(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -365,15 +352,15 @@ def test_search_index_content(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    page1 = Path(target) / 'ns1' / 'page_one.md'
+    page1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert page1.exists()
     
-    page2 = Path(target) / 'ns1' / 'page_two.md'
+    page2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'
     assert page2.exists()
     
-    index1 = Path(target) / 'ns1' / '_index.json'
+    index1 = tmp_path / 'ns1' / PROCESS / '_index.json'
     assert index1.exists()
 
     expect = {
@@ -416,9 +403,6 @@ def test_search_index_noise_words_none(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
@@ -441,7 +425,7 @@ def test_search_index_noise_words_none(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -450,15 +434,15 @@ def test_search_index_noise_words_none(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    page1 = Path(target) / 'ns1' / 'page_one.md'
+    page1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert page1.exists()
     
-    page2 = Path(target) / 'ns1' / 'page_two.md'
+    page2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'
     assert page2.exists()
     
-    index1 = Path(target) / 'ns1' / '_index.json'
+    index1 = tmp_path / 'ns1' / PROCESS / '_index.json'
     assert index1.exists()
 
     expect = {
@@ -508,9 +492,6 @@ def test_search_index_noise_words_list(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
@@ -535,7 +516,7 @@ def test_search_index_noise_words_list(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -544,15 +525,15 @@ def test_search_index_noise_words_list(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    page1 = Path(target) / 'ns1' / 'page_one.md'
+    page1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert page1.exists()
 
-    page2 = Path(target) / 'ns1' / 'page_two.md'
+    page2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'
     assert page2.exists()
     
-    index1 = Path(target) / 'ns1' / '_index.json'
+    index1 = tmp_path / 'ns1' / PROCESS / '_index.json'
     assert index1.exists()
 
     expect = {
@@ -593,9 +574,6 @@ def test_search_index_noise_file(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    """
@@ -623,7 +601,7 @@ def test_search_index_noise_file(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -632,15 +610,15 @@ def test_search_index_noise_file(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    page1 = Path(target) / 'ns1' / 'page_one.md'
+    page1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert page1.exists()
 
-    page2 = Path(target) / 'ns1' / 'page_two.md'
+    page2 = tmp_path / 'ns1' / PROCESS / 'page_two.md'
     assert page2.exists()
     
-    index1 = Path(target) / 'ns1' / '_index.json'
+    index1 = tmp_path / 'ns1' / PROCESS / '_index.json'
     assert index1.exists()
 
     expect = {

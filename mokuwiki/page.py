@@ -9,6 +9,7 @@ import argparse
 import subprocess
 from string import Template
 from typing import TYPE_CHECKING
+from functools import partial
 
 if TYPE_CHECKING:
     from mokuwiki.namespace import Namespace
@@ -136,8 +137,8 @@ class Page:
 
         # mainly for single file mode
         # TODO only set if namesapce == none? is that right?
-        self.media = media
-        self.custom = custom
+        self._media = media
+        self._custom = custom
 
         self.modified = page_path.stat().st_mtime
 
@@ -193,12 +194,12 @@ class Page:
     @property
     def media_dir(self) -> str:
         # for mwpage...
-        return self.namespace.config.media_dir if self.namespace else self.media
+        return self.namespace.config.media_dir if self.namespace else self._media
 
     @property
     def custom_css(self) -> str:
         # for mwpage...
-        return self.namespace.config.custom_css if self.namespace else self.custom
+        return self.namespace.config.custom_css if self.namespace else self._custom
 
     def content(self, indent: str = '', shift: int = 0) -> str:
         """Fully processed body with prefix, suffix and metadata replacement
@@ -245,12 +246,12 @@ class Page:
 
         if not self.target:
             # if no target then plain file that was included, cannot save
-            logging.error(f"tried to save included file {self.source}")
+            logging.error(f"tried to save included file '{self.source}'")
             return
 
         if not file_name:
-            target = self.namespace.config.target_dir if self.namespace else ''
-            file_name = Path(target) / self.target
+            target_dir = self.namespace.config.target_dir if self.namespace else ''
+            file_name = Path(target_dir) / self.target
             file_name = file_name.with_suffix('.md')
 
         try:
@@ -307,24 +308,24 @@ class Page:
         which would then be processed as usual (e.g. into
         '[apple](apple.html)')
         """
-        
-        """ 
-        TODO Can we look up page in wiki get_page_by_name get NS and add the right
-        wiki links here? then  process page directives?
-        """
 
-        if not self.namespace.config.meta_fields:
+        process_links = partial(self.process_link_directives, show_broken = self.namespace.config.meta_links_broken)
+
+        if not self.namespace.config.meta_links:
             return
 
-        for field in self.namespace.config.meta_fields:
+        for field in self.namespace.config.meta_links:
             if field not in self.meta:
                 continue
 
+            # TODO next, prev etc are NOT in wiki link format so are not found
+            ## if home, next, prev are system type things then we can add
+            ## but for subtitle test will have to put directly
             if isinstance(self.meta[field], list):
-                self.meta[field] = [re.sub(PAGE_LINK_RE, self.process_link_directives, make_wiki_link(f)) for f in self.meta[field]]
+                self.meta[field] = [re.sub(PAGE_LINK_RE, process_links, f) for f in self.meta[field]]
 
             if isinstance(self.meta[field], str) and self.meta[field]:
-                self.meta[field] = re.sub(PAGE_LINK_RE, self.process_link_directives, make_wiki_link(self.meta[field]))
+                self.meta[field] = re.sub(PAGE_LINK_RE, process_links, self.meta[field])
 
     def process_file_includes(self, include: Match) -> str:
         """Reads the content of all files matching the file specification
@@ -341,7 +342,6 @@ class Page:
         Returns:
             str: the concatenated contents of the file specification
         """
-        # breakpoint()
         include = str(include.group(1))
         options = Page.FileIncludeParser.parse(include)
 
@@ -354,38 +354,44 @@ class Page:
 
         # TODO add -pipe option to e.g. include monster and pipe through monster + adhoc 
 
+        page_list = []
+
         # resolve namespace ref if present
         # TODO replace 'ns1:' with path to content, then glob? this would allow ns1:file*.md?
-        # TODO must also account for single page mode
         if ':' in options.files:
             # if namespace ref exists list is only one file long
             # in DW terms this will be the path in the 'monster' NS
-            page_list = self.namespace.wiki.get_page_by_name(options.files)
-
-            if not page_list:
-                return ''
-
-            repeat = min(max(options.repeat, MIN_REPEAT_COUNT), MAX_REPEAT_COUNT)
-
-            page_list = [page_list.source for _ in range(repeat)]
-        elif '*' in options.files:
-            # no NS ref but needs globbing
-            page_list = list(self.namespace.config.content_dir.glob(options.files))
-
-            if options.sort:
-                # sort by filename
-                page_list = sorted(page_list)
-        else:
-            # single file
-            page_list = self.namespace.config.content_dir / options.files
-            page_list = [page_list]
+            page = self.namespace.wiki.get_page_by_name(options.files)
             
+            if page:
+                page_list = [page.source]
+
+        elif '/' in options.files:
+            # this is a path spec
+            page_list = list(Path('.').glob(options.files))
+        
+        else:
+            # assume this is a file(s) in one of the content_dirs
+            for content_dir in self.namespace.config.content_dirs:
+                page_list.extend(list(content_dir.glob(options.files)))
+                
         # create text
         if len(page_list) == 0:
             return ''
 
+        if len(page_list) == 1 and options.repeat > 1:
+            # repeat is only applicable for a single file include
+            repeat = min(max(options.repeat, MIN_REPEAT_COUNT), MAX_REPEAT_COUNT)
+
+            page_list = page_list * repeat
+
+        if options.sort:
+            # sort by filename
+            page_list = sorted(page_list)
+
         try:
             if options.format:
+                # create list of Page objects from paths
                 page_list = [Page(p, self.namespace, included=True) for p in page_list]
 
                 incl_text = [MetadataReplace(options.format).safe_substitute(p.meta) for p in page_list]
@@ -416,6 +422,7 @@ class Page:
 
         cmd_args = str(command.group(1))
 
+        # TODO try/except
         cmd_output = subprocess.run(cmd_args, shell=True, capture_output=True, universal_newlines=True, encoding='utf-8')
 
         return cmd_output.stdout
@@ -539,11 +546,13 @@ class Page:
         
         return options.header + tag_text
 
-    def process_link_directives(self, page: Match) -> str:
+    def process_link_directives(self, page: Match, show_broken = True) -> str:
         """Convert a page title in double square brackets into an inter-page link.
         Typically this will be `[[Page name]]` or `[[Display name|Page name]]`,
         or with namespaces `[[ns:Page name]]` or `[[Display name|ns:Page name]]`.
 
+        A page name should not contain a ":".
+        
         Note: when writing a page link with a namespace must always use the
         alias for that namespace, otherwise it will be flagged as a broken
         link. It is no longer possible to use the 'fullns' option and insert
@@ -565,35 +574,54 @@ class Page:
         show_name = ''
 
         if '|' in page_name:
-            show_name, page_name = page_name.split('|', 1)
+            show_name, _, page_name = page_name.partition('|')
 
         # resolve namespace
         namespace = ''
+        page_title = page_name
 
         if ':' in page_name:
             # e.g. this is a [[x:Page One]] reference
-            namespace, page_title = page_name.split(':', 1)
-        else:
-            page_title = page_name
+            namespace, _, page_title = page_name.partition(':')
 
         # resolve namespace names or aliases to get target NS for the link
         if namespace:
-            # lookup namespace alias
-            target_ns = self.namespace.wiki.get_namespace(namespace)
+            
+            if namespace == '.':
+                # use of [[.:Foo]] forces current namespace
+                target_ns = self.namespace
+            else:
+                # lookup namespace alias
+                target_ns = self.namespace.wiki.get_namespace(namespace)
 
             if not target_ns:
-                if ':' in page_name:
-                    # no valid NS so assume the : is part of the page name
-                    target_ns = self.namespace
-                    page_title = page_name
-                else:
-                    logging.error(f"no namespace name or alias found for '{namespace}' in '{self.file}'")
+                # assume link is broken, as no target NS found
+                logging.error(f"no namespace found using name or alias '{namespace}' for '{self.source}'")
+                if show_broken:
                     return make_markdown_span(page_title, self.namespace.config.broken_css)
+                else:
+                    return page_title
         else:
-            # here you COULD look up using wiki.get_page_by_name() -> page -> page.namespace.alias
-            # could FORCE current with ".:Foo"
+            # no namespace given, look for page in all namespaces
+            
+            ### No namespace, see if exists locally THEN if not try to find....
+            
             target_ns = self.namespace
-
+            
+            if not target_ns.get_page(page_name):
+            
+                search_page = self.namespace.wiki.get_page_by_name(page_name)
+            
+                if search_page:
+                    # if this is a local page, we will find it here
+                    target_ns = search_page.namespace
+                else:
+                    logging.debug(f"page '{self.source}' not found in any namespace")
+                    if show_broken:
+                        return make_markdown_span(page_title, self.namespace.config.broken_css)
+                    else:
+                        return page_title
+                    
         # set show name if not already done
         if not show_name:
             show_name = page_title

@@ -7,6 +7,8 @@ from mokuwiki.wiki import Wiki
 
 from utils import Markdown
 
+PROCESS = 'mokuwiki'
+
 
 def test_file_includes(tmp_path):
     
@@ -15,9 +17,6 @@ def test_file_includes(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -40,16 +39,16 @@ def test_file_includes(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -69,9 +68,6 @@ def test_file_includes_plain(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    f"""
@@ -90,16 +86,16 @@ def test_file_includes_plain(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path/ 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -120,9 +116,6 @@ def test_file_includes_globbing(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -155,16 +148,16 @@ def test_file_includes_globbing(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -185,9 +178,6 @@ def test_file_includes_globbing_nosort(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -220,16 +210,16 @@ def test_file_includes_globbing_nosort(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -250,9 +240,6 @@ def test_file_includes_separator(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -285,16 +272,16 @@ def test_file_includes_separator(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -317,9 +304,6 @@ def test_file_includes_format(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'fileX1.md'
     Markdown.write(file1,
@@ -356,16 +340,16 @@ def test_file_includes_format(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -390,9 +374,6 @@ def test_file_includes_format_template(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'fileX1.md'
     Markdown.write(file1,
@@ -429,7 +410,7 @@ def test_file_includes_format_template(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -441,9 +422,9 @@ def test_file_includes_format_template(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -468,9 +449,6 @@ def test_file_includes_format_table(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'fileX1.md'
     Markdown.write(file1,
@@ -507,16 +485,16 @@ def test_file_includes_format_table(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -545,9 +523,6 @@ def test_file_includes_by_namespace(tmp_path):
     ns2 = source / 'ns2'
     ns2.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    f"""
@@ -569,7 +544,7 @@ def test_file_includes_by_namespace(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -578,9 +553,9 @@ def test_file_includes_by_namespace(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -601,9 +576,6 @@ def test_file_includes_by_namespace_repeat(tmp_path):
 
     ns2 = source / 'ns2'
     ns2.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -626,7 +598,7 @@ def test_file_includes_by_namespace_repeat(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -635,9 +607,9 @@ def test_file_includes_by_namespace_repeat(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -659,9 +631,6 @@ def test_file_includes_shift(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -686,16 +655,16 @@ def test_file_includes_shift(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -716,9 +685,6 @@ def test_file_includes_shift_down(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -743,16 +709,16 @@ def test_file_includes_shift_down(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -774,9 +740,6 @@ def test_file_includes_line_prefix(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    f"""
@@ -797,16 +760,16 @@ def test_file_includes_line_prefix(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -825,9 +788,6 @@ def test_file_includes_separator_and_line_prefix(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -860,16 +820,16 @@ def test_file_includes_separator_and_line_prefix(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -892,9 +852,6 @@ def test_file_includes_prefix_and_suffix(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -919,16 +876,16 @@ Included Text
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -950,9 +907,6 @@ def test_file_includes_metadata_replace(tmp_path):
     ns1 = source / 'ns1'
     ns1.mkdir()
 
-    target = tmp_path / 'target'
-    target.mkdir()
-
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
                    f"""
@@ -973,16 +927,16 @@ def test_file_includes_metadata_replace(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """
@@ -1001,9 +955,6 @@ def test_file_includes_metadata_replace_multi(tmp_path):
     
     ns1 = source / 'ns1'
     ns1.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -1026,16 +977,16 @@ def test_file_includes_metadata_replace_multi(tmp_path):
     
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     assert actual1.exists()
 
     expect1 = """

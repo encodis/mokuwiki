@@ -3,12 +3,13 @@
 # NOTE that most tests have set the default section of test.cfg to default in create_wiki_config()
 
 from pathlib import Path
-
 import yaml
 
 from mokuwiki.wiki import Wiki
 
 from utils import Markdown
+
+PROCESS = 'mokuwiki'
 
 
 def test_multiple_namespaces(tmp_path):
@@ -21,9 +22,6 @@ def test_multiple_namespaces(tmp_path):
     ns2 = source / 'ns2'
     ns1.mkdir()
     ns2.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     Markdown.write(file1,
@@ -45,7 +43,7 @@ def test_multiple_namespaces(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               content: {ns1}
@@ -54,7 +52,7 @@ def test_multiple_namespaces(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
     assert len(wiki) == 2
     assert len(wiki.namespaces['ns1']) == 1
@@ -67,7 +65,7 @@ def test_multiple_namespaces(tmp_path):
     A link to [Page Two](../ns2/page_two.html)
     """
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     
     assert actual1.exists()
     assert Markdown.compare(expect1, actual1)
@@ -79,7 +77,7 @@ def test_multiple_namespaces(tmp_path):
     A link to [Page One](../ns1/page_one.html)
     """
     
-    actual2 = Path(target) / 'ns2' / 'page_two.md'
+    actual2 = tmp_path / 'ns2' / PROCESS / 'page_two.md'
     
     assert actual2.exists()
     assert Markdown.compare(expect2, actual2)
@@ -95,9 +93,6 @@ def test_multiple_namespaces_aliases(tmp_path):
     ns2 = source / 'ns2'
     ns1.mkdir()
     ns2.mkdir()
-
-    target = tmp_path / 'target'
-    target.mkdir()
 
     file1 = ns1 / 'file1.md'
     
@@ -120,7 +115,7 @@ def test_multiple_namespaces_aliases(tmp_path):
 
     wiki_config = f"""
         name: test
-        target: {target}
+        build_dir: {tmp_path}
         namespaces:
           ns1:
               alias: X
@@ -131,7 +126,7 @@ def test_multiple_namespaces_aliases(tmp_path):
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_namespaces()
+    wiki.process_wiki()
 
     assert len(wiki) == 2
     assert len(wiki.namespaces['ns1']) == 1
@@ -145,7 +140,7 @@ def test_multiple_namespaces_aliases(tmp_path):
     A link to [2nd Page](../ns2/page_two.html)
     """
 
-    actual1 = Path(target) / 'ns1' / 'page_one.md'
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
     
     assert actual1.exists()
     assert Markdown.compare(expect1, actual1)
@@ -157,7 +152,7 @@ def test_multiple_namespaces_aliases(tmp_path):
     A link to [Page One](../ns1/page_one.html)
     """
     
-    actual2 = Path(target) / 'ns2' / 'page_two.md'
+    actual2 = tmp_path / 'ns2' / PROCESS / 'page_two.md'
     
     assert actual2.exists()
     assert Markdown.compare(expect2, actual2)

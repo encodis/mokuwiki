@@ -159,6 +159,8 @@ class Index:
     def export_search_index(self) -> None:
         """Save the search index as a JSON file. The file name is given
         by the 'search_file' configuration option.
+        
+        TODO this should go to site_dir/NS/_index.json
         """
         search_index = self.namespace.config.search_prefix + json.dumps(self._search, indent=2)
 
