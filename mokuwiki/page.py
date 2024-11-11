@@ -422,7 +422,7 @@ class Page:
 
         cmd_args = str(command.group(1))
 
-        # TODO try/except
+        # TODO try/except; esacpe with shlex?
         cmd_output = subprocess.run(cmd_args, shell=True, capture_output=True, universal_newlines=True, encoding='utf-8')
 
         return cmd_output.stdout
@@ -683,7 +683,7 @@ class Page:
 
         return make_markdown_span(style_text, self.custom_css)
 
-
+# TODO use mokuwiki --single
 def mwpage(args=None):
     if args is None:
         args = sys.argv[1:]
@@ -705,7 +705,7 @@ def mwpage(args=None):
     page.process_directives()
     page.save(args.target)
 
-
+# TODO is this needed?
 def mwmeta(args=None):
     """This seems to have been an idea, but never used. It only qorks on metadata so Page may
     be unnecessary although useful. Maybe rewrite in Card.py"""

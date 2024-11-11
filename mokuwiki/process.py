@@ -1,147 +1,193 @@
+import logging
 import shutil
 import subprocess
 
 from pathlib import Path
 
-from mokuwiki.config import NamespaceConfig
-
-
+# TODO how do we report on errors?
 
 class Processor:
     # will have abstract process()?
 
-    def __init__(self, config: NamespaceConfig) -> None:
-        
-        # config is ns_config.preprocessing or .postprocessing
-        self.config = config
-        
-        self.built_in = {
-            'copy_support_files': self.copy_support_files,
-        }
-
-    def preprocess(self):
-        self.process(self.config.preprocessing)
-        
-    def postprocess(self):
-        self.process(self.config.postprocessing)
+    def __init__(self) -> None:        
+        pass
         
     def process(self, config: list[dict]):
         """config is local, either pre or post
         """
         
         for processor in config:
-            
-            exec = list(processor.keys())[0]
-            args = list(processor.values())[0]
-            
-            if processor in self.built_in.keys():
-                self.built_in[processor](args)
-                continue
+            logging.debug(f"running processor: {processor}")
 
-            # assemble string then use shlex.split() or assemble list of args? for subprocess?
-            args, paths = self._build_args(args)
+            input = files = None
+
+            if isinstance(processor, str):
+                # if any args has a space this will fail, use list method instead
+                command = processor.split(' ')
+                                
+                try:
+                    command = self._glob_args(command)
+                except ValueError:
+                    logging.error(f"processing '{processor}': had no files to process")
+                    continue
+                    
+            elif isinstance(processor, list):
+                # by pre-splitting the command this can handle spaces in args
+                command = processor
+
+                try:
+                    command = self._glob_args(command)
+                except ValueError:
+                    logging.error(f"processing '{processor}': had no files to process")
+                    continue                
+                
+            elif isinstance(processor, dict):
+                # breakpoint()
+                exec = list(processor.keys())[0]
+                args = list(processor.values())[0]
             
-            command = [exec]
-            command.extend(args)
+                # assemble string then use shlex.split() or assemble list of args? for subprocess?
+                input, files, args = self._build_args(args)
             
-            if paths:
-                for file in Path(paths).glob('*.md'):
-                    subprocess.run(command.extend([file]), shell=True, universal_newlines=True, encoding='utf-8')     
+                command = [exec]
+                command.extend(args)
             else:
-                subprocess.run(command, shell=True, universal_newlines=True, encoding='utf-8')
-    
-    def copy_support_files(self, args):
-        """Copies indicated files to site_dir/namespace, use values in NS config
-        In this case the args are lists of path specs so don't need to build_args
-        
-        e.g.
-        copy_files: 
-            source: ['images/*', '*.css', '*.js']
-            target: $site_dir/$namespace
+                logging.error(f"unknown type for processing: '{processor}'")
+                continue
             
-            which will have been expanded
-        
-        """
-        
-        source = args['source']
-        target = args['target']
-        
-        # NOTE as content_dirs is looped over, may overwrite support files
-        
-        for content_dir in self.config.content_dirs:
-            for path in source:
-                path = content_dir / path
+            # NOTE at this point could have list of command string
+            # that are all globbed etc, and just execute one by one
+            # i.e. one "command" per file    
             
-                shutil.copytree(path, target, dirs_exist_ok=True)
+            # TODO catch exceptions here and print as errors, print cmd output as debug/info
+            if files:
+                # asumes foo/bar/*.md
+                # TODO now dynamically extend command for each input path and do param subst on args
+                for file in Path(files).parent.glob(Path(files).name):
+                                        
+                    # replace output file marker
+                    cmd = [c.replace('@', file.stem) if '@' in c else c for c in command]
 
-    def _build_args(self, config: dict) -> list:
+                    if not input:
+                        cmd.append(str(file))
+                    elif input.endswith('='):
+                        cmd.append(f"{input}{file}")
+                    else:
+                        cmd.extend([input, str(file)])
+                    
+                    output = subprocess.run(cmd, shell=False, universal_newlines=True, encoding='utf-8')     
+            else:
+                # if not specified a path the glob command line                
+                output = subprocess.run(command, shell=False, universal_newlines=True, encoding='utf-8')
+    
+    def _glob_args(self, command):
+        cmd = []
+        
+        for c in command:
+            if '*' in c:
+                files = list(Path(c).parent.glob(Path(c).name))
+                
+                if not files:
+                    raise ValueError
+                
+                cmd.extend(files)
+            else:
+                cmd.append(c)
+        
+        return cmd
+
+    def _build_args(self, config: dict) -> tuple:
         """Convert a configuration dictionary into into list of arguments suitable for
         use by `subprocess`. The conversion is fairly straightforward, but there are
         some caveats:
         
-        -  A key with the value '@' is treated as a path specification to be iterated over and is not included
-        as an argument, see XXX()
-        -  A key that starts with '_' just has the value included
-        -  Values that are lists are repeated
-        -  Values that are dictionaries are repeated as key=value pairs
-        -  Arguments with no values are indicated with a 'null' or '~' value
+        -  A key that ends in '=' is assumed to be an argument is assumed to be one of the type "--arg=val",
+        otherwise "--arg val".
+        -  A key that starts with '<' is treated as an "input" path specification to be iterated
+        over and separated out of the returned argument list to be returned as `input_arg`; the value of 
+        that argument is returned as `input_path` (the value '>' is removed from the argument, which is
+        then processed as  descibed below). It is assumed that the  `input_path` is of the 
+        form "path/to/files/*.md". 
+        -  Any value that contains the string '${@}' (or "$@") will have it interpreted as the 
+        basename of the input file (as determined by the iteration over the input arguments)
+        -  Keys can start with '-' or '--' as required by the argument.
+        -  A key that starts with '_' just has the value included, i.e. the underscore is a way
+        of adding multiple positional arguments.
+        -  Values that are lists are repeated for each element of the list.
+        -  Values that are dictionaries are repeated as key=value pairs.
+        -  Arguments with no values are indicated with a 'null' or '~' value.
         
         For example, the config (for pandoc):
         
-            @: build/NS/pages
-            output: home/sites/wiki
-            template: ./template.html
-            table-of-contents: true
-            standalone: ~
-            include-in-header: ['file1', 'file2']
-            variable: 
+            <: build/NS/mokuwiki/*.md
+            --output=: home/sites/wiki/NS/${@}.html
+            --template=: ./template.html
+            --table-of-contents=: true
+            --standalone: null
+            --include-in-header=: ['file1', 'file2']
+            -V: 
                 site-name: My site
                 site-icon: icon.png
+            -M:
+                processed: yes
   
-        will be converted into the list:
+        will be converted into the returned varaibles:
         
-            ["--output=home/sites/wiki",
-             "--template=./template.html',
-             "--table-of-contents=true',
-             "--standalone",
-             "--include-in-header=file1",
-             "--include-in-header=file2",
-             "--variable=site-name:"My site"",
-             "--variable=site-icon:icon.png"
+            input_path: build/NS/mokuwiki/*.md
+            input_arg: ''
+            args:
+                ["--output=home/sites/wiki/NS/@.html",
+                 "--template=./template.html',
+                 "--table-of-contents=true',
+                 "--standalone",
+                 "--include-in-header=file1",
+                 "--include-in-header=file2",
+                 "-V site-name="My site"",
+                 "-V site-icon=icon.png"
+                 "-M processed=yes"]
         
+        Do NOT change the ORDER of the returned `args` array.
         """
         
-        def _escape(string: str) -> str:
-            if ' ' in string:
-                return f'"{string}"'
-            
-            return string
-        
         args = []
-        paths = None
+        input_path = None
+        input_arg = None
         
         for key, val in config.items():
+            sep1, sep2 = ('', ':') if key.endswith('=') else (' ', '=')
             
-            # path spec
-            if key == '@':
-                paths = val 
+            if key.startswith('<'):
+                if input_arg:
+                    logging.error(f"multiple input paths specified in process config, '{key}'")
+                
+                input_arg = key[1:]
+                input_path = val
+                continue
 
             # add value without argument
             if key.startswith('_'):
-                args.append(_escape(val))
+                args.append(val)
                 continue
 
-            if isinstance(val, str):
-                # TODO if val is "true" then lower case
-                if val in ['null', '~']:
-                    args.append(f"--{key}")
-                else:
-                    args.append(f"--{key}={_escape(val)}")
-                
-            if isinstance(val, list):
-                args.extend([f"--{key}={_escape(v)}" for v in val])
+            if val is None:
+                # e.g. --standalone
+                args.append(f"{key}")
+            
+            elif isinstance(val, str):
+                # e.g. --template=./template.html
+                args.append(f"{key}{sep1}{val}")
+            
+            elif isinstance(val, bool):
+                # e.g. --table-of-contents=true
+                args.append(f"{key}{sep1}{str(val)}")
+            
+            elif isinstance(val, list):
+                args.extend([f"{key}{sep1}{v}" for v in val])
         
-            if isinstance(val, dict):
-                args.extend([f"--{key}={_escape(v)}:{_escape(k)}" for v, k in val.items()])
+            elif isinstance(val, dict):
+                args.extend([f"{key}{sep1}{k}{sep2}{v}" for k, v in val.items()])
 
-        return args, paths
+            else:
+                pass
+
+        return input_arg, input_path, args

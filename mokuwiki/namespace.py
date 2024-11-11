@@ -39,7 +39,6 @@ class Namespace:
             ConfigParser
             wiki (Wiki): A reference to the namespace's parent wiki.
         """
-
         self.config = NamespaceConfig(name, config, wiki)
 
         self.wiki = wiki
@@ -48,18 +47,13 @@ class Namespace:
         self.name = self.config.name
         self.alias = self.config.alias
 
-        for content_dir in self.config.content_dirs:
-            if not content_dir or not Path(content_dir).is_dir():
-                logging.warning(f"namespace path '{content_dir}' does not exist, skipping")
-                raise ValueError
-
         self.is_root = self.config.is_root
 
-        # create target path
+        # create target path (will create namespace build dir too)
         self.config.target_dir.mkdir(parents=True, exist_ok=True)
         
         self.index = idx.Index(self)
-        self.processor = Processor(self.config)
+        self.processor = Processor()
 
         # TODO test support for '**' in glob spec, with recursive=True
         # titles must be unique? or allow path to be multivalued
@@ -84,22 +78,23 @@ class Namespace:
     def __eq__(self, other) -> bool:
         return True if self.title == other.title else False
 
-    def preprocess(self) -> None:
-        self.processor.preprocess()
+    def preprocess_pages(self) -> None:
+        self.processor.process(self.config.preprocessing)        
+        logging.debug(f"pre-processed namespace '{self.name}'")
 
-    def postprocess(self) -> None:
-        self.processor.postprocess()
+    def postprocess_pages(self) -> None:
+        self.processor.process(self.config.postprocessing)
+        logging.debug(f"post-processed namespace '{self.name}'")
 
     def load_pages(self) -> None:
         
-        # TODO can be list and add pages_dir itself, content_dir should be root for NS
-        ## add pages unles *.md is specified, i.e. like monsters **/monsters/**/*.md
-        ## but no, that's preprocessor that puts in build/prep/monsters/pages... but 
-        ## rules would need content/core/rules/pages
-        
-        for path in self.config.content_dirs:
-        
-            for page_path in path.glob('*.md'):
+        for content_dir in self.config.content_dirs:
+            
+            if not content_dir or not Path(content_dir).is_dir():
+                logging.warning(f"namespace path '{content_dir}' does not exist, skipping")
+                continue
+            
+            for page_path in content_dir.glob('*.md'):
                 # pass in ref to namespace
                 try:
                     page = Page(page_path, self)
@@ -115,6 +110,8 @@ class Namespace:
                     continue
                 
                 self.pages.append(page)
+
+        logging.debug(f"loaded namespace '{self.name}'")
 
     def get_page(self, page_title) -> Page|None:
         """Get a reference to a page given the page title.
@@ -160,6 +157,8 @@ class Namespace:
         if self.config.search_fields:
             self.index.export_search_index()
 
+        logging.debug(f"processed namespace '{self.name}'")
+
     def report_broken_links(self) -> None:
         """Report broken links. If the verbose level is set
         to 3 then report broken links.
@@ -176,10 +175,15 @@ class Namespace:
         TODO: may want to use a story prefix for filenames e.g. in rules we would have core-intro.md, eberron-intro.md
         and so on
         
+        TODO: could you have a story tag? so you could list all stories? and pages in a story?
+        with a special tag prefix {{core %story}} ???
+        
         As all HF/content/**/rules/*.m is going into same folder maybe each story does need a string
         that can be used to uniquify a filename, i.e. auto gets added in slugify...
         
         """
+        
+        # TODO have a "story title" like "Core Rules"
                 
         self.home_pages = []
         
@@ -273,6 +277,49 @@ class Namespace:
                 continue
             
             page.meta['ns-toc'] = toc
+
+    def create_plain_toc(self, pages: list) -> str:
+        return '\n'.join([make_markdown_span(make_markdown_link(p.title), f"toc{p.toc_level}") for p in pages])
+
+    # def create_nested_toc(self, pages: list) -> str:
+    #     """Given a list of ordered pages, each with a toc_level, create an HTML fragment for use
+    #     as a ToC in the same style as Pandoc, i.e.
+        
+    #     <ul>
+    #       <li>TOC 1</li>
+    #       <li>TOC 1
+    #         <ul>
+    #           <li>TOC 2</li>
+    #           <li>TOC 2
+    #             <ul>
+    #               <li>TOC 3</li>
+    #             </ul>
+    #         </ul>
+    #       </li>
+    #       <li>TOC 1</li>
+    #     </ul>
+    #     """
+        
+    #     def make_element(page: Page):
+    #         make_markdown_link(page.title)
+        
+    #     toc = "<ul>"
+        
+        
+    #     create_li()
+    #     create_ul()
+        
+    #     for page, next in zip(pages, [*pages, None]):
+    #         toc += "<li>"
+    #         toc += make_markdown_link(page.title)
+            
+    #         if next and next.toc_level == page.toc_level:
+    #             toc += "</li>"
+    #             continue
+            
+        
+    #     toc += "</ul>"
+    
 
     def update_story_links(self):
         

@@ -1,9 +1,11 @@
-import sys
 import argparse
+import shutil
+import sys
 
 from mokuwiki.config import WikiConfig
 from mokuwiki.namespace import Namespace
 from mokuwiki.page import Page
+from mokuwiki.process import Processor
 
 import logging
 logging.basicConfig(format='mokuwiki: %(levelname)s %(message)s', level=logging.WARNING)
@@ -27,13 +29,18 @@ class Wiki:
             nosearch (bool, optional): Stop creation of a search index. Defaults to False.
             verbose (int, optional): Increase verbose level. Defaults to 1.
         """
-        
         try:
             self.config = WikiConfig(config)
         except ValueError:
             raise ValueError("Could not initialize wiki")
                 
         self._set_reporting_level(verbose)
+        
+        # set up build dir
+        if self.config.clean in ['setup', 'always']:
+            shutil.rmtree(self.config.build_dir, ignore_errors=True)
+            
+        self.config.build_dir.mkdir(parents=True, exist_ok=True)
         
         # create namespaces
         self.namespaces = {}
@@ -63,14 +70,14 @@ class Wiki:
                 continue
 
             self.namespaces[namespace.name] = namespace
-            
-            logging.info(f"Successfully created namespace '{namespace.name}'")
-            
+                    
         if not self.root_ns:
             logging.error(f"no namespace has been marked as root")
             
         if len(self.namespaces) == 0:
             logging.error(f"no valid namespaces found")
+
+        self.processor = Processor()
 
     def __len__(self) -> int:
         """The 'size' of the wiki is the number of namespaces.
@@ -99,7 +106,7 @@ class Wiki:
         else:
             pass
 
-    def get_namespace(self, name: str) -> str|None:
+    def get_namespace(self, name: str) -> str | None:
         """Get a namespace from its full name or alias.
         """
         
@@ -113,7 +120,7 @@ class Wiki:
             
         return None
 
-    def get_page_by_name(self, page_name: str) -> Page|None:
+    def get_page_by_name(self, page_name: str) -> Page | None:
         """Get a page from a namespace by looking up the namespace alias and title.
 
         Example: "a:Foo" will return "aa/foo.md" if the namespace alias "a" maps to the path "aa/"
@@ -137,10 +144,6 @@ class Wiki:
             
             return None
 
-        # if ':' not in page_link:
-        #     logging.warning(f"no namespace alias in '{page_link}'")
-        #     return None
-
         ns_alias, _, page_name = page_name.partition(':')
         namespace = self.get_namespace(ns_alias)
         
@@ -157,29 +160,24 @@ class Wiki:
         return page
 
     def process_wiki(self) -> None:
+        """Note: need the separate loops
+        """
         
+        logging.info("processing wiki")
+
         for namespace in self.namespaces:
-            self.namespaces[namespace].preprocess()
+            self.namespaces[namespace].preprocess_pages()
             self.namespaces[namespace].load_pages()
 
         for namespace in self.namespaces:
             self.namespaces[namespace].process_pages()
             
         for namespace in self.namespaces:
-            self.namespaces[namespace].postprocess()
+            self.namespaces[namespace].postprocess_pages()
 
-    def process_namespaces(self) -> None:
-        """Tell the namespaces to process their pages. Note that the namespaces were
-        indexed during creation.
-        
-        ns.preprocess
-        ns.load_pages
-        ns.postprocess
-        
-        """
-
-        for namespace in self.namespaces:
-            self.namespaces[namespace].process_pages()
+        # tear down build dir
+        if self.config.clean in ['teardown', 'always']:
+            shutil.rmtree(self.config.build_dir, ignore_errors=False)
 
     def report_broken_links(self) -> None:
         """Report broken links in namespaces.

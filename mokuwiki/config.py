@@ -13,13 +13,14 @@ if TYPE_CHECKING:
 
 DEFAULT_WIKINAME = 'Wiki'
 DEFAULT_TARGET = 'build'
-DEFAULT_VERBOSITY = 1
+DEFAULT_VERBOSE = 1
+DEFAULT_CLEAN = 'never'
 DEFAULT_BROKEN_CSS = '.broken'
 DEFAULT_TAGS_CSS = '.tag'
 DEFAULT_CUSTOM_CSS = '.smallcaps'
 DEFAULT_CONTENT_DIR = 'content'
+DEFAULT_SITE_DIR = 'site'
 DEFAULT_BUILD_DIR = 'build'
-DEFAULT_PAGES_DIR = 'pages'
 DEFAULT_MEDIA_DIR = 'images'
 DEFAULT_TOC_LEVEL = 0
 DEFAULT_META_HOME = "home"
@@ -67,20 +68,41 @@ class WikiConfig:
         
         return namespaces
     
-    # @property
-    # def target_dir(self) -> Path:
-    #     target = self.config.get('target', None)
-        
-    #     if not target:
-    #         target == DEFAULT_TARGET
-    #         logging.warning(f"No target directory set, assuming {target}")
-            
-    #     return Path(target)
+    def asdict(self):
+        """Return a dictionary of attributes/properties.
+        Used for template substitution. Not all properties
+        are included.
+        """
+    
+        return {'wikiname': self.name,
+                'site_dir': self.site_dir,
+                'build_dir': self.build_dir,
+                'media_dir': self.media_dir,
+                'broken_css': self.broken_css,
+                'tags_css': self.tags_css,
+                'custom_css': self.custom_css
+                }
     
     @property
     def verbose(self) -> int:
-        return self.config.get('verbose', DEFAULT_VERBOSITY)
+        return self.config.get('verbose', DEFAULT_VERBOSE)
 
+    @property
+    def clean(self) -> bool:
+        clean = self.config.get('clean', DEFAULT_CLEAN)
+        
+        if clean not in ['never', 'setup', 'teardown', 'always']:
+            clean = 'never'
+            
+        return clean
+
+    # TODO need to expand user or ~ ... should we add 'home' to asdict()??
+
+    # TODO need to check these exist!!!
+    @property
+    def site_dir(self) -> Path:
+        return Path(self.config.get('site_dir', DEFAULT_SITE_DIR)).expanduser()
+    
     @property
     def build_dir(self) -> Path:
         return Path(self.config.get('build_dir', DEFAULT_BUILD_DIR))
@@ -88,10 +110,6 @@ class WikiConfig:
     @property
     def media_dir(self) -> str:
         return self.config.get('media_dir', DEFAULT_MEDIA_DIR)
-
-    @property
-    def pages_dir(self) -> str:
-        return self.config.get('pages_dir', DEFAULT_PAGES_DIR)
     
     @property
     def broken_css(self) -> str:
@@ -175,11 +193,12 @@ class NamespaceConfig:
     
         return {'name': self.name,
                 'namespace': self.namespace,
+                'wikiname': self.wiki_config.name,
                 'alias': self.alias,
                 'is_root': self.is_root,
+                'site_dir': self.wiki_config.site_dir,
                 'build_dir': self.build_dir,
                 'media_dir': self.media_dir,
-                'pages_dir': self.pages_dir,
                 'target_dir': self.target_dir,
                 'broken_css': self.broken_css,
                 'tags_css': self.tags_css,
@@ -196,8 +215,14 @@ class NamespaceConfig:
     
     @property
     def build_dir(self) -> Path:
-        """This is the base build dir for all the processes, including the "internal" MW process
+        """This is the base build dir for all the processes, including the "internal" MW process.
+        By default this is the namespace's sub-folder of the wiki build_dir.
         """
+        build_dir = self.config.get('build_dir', None)
+        
+        if build_dir:
+            return build_dir
+        
         return self.wiki_config.build_dir / self.name
     
     @property
@@ -217,16 +242,12 @@ class NamespaceConfig:
     @property
     def media_dir(self) -> str:
         return self.config.get('media_dir', self.wiki_config.media_dir)
-
-    @property
-    def pages_dir(self) -> str:
-        return self.config.get('pages_dir', self.wiki_config.pages_dir)
     
     @property
     def target_dir(self) -> Path:
         """This is where the internal process has to send the wikified MD files for processing by pandoc
         By default this will be ./build/$NS/mokuwiki, as 'mokuwiki' represents the internal process"""
-        return self.build_dir / "mokuwiki"
+        return self.config.get('target_dir', self.build_dir / "mokuwiki")
     
     @property
     def broken_css(self) -> str:
@@ -306,51 +327,56 @@ class NamespaceConfig:
 
     @property
     def preprocessing(self) -> list:
-        # do namespace and vars subst here, for each NS before returning
-        # which you might get from wiki...
-        ### NO only do var subst here - up to process() to work out args
-        
-        # TODO need to get default from wiki and combine with namespace
-        
-        preprocessors: list = self.config.get('preprocessing', deepcopy(self.wiki_config.preprocessing))
-        
-        if not preprocessors:
-            return []
 
-        return self._param_substitution(preprocessors)
+        default = deepcopy(self.wiki_config.preprocessing)
+        
+        preprocessors: list = self.config.get('preprocessing', [])
+        
+        default.extend(preprocessors)
+
+        return param_substitution(default, self.asdict())
 
     @property
     def postprocessing(self) -> list:
         
-        postprocessors: list = self.config.get('postprocessing', deepcopy(self.wiki_config.postprocessing))
+        default = deepcopy(self.wiki_config.postprocessing)
         
-        if not postprocessors:
-            return []
+        postprocessors: list = self.config.get('postprocessing', [])
+        
+        default.extend(postprocessors)
 
-        return self._param_substitution(postprocessors)
+        return param_substitution(default, self.asdict())
 
-    def _param_substitution(self, processors: dict) -> list:
+
+def param_substitution(processors: list, params: dict) -> list:
+    
+    if not isinstance(processors, list):
+        logging.error("processes must be a list")
+        return []
+    
+    for i, processor in enumerate(processors):
         
-        for processor in processors:
+        if isinstance(processor, str):
+            processors[i] = Template(processor).substitute(params)
+            continue
+        
+        for _, config in processor.items():
+        
+            for arg, val in config.items():
             
-            for exec, config in processor.items():
+                if isinstance(val, str):
+                    config[arg] = Template(val).substitute(params)
+                    continue
             
-                for arg, val in config.items():
-                
-                    if isinstance(val, str):
-                        config[arg] = Template(val).substitute(self.asdict())
-                        continue
-                
-                    if isinstance(val, list):
-                        config[arg] = [Template(v).substitute(self.asdict()) for v in val]
-                        continue
-                
-                    if isinstance(val, dict):
-                        for k, v in val.items():
-                            val[k] = Template(v).substitute(self.asdict())
-        
-        return processors
-        
+                if isinstance(val, list):
+                    config[arg] = [Template(v).substitute(params) for v in val]
+                    continue
+            
+                if isinstance(val, dict):
+                    for k, v in val.items():
+                        val[k] = Template(v).substitute(params)
+    
+    return processors
 
 def read_noise_words(path:Path) -> list[str]:
     """Read a file of noise words This file

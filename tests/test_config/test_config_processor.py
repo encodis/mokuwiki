@@ -1,9 +1,11 @@
 import yaml
-from pathlib import Path
 
 from mokuwiki.wiki import Wiki
 
-def test_ns_processor_replace(tmp_path):
+from utils import Markdown
+
+
+def test_config_replace(tmp_path):
     source = tmp_path / 'source'
     source.mkdir()
     
@@ -22,6 +24,8 @@ def test_ns_processor_replace(tmp_path):
                 key2: ${{namespace}}/2 $broken_css
         namespaces:
           ns1:
+              preprocessing:
+                - copy content/$namespace/$media_dir/ my_site/$namespace/$media_dir
               content: {ns1}
               toc: 1
         """
@@ -37,9 +41,9 @@ def test_ns_processor_replace(tmp_path):
               maps:
                 key1: ns1/1
                 key2: ns1/2 .broken
-            """)
+          - copy content/ns1/images/ my_site/ns1/images
+          """)
     
     actual = ns1.config.preprocessing
     
     assert expect == actual
-    
