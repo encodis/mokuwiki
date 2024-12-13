@@ -732,7 +732,7 @@ def test_file_includes_shift_down(tmp_path):
     
     assert Markdown.compare(expect1, actual1)
 
-def test_file_includes_line_prefix(tmp_path):
+def test_file_includes_line_indent(tmp_path):
 
     source = tmp_path / 'source'
     source.mkdir()
@@ -781,7 +781,7 @@ def test_file_includes_line_prefix(tmp_path):
         
     assert Markdown.compare(expect1, actual1)
 
-def test_file_includes_separator_and_line_prefix(tmp_path):
+def test_file_includes_separator_and_line_indent(tmp_path):
 
     source = tmp_path / 'source'
     source.mkdir()
@@ -895,6 +895,58 @@ Included Text
     The prefix line
     Included Text
     The suffix line
+    """
+        
+    assert Markdown.compare(expect1, actual1)
+
+def test_file_includes_prefix_and_indent(tmp_path):
+
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
+
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   f"""
+                   ---
+                   title: Page One
+                   ...
+                   <<file2.md --indent "> " --shift 1>>
+                   """)
+
+    # note: 'Included Text' is left justifed because the \n in the prefix messes up dedent()
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Three
+                   prefix: '### Prefix\n\n'
+                   ...
+Included Text
+                   """)
+    
+    wiki_config = f"""
+        name: test
+        build_dir: {tmp_path}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
+
+    wiki = Wiki(yaml.safe_load(wiki_config))
+    wiki.process_wiki()
+
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'
+    assert actual1.exists()
+
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    > #### Prefix
+    > Included Text
     """
         
     assert Markdown.compare(expect1, actual1)

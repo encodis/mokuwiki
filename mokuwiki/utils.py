@@ -23,6 +23,7 @@ class OptionsParser:
             options = self._parser.parse_args(re.findall(r"(?:\".*?\"|\S)+", line))
         except (argparse.ArgumentError, argparse.ArgumentTypeError):
             logging.error("Error parsing file include directive")
+            # TODO check returned value when used as options.format will not exist etc
             return {}
 
         # double quotes will have been preserved and must be removed        
@@ -61,6 +62,17 @@ class TagListParser(OptionsParser):
         self._parser.add_argument('--header', default='')
         self._parser.add_argument('--before', default='\n')
         self._parser.add_argument('--after', default='\n')
+        
+        """TODO --table option eg. --table "<Name:title,Rank:level"
+        so would have column_title:metadata_element, then maybe some 
+        way of indicating justification and relative width (so start with
+        "<" for left, ">" for right and nothing for centered)
+        
+        so --table would set --header, --format and --after accordingly
+        
+        would do this here
+        
+        """
         
         logging.debug("TagListParser initialized")
 

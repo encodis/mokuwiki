@@ -228,6 +228,8 @@ class Namespace:
             guard_count = 0
         
             while True:
+                logging.debug(f'generating story ToC for: {current_page.title}')
+
                 next_page = current_page.meta.get(DEFAULT_META_NEXT, False)
             
                 if not next_page or guard_count > len(self):
@@ -237,6 +239,9 @@ class Namespace:
             
                 # get actual page from title
                 next_page = self.get_page(next_page)
+                
+                # TODO need to check whether next page exists
+                
                 toc_pages.append(next_page)            
                 current_page = next_page
             
@@ -254,22 +259,24 @@ class Namespace:
         """i.e. for pages that are not in a story, also obey sort order
         Should be run AFTER story ToC generation"""
         
-        toc_pages = []
+        # toc_pages = []
         
-        for page in self.pages:
+        # for page in self.pages:
             
-            # skip pages with a story ToC
-            if page.meta.get(DEFAULT_META_HOME, False):
-                continue
+        #     # skip pages with a story ToC
+        #     if page.meta.get(DEFAULT_META_HOME, False):
+        #         continue
         
-            toc_pages.append(page)
+        #     toc_pages.append(page)
+            
+        toc_pages = [p for p in self.pages if not p.meta.get(DEFAULT_META_HOME, False)]
             
         if len(toc_pages) == 0:
             return
         
         # use tuple for nested sort
         toc_pages = sorted(toc_pages, key=lambda p: (p.toc_order, p.title))
-        
+    
         toc = '\n'.join([make_markdown_span(make_markdown_link(p.title), f"toc{p.toc_level}") for p in toc_pages])
 
         for page in toc_pages:
@@ -277,49 +284,6 @@ class Namespace:
                 continue
             
             page.meta['ns-toc'] = toc
-
-    def create_plain_toc(self, pages: list) -> str:
-        return '\n'.join([make_markdown_span(make_markdown_link(p.title), f"toc{p.toc_level}") for p in pages])
-
-    # def create_nested_toc(self, pages: list) -> str:
-    #     """Given a list of ordered pages, each with a toc_level, create an HTML fragment for use
-    #     as a ToC in the same style as Pandoc, i.e.
-        
-    #     <ul>
-    #       <li>TOC 1</li>
-    #       <li>TOC 1
-    #         <ul>
-    #           <li>TOC 2</li>
-    #           <li>TOC 2
-    #             <ul>
-    #               <li>TOC 3</li>
-    #             </ul>
-    #         </ul>
-    #       </li>
-    #       <li>TOC 1</li>
-    #     </ul>
-    #     """
-        
-    #     def make_element(page: Page):
-    #         make_markdown_link(page.title)
-        
-    #     toc = "<ul>"
-        
-        
-    #     create_li()
-    #     create_ul()
-        
-    #     for page, next in zip(pages, [*pages, None]):
-    #         toc += "<li>"
-    #         toc += make_markdown_link(page.title)
-            
-    #         if next and next.toc_level == page.toc_level:
-    #             toc += "</li>"
-    #             continue
-            
-        
-    #     toc += "</ul>"
-    
 
     def update_story_links(self):
         

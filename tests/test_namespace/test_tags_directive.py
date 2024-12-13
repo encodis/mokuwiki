@@ -975,6 +975,7 @@ def test_tags_other_namespace(tmp_path):
               content: {ns1}
           ns2:
               content: {ns2}
+              alias: zz
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))

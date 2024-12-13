@@ -71,6 +71,8 @@ class Index:
         for tag in page.tags:
             self._tags[tag].add(page.title)
 
+        # TODO add pseudo links here?
+
         self._update_search_index(page)
 
     def has_title(self, page_name: str) -> bool:

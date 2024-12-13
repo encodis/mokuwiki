@@ -167,6 +167,10 @@ class Page:
         return self.meta.get('alias', '')
 
     @property
+    def display_title(self) -> str:
+        return self.meta.get('display_title', self.title)
+    
+    @property
     def tags(self) -> list[str]:
         return [t.lower() for t in self.meta.get('tags', [])]
 
@@ -489,7 +493,7 @@ class Page:
                 return tag_text
 
         if tag_name == '*':
-            tag_text = [make_wiki_link(t, tag_ns.alias) for t in tag_ns.index.get_titles()]
+            tag_text = [make_wiki_link(t, tag_ns.name) for t in tag_ns.index.get_titles()]
 
         elif tag_name == '@':
             tag_text = [make_markdown_span(t, tag_ns.config.tags_css) for t in tag_ns.index.get_tags()]
@@ -521,28 +525,31 @@ class Page:
                     else:
                         page_set = page_set | tag_ns.index.get_tagged_pages(tag_name)
 
-                ns_alias = '' if own_ns else tag_ns.alias
+                ns_name = '' if own_ns else tag_ns.name
                 
                 if not options.format:
                     # TODO can't we just make a wiki link, as will be processed next?
-                    tag_text = [make_markdown_link(p, '', ns_alias) for p in page_set]
+                    tag_text = [make_markdown_link(p, '', ns_name) for p in page_set]
                 else:
                     # turn titles back into pages
-                    page_set = [self.namespace.get_page(p) for p in page_set]
+                    page_set = [tag_ns.get_page(p) for p in page_set]
 
                     tag_text = [MetadataReplace(options.format).safe_substitute(p.meta) for p in page_set]
 
         else:
             pass
-        
-        if options.sort:
-            # sort by content (e.g. title)
-            tag_text = sorted(tag_text)
-                
-        tag_text = options.sep.join([options.before + 
-                                     t + 
-                                     options.after
-                                     for t in tag_text])
+                        
+        if isinstance(tag_text, str):
+            tag_text = options.before + tag_text + options.after
+        else:
+            if options.sort:
+                # sort by content (e.g. title)
+                tag_text = sorted(tag_text)
+            
+            tag_text = options.sep.join([options.before + 
+                                         t + 
+                                         options.after
+                                         for t in tag_text])
         
         return options.header + tag_text
 
@@ -565,6 +572,28 @@ class Page:
             str: Markdown formatted link to a page,
             e.g. `[Page name](./page_name.html)`
 
+        """
+
+        # TODO syntax for linking to anchors in page e.g. [[r:Attributes#wounds]]
+        # or create pseudo-pages so you can use [[r:Wounds]] and it know how to link to that
+        # would have to define in metadata
+        """So pseudo: Strength, Wounds
+        would insert into the namespace index if those headings exist
+        this would need changes to make_markdown_link() to be aware of diffs
+        i.e. the page title you would add to index would have to be Page_title#foo (is_pseudo=True)
+        and making the link would need to accomodate this 
+        
+        you would have to create a Page(is_pseudo=True) object with a specific title and then
+        make up - from the page_path - a title (Wounds) with a new pseudo attribute which
+        pointed to the actual page title with the anchor (Attributes#wounds). and it could not save()
+        and would not need to be processed
+        
+        But would it be easier to create a Wounds page and include into the main page? They would not
+        be linked to a story though... but clicking would go to that page not the anchor... but it
+        could be aliased (wound/wounds etc). In those cases could you have a link redirect
+        in the metadata? so [[Wounds]] would go to [[attributes#wounds]]?
+        
+        
         """
 
         # TODO the logic for handling names containing a ":" is a bit convoluted!
