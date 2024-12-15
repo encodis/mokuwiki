@@ -401,6 +401,7 @@ class Page:
                 incl_text = [MetadataReplace(options.format).safe_substitute(p.meta) for p in page_list]
             else:
                 incl_text = [Page(p, self.namespace, included=True).content(options.indent, options.shift) for p in page_list]
+
         except ValueError:
             # catch Page() errors due to path issues
             logging.warning(f"missing files in include directive '{options.files}'")
@@ -574,36 +575,18 @@ class Page:
 
         """
 
-        # TODO syntax for linking to anchors in page e.g. [[r:Attributes#wounds]]
-        # or create pseudo-pages so you can use [[r:Wounds]] and it know how to link to that
-        # would have to define in metadata
-        """So pseudo: Strength, Wounds
-        would insert into the namespace index if those headings exist
-        this would need changes to make_markdown_link() to be aware of diffs
-        i.e. the page title you would add to index would have to be Page_title#foo (is_pseudo=True)
-        and making the link would need to accomodate this 
-        
-        you would have to create a Page(is_pseudo=True) object with a specific title and then
-        make up - from the page_path - a title (Wounds) with a new pseudo attribute which
-        pointed to the actual page title with the anchor (Attributes#wounds). and it could not save()
-        and would not need to be processed
-        
-        But would it be easier to create a Wounds page and include into the main page? They would not
-        be linked to a story though... but clicking would go to that page not the anchor... but it
-        could be aliased (wound/wounds etc). In those cases could you have a link redirect
-        in the metadata? so [[Wounds]] would go to [[attributes#wounds]]?
-        
-        
-        """
-
         # TODO the logic for handling names containing a ":" is a bit convoluted!
         # TODO suggest this is not allowed
 
         page_name = str(page.group(1))
         show_name = ''
-
+        anchor_name = ''
+        
         if '|' in page_name:
             show_name, _, page_name = page_name.partition('|')
+
+        if '#' in page_name:
+            page_name, _, anchor_name = page_name.partition('#')
 
         # resolve namespace
         namespace = ''
@@ -627,6 +610,7 @@ class Page:
                 # assume link is broken, as no target NS found
                 logging.error(f"no namespace found using name or alias '{namespace}' for '{self.source}'")
                 if show_broken:
+                    # TODO show_broken should be part of make_markdown_span?
                     return make_markdown_span(page_title, self.namespace.config.broken_css)
                 else:
                     return page_title
@@ -664,7 +648,7 @@ class Page:
         if target_ns.index.has_title(page_title):
             # if title exists in target namespace index make into a link
             ns_path = '' if target_ns is self.namespace else target_ns.name
-            page_link = make_markdown_link(show_name, make_file_name(page_title), ns_path, target_ns.is_root)
+            page_link = make_markdown_link(show_name, make_file_name(page_title), ns_path, target_ns.is_root, anchor_name)
         else:
             # if title does not exist in index then turn into bracketed span with class='broken' (default)
             page_link = make_markdown_span(page_title, target_ns.config.broken_css)

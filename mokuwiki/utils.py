@@ -106,22 +106,25 @@ def make_markdown_span(span_text: str, css_class: str = '') -> str:
     
     return f"[{span_text}]{css_class}"
 
-def make_markdown_link(show_name: str, page_name: str = '', ns_path: str = '', root_ns: bool = False) -> str:
+def make_markdown_link(show_name: str, page_name: str = '', ns_path: str = '', root_ns: bool = False, anchor_name: str = '') -> str:
 
     # TODO if namespace targets could be different then you would need to factor that in here
     if not page_name:
         page_name = make_file_name(show_name)
 
+    if anchor_name:
+        anchor_name = f"#{anchor_name}"
+
     if not ns_path:
         # source and target NS are the same
-        return f'[{show_name}]({page_name}.html)'
+        return f'[{show_name}]({page_name}.html{anchor_name})'
 
     if root_ns:
         # if target is root just go up one level
-        return f'[{show_name}](../{page_name}.html)'
+        return f'[{show_name}](../{page_name}.html{anchor_name})'
     
     # otherwise go up and come back down
-    return f'[{show_name}](../{ns_path}/{page_name}.html)'
+    return f'[{show_name}](../{ns_path}/{page_name}.html{anchor_name})'
 
 def make_wiki_link(title: str, namespace: str = ''):
     """Make a wiki link from a title and optional namespace alias"""

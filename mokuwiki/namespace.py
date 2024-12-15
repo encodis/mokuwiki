@@ -185,12 +185,7 @@ class Namespace:
         
         # TODO have a "story title" like "Core Rules"
                 
-        self.home_pages = []
-        
-        # get home page
-        for page in self.pages:
-            if page.meta.get(DEFAULT_META_HOME, False):
-                self.home_pages.append(page)
+        self.home_pages = [p for p in self.pages if p.meta.get(DEFAULT_META_HOME, False)]
         
         if not self.home_pages:
             logging.info("No home pages for story generation")
@@ -258,16 +253,6 @@ class Namespace:
     def generate_ns_toc(self) -> None:
         """i.e. for pages that are not in a story, also obey sort order
         Should be run AFTER story ToC generation"""
-        
-        # toc_pages = []
-        
-        # for page in self.pages:
-            
-        #     # skip pages with a story ToC
-        #     if page.meta.get(DEFAULT_META_HOME, False):
-        #         continue
-        
-        #     toc_pages.append(page)
             
         toc_pages = [p for p in self.pages if not p.meta.get(DEFAULT_META_HOME, False)]
             

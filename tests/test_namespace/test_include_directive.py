@@ -901,6 +901,8 @@ Included Text
 
 def test_file_includes_prefix_and_indent(tmp_path):
 
+    # TODO this does not work in production - same reason NS TOC as nested lists did not???
+
     source = tmp_path / 'source'
     source.mkdir()
     
@@ -925,6 +927,8 @@ def test_file_includes_prefix_and_indent(tmp_path):
                    prefix: '### Prefix\n\n'
                    ...
 Included Text
+
+More Included Text
                    """)
     
     wiki_config = f"""
@@ -947,6 +951,8 @@ Included Text
     ...
     > #### Prefix
     > Included Text
+    > 
+    > More Included Text
     """
         
     assert Markdown.compare(expect1, actual1)
