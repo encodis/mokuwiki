@@ -127,7 +127,7 @@ class Namespace:
             if page.title == page_title:
                 return page
             
-            if page.alias == page_title:
+            if page_title in page.alias:
                 return page
 
         # if still here try aliases
@@ -223,6 +223,7 @@ class Namespace:
             guard_count = 0
         
             while True:
+                # FIXME this warning does not work if there is no current page!! need to check on settinh
                 logging.debug(f'generating story ToC for: {current_page.title}')
 
                 next_page = current_page.meta.get(DEFAULT_META_NEXT, False)

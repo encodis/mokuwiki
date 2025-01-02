@@ -163,8 +163,13 @@ class Page:
         return self.meta.get('title', '')
 
     @property
-    def alias(self) -> str:
-        return self.meta.get('alias', '')
+    def alias(self) -> list[str]:
+        alias = self.meta.get('alias', '')
+        
+        if not alias:
+            return ''
+        
+        return [alias] if isinstance(alias, str) else alias
 
     @property
     def display_title(self) -> str:
@@ -371,8 +376,9 @@ class Page:
                 page_list = [page.source]
 
         elif '/' in options.files:
-            # this is a path spec
-            page_list = list(Path('.').glob(options.files))
+            # this is a path spec relative to the including file
+            content_dir = Path(self.source).parent / Path(options.files).parent
+            page_list = list(content_dir.glob(Path(options.files).name))
         
         else:
             # assume this is a file(s) in one of the content_dirs
@@ -630,6 +636,7 @@ class Page:
                     target_ns = search_page.namespace
                 else:
                     logging.debug(f"page '{self.source}' not found in any namespace")
+                    
                     if show_broken:
                         return make_markdown_span(page_title, self.namespace.config.broken_css)
                     else:
@@ -670,6 +677,8 @@ class Page:
             str: Markdown formatted link to the image
 
         """
+
+        # TODO need to be able to specify a class, see https://pandoc.org/MANUAL.html#extension-link_attributes 
 
         image_name = str(image.group(1))
 

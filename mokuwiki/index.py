@@ -55,23 +55,25 @@ class Index:
         if self.has_target(page.target):
             logging.warning(f"skipping '{page.source}', duplicate output filename '{page.target}'")
             raise ValueError
-        
+                
         if page.alias:
-            if self.has_alias(page.alias):
-                logging.warning(f"skipping '{page.file}', duplicate alias '{page.alias}'")
-                raise ValueError
             
-            if page.alias in self._titles:
-                logging.warning(f"skipping '{page.file}', alias duplicated in title of '{self._titles[page.alias]}'")
-                raise ValueError
+            for alias in page.alias:
+                if self.has_alias(alias):
+                    logging.warning(f"skipping '{page.file}', duplicate alias '{alias}'")
+                    raise ValueError
+            
+                if alias in self._titles:
+                    logging.warning(f"skipping '{page.file}', alias duplicated in title of '{self._titles[alias]}'")
+                    raise ValueError
+
+            for alias in page.alias:
+               self._aliases[alias] = page.title
 
         self._titles[page.title] = page.target
-        self._aliases[page.alias] = page.title
-
+    
         for tag in page.tags:
             self._tags[tag].add(page.title)
-
-        # TODO add pseudo links here?
 
         self._update_search_index(page)
 

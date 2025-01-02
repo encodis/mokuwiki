@@ -133,6 +133,71 @@ def test_page_links_alias(tmp_path):
     
     assert Markdown.compare(expect2, actual2)
 
+def test_page_links_aliases(tmp_path):
+
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
+
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   ...
+                   A link to [[2nd Page]]
+                   A link to [[Second Page]]
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   alias: ['2nd Page', 'Second Page']
+                   ...
+                   A link to [[Page One]]
+                   """)
+
+    wiki_config = f"""
+        name: test
+        build_dir: {tmp_path}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
+
+    wiki = Wiki(yaml.safe_load(wiki_config))
+    wiki.process_wiki()
+
+    actual1 = tmp_path / 'ns1' / PROCESS /  'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    ...
+    A link to [2nd Page](page_two.html)
+    A link to [Second Page](page_two.html)
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+
+    actual2 = tmp_path / 'ns1' / PROCESS /  'page_two.md'    
+    assert actual2.exists()
+    
+    expect2 = """
+    ---
+    title: Page Two
+    alias: ['2nd Page', 'Second Page']
+    ...
+    A link to [Page One](page_one.html)
+    """
+    
+    assert Markdown.compare(expect2, actual2)
+
 def test_page_links_display(tmp_path):
     
     source = tmp_path / 'source'
