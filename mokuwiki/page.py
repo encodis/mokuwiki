@@ -14,7 +14,7 @@ from functools import partial
 if TYPE_CHECKING:
     from mokuwiki.namespace import Namespace
 
-from mokuwiki.utils import FileIncludeParser, TagListParser
+from mokuwiki.utils import FileIncludeParser, ImageIncludeParser, TagListParser
 from mokuwiki.utils import make_file_name, make_image_link, make_markdown_link, make_wiki_link, make_markdown_span
 
 
@@ -54,6 +54,7 @@ class Page:
     """
 
     FileIncludeParser = FileIncludeParser()
+    ImageIncludeParser = ImageIncludeParser()
     TagListParser = TagListParser()
 
     def __init__(self, page_path: Path | str, namespace: 'Namespace', included: bool = False, media: str = 'images', custom: str = '.smallcaps') -> None:
@@ -122,7 +123,7 @@ class Page:
                 self.target = None
             else:
                 raise ValueError(f"page {page_path} has no title")
-        
+                
         self.source = page_path        
         self.namespace = namespace
 
@@ -156,6 +157,8 @@ class Page:
         # return '\n'.join('---', yaml.safe_dump(self.meta, default_flow_style=False), '...', self.body)
 
         return '---\n' + yaml.safe_dump(self.meta, default_flow_style=False) + '...\n' + self.body
+
+    # TODO should we have a predetermined file_name (with html ext) and have ns.get_page() return a link as well or get_link(pagr)?
 
     @property
     def title(self) -> str:
@@ -234,6 +237,7 @@ class Page:
         content = self.meta.get('prefix', '') + self.body + self.meta.get('suffix', '')
         
         # replace ?{value} strings in content with appropriate metadata values
+        # TODO this needs to be aware of metadata structures like monster.rank, item.cost etc
         content = MetadataReplace(content).safe_substitute(self.meta)
         
         if shift != 0:
@@ -330,6 +334,15 @@ class Page:
             # TODO next, prev etc are NOT in wiki link format so are not found
             ## if home, next, prev are system type things then we can add
             ## but for subtitle test will have to put directly
+                        
+            if isinstance(self.meta[field], dict):
+                for key, value in self.meta[field].items():
+                    if isinstance(value, list):
+                        self.meta[field][key] = [re.sub(PAGE_LINK_RE, process_links, f) for f in value]
+
+                    if isinstance(value, str):
+                        self.meta[field][key] = re.sub(PAGE_LINK_RE, process_links, value)
+            
             if isinstance(self.meta[field], list):
                 self.meta[field] = [re.sub(PAGE_LINK_RE, process_links, f) for f in self.meta[field]]
 
@@ -467,7 +480,6 @@ class Page:
         """
         
         tag_list = str(tags.group(1))
-        
         options = Page.TagListParser.parse(tag_list)
 
         # replace format. header if in template, else retain
@@ -541,6 +553,8 @@ class Page:
                     # turn titles back into pages
                     page_set = [tag_ns.get_page(p) for p in page_set]
 
+                    # TODO needs to be aware of nested properties like item.cost unless we expand out locally
+                    # TODO ... maybe create meta terms like 'item.cost' locally
                     tag_text = [MetadataReplace(options.format).safe_substitute(p.meta) for p in page_set]
 
         else:
@@ -669,25 +683,59 @@ class Page:
         'media_dir' configuration option is prepended to the name.
 
         For example, `!!An Image!!` becomes `![An Image](images/an_image.png)`
+        
+        Options include:
+            --ext: The image extension
+            --media: The media dir for this image, defaults to namespaces' media_dir
+            --link: Surround the image markup in a page link
+            --style: Add the style attributes
+            --figure: Format the image directive as a figure, defaults to True
+
+        Note that because of the way Markdown works, the --link option produces HTML
 
         Args:
             image (Match): A Match object corresponding to an image link
 
         Returns:
             str: Markdown formatted link to the image
-
         """
 
-        # TODO need to be able to specify a class, see https://pandoc.org/MANUAL.html#extension-link_attributes 
+        image = str(image.group(1))
+        options = Page.ImageIncludeParser.parse(image)
 
-        image_name = str(image.group(1))
-
-        file_ext = 'jpg'
-
+        image_name = " ".join(options.image)
+        image_ext = options.ext
+        media_dir = options.media if options.media else self.media_dir
+        
+        # TODO allow !!Caption Name|Image Name
+        caption_name = image_name
+        
         if '|' in image_name:
-            image_name, file_ext = image_name.split('|')
+            caption_name, _, image_name = image_name.partition('|')        
+        
+        image_link = make_image_link(image_name, caption_name, image_ext, media_dir)
+        
+        if not options.figure:
+            # add non-breaking space to disable Pandoc <figure> production
+            image_link = image_link + '\ '
 
-        return make_image_link(image_name, file_ext, self.media_dir)
+        if options.style:
+            image_link = f"{image_link}{{{options.style}}}"
+        
+        if options.link:    
+            # get link (a bit overkill but works!)
+            link_name = re.sub(PAGE_LINK_RE, self.process_link_directives, '[[' + options.link + ']]')
+            
+            # extract HTML part of link
+            if '(' in link_name:
+                link_href = link_name.split('(')[1][:-1]
+            else:
+                # probably a broken link as no link element
+                link_href = options.link
+            
+            image_link = f"<a href='{link_href}'>\n\n{image_link}\n\n</a>"
+        
+        return image_link
 
     def process_custom_style(self, style: Match) -> str:
         """Convert a custom style specification into a (Pandoc) bracketed span.
@@ -706,6 +754,9 @@ class Page:
         return make_markdown_span(style_text, self.custom_css)
 
 # TODO use mokuwiki --single
+
+# TODO option (-concat) to use story ToC to concatenate? with ToC level 1 as chapters, 2 as sections etc?
+
 def mwpage(args=None):
     if args is None:
         args = sys.argv[1:]

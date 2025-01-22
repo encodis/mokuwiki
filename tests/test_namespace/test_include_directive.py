@@ -535,6 +535,8 @@ def test_file_includes_format_table(tmp_path):
                    Included Three
                    """)
     
+    # TODO test format with metalinks    
+    
     wiki_config = f"""
         name: test
         build_dir: {tmp_path}

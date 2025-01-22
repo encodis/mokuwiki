@@ -524,7 +524,7 @@ def test_page_links_metadata_string(tmp_path):
         namespaces:
           ns1:
               content: {ns1}
-              meta_links: ['subtitle']
+              meta_links: [subtitle]
         """
 
     wiki = Wiki(yaml.safe_load(wiki_config))
@@ -559,7 +559,7 @@ def test_page_links_metadata_list(tmp_path):
                    """
                    ---
                    title: Page One
-                   tags: ['[[Page Two]]', '[[Page Three]]', '[[Not Found]]']
+                   tags: ["[[Page Two]]", '[[Page Three]]', '[[Not Found]]']
                    ...
                    Text 1
                    """)

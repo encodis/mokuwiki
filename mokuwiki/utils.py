@@ -22,7 +22,7 @@ class OptionsParser:
         try:
             options = self._parser.parse_args(re.findall(r"(?:\".*?\"|\S)+", line))
         except (argparse.ArgumentError, argparse.ArgumentTypeError):
-            logging.error("Error parsing file include directive")
+            logging.error(f"Error parsing directive for {line}")
             # TODO check returned value when used as options.format will not exist etc
             return {}
 
@@ -49,8 +49,22 @@ class FileIncludeParser(OptionsParser):
         self._parser.add_argument('--repeat', default=1, type=int)
         
         logging.debug("FileIncludeParser initialized")
+
+
+class ImageIncludeParser(OptionsParser):
     
-            
+    def __init__(self) -> None:
+        super().__init__()
+        self._parser.add_argument('image', nargs='+')
+        self._parser.add_argument('--ext', default='jpg')
+        self._parser.add_argument('--link', default='')
+        self._parser.add_argument('--style', default='')
+        self._parser.add_argument('--media', default='')
+        self._parser.add_argument('--figure', action='store_true', default=True)
+        
+        logging.debug("ImageIncludeParser initialized")
+
+
 class TagListParser(OptionsParser):
     
     def __init__(self) -> None:
@@ -66,7 +80,8 @@ class TagListParser(OptionsParser):
         """TODO --table option eg. --table "<Name:title,Rank:level"
         so would have column_title:metadata_element, then maybe some 
         way of indicating justification and relative width (so start with
-        "<" for left, ">" for right and nothing for centered)
+        "<" for left, ">" for right and nothing for centered). Plus something
+        for making the column wide, e.g. number of + signs after (each one adds len(name) in spaces)
         
         so --table would set --header, --format and --after accordingly
         
@@ -136,11 +151,16 @@ def make_wiki_link(title: str, namespace: str = ''):
         
     return f"[[{title}]]"
 
-def make_image_link(image_name: str, ext: str = 'jpg', media_dir: str = '') -> str:
+def make_image_link(image_name: str, caption_name:str|None = None,image_ext: str = 'jpg', media_dir: str = '') -> str:
     
-    file_name = make_file_name(image_name, ext)
+    # TODO with optional class(es)
     
-    if media_dir:
-        return f'![{image_name}]({media_dir}/{file_name})'
+    file_name = make_file_name(image_name, image_ext)
 
-    return f'![{image_name}]({file_name})'
+    if not caption_name:
+        caption_name = image_name
+            
+    if media_dir:
+        return f'![{caption_name}]({media_dir}/{file_name})'
+
+    return f'![{caption_name}]({file_name})'

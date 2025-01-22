@@ -113,7 +113,7 @@ class Namespace:
 
         logging.debug(f"loaded namespace '{self.name}'")
 
-    def get_page(self, page_title) -> Page|None:
+    def get_page(self, page_title) -> Page | None:
         """Get a reference to a page given the page title.
         If no titles match then try aliases.
 
@@ -223,20 +223,20 @@ class Namespace:
             guard_count = 0
         
             while True:
-                # FIXME this warning does not work if there is no current page!! need to check on settinh
-                logging.debug(f'generating story ToC for: {current_page.title}')
-
                 next_page = current_page.meta.get(DEFAULT_META_NEXT, False)
             
                 if not next_page or guard_count > len(self):
                     break
+
+                logging.debug(f'generating story ToC for: {current_page.title}')
 
                 guard_count += 1
             
                 # get actual page from title
                 next_page = self.get_page(next_page)
                 
-                # TODO need to check whether next page exists
+                if not next_page:
+                    break
                 
                 toc_pages.append(next_page)            
                 current_page = next_page

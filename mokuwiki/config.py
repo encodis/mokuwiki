@@ -173,6 +173,8 @@ class WikiConfig:
 
 class NamespaceConfig:
     
+    # TODO some kind of "exclude" list to filter out folders, file exts from copying?
+    
     def __init__(self, name, config: dict, wiki: 'Wiki') -> None:
         # config is a WikiConfig object
         
@@ -290,7 +292,8 @@ class NamespaceConfig:
     
     @property
     def meta_links(self) -> list[str]:
-        
+        """NOTE: meta_links must be a list in the original config
+        """
         meta_links = self.config.get('meta_links', [])
         
         if meta_links:
