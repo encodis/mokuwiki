@@ -187,7 +187,9 @@ def test_image_links_link(tmp_path):
     title: Page One
     ...
     <a href='page_two.html'>
+    
     ![An Image](images/an_image.jpg)
+    
     </a>
     """
     
@@ -243,7 +245,9 @@ def test_image_links_link_ns(tmp_path):
     title: Page One
     ...
     <a href='../ns2/page_two.html'>
+    
     ![An Image](images/an_image.jpg)
+    
     </a>
     """
     
@@ -293,7 +297,9 @@ def test_image_links_link_and_style(tmp_path):
     title: Page One
     ...
     <a href='page_two.html'>
+    
     ![An Image](images/an_image.jpg){.aaa #bbb}
+    
     </a>
     """
     

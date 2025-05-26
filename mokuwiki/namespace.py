@@ -192,7 +192,8 @@ class Namespace:
             return
 
         for home_page in self.home_pages:
-
+            logging.debug(f"generating story for {home_page.title}")
+            
             home_page.meta[DEFAULT_META_HOME] = home_page.title
 
             last_page = home_page
@@ -208,7 +209,7 @@ class Namespace:
                         page2.meta[DEFAULT_META_HOME] = home_page.title
                         last_page = page2
                         break
-        
+            
     def generate_story_tocs(self) -> None:
         """Note that ToC generation just makes the Markdown links explicitly here, so not
         wait until metadata is processed. But the individual meta links are processed then"""
@@ -242,7 +243,7 @@ class Namespace:
                 current_page = next_page
             
             # format toc with CSS as string, using toc-level for each page
-            toc = '\n'.join([make_markdown_span(make_markdown_link(p.title), f"toc{p.toc_level}") for p in toc_pages])
+            toc = '\n'.join([make_markdown_span(make_markdown_link(p.page_title, p.title), f"toc{p.toc_level}") for p in toc_pages])
             
             # insert ToC as metadata into each page
             for page in toc_pages:
@@ -263,7 +264,7 @@ class Namespace:
         # use tuple for nested sort
         toc_pages = sorted(toc_pages, key=lambda p: (p.toc_order, p.title))
     
-        toc = '\n'.join([make_markdown_span(make_markdown_link(p.title), f"toc{p.toc_level}") for p in toc_pages])
+        toc = '\n'.join([make_markdown_span(make_markdown_link(p.page_title, p.title), f"toc{p.toc_level}") for p in toc_pages])
 
         for page in toc_pages:
             if not page.toc_display:
@@ -273,9 +274,21 @@ class Namespace:
 
     def update_story_links(self):
         
+        # TODO go each story and convert to page_title if config says so
+
+        # TODO must catch exceptions when get_page returns None
+
         for page in self.pages:
             for nav in DEFAULT_META_LINKS:
                 if nav not in page.meta:
                     continue
-                page.meta[nav] = make_wiki_link(page.meta[nav])
+                
+                """if using page_title need 
+                """
+                try:
+                    page.meta[nav] = make_wiki_link(page.meta[nav], '', self.get_page(page.meta[nav]).page_title  )
+                except AttributeError:
+                    logging.error(f"Cannot set '{nav}' for page '{page.title}'")            
+                    
+                # page.meta[nav] = make_wiki_link(page.meta[nav])
 

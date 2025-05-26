@@ -175,12 +175,12 @@ class Page:
         return [alias] if isinstance(alias, str) else alias
 
     @property
-    def display_title(self) -> str:
-        return self.meta.get('display_title', self.title)
+    def page_title(self) -> str:
+        return self.meta.get('page_title', self.title)
     
     @property
     def tags(self) -> list[str]:
-        return [t.lower() for t in self.meta.get('tags', [])]
+        return self.meta.get('tags', [])
 
     @property
     def toc_level(self) -> int:
@@ -343,6 +343,7 @@ class Page:
                     if isinstance(value, str):
                         self.meta[field][key] = re.sub(PAGE_LINK_RE, process_links, value)
             
+            # TODO this can sometimes fail if a wiki link in a meta field is not in quotes e.g. [[Fly]] is a list of lists
             if isinstance(self.meta[field], list):
                 self.meta[field] = [re.sub(PAGE_LINK_RE, process_links, f) for f in self.meta[field]]
 
@@ -492,7 +493,7 @@ class Page:
         tag_list = options.tags
 
         # get initial category
-        tag_name = tag_list[0].replace('_', ' ').lower()
+        tag_name = tag_list[0]
         tag_text = ''
 
         # TODO if using format, then tag_text are the things that will go in there
@@ -535,7 +536,7 @@ class Page:
                     tag_name = tag[1:] if tag.startswith(('&', '!')) else tag
 
                     # normalise tag name
-                    tag_name = tag_name.lower()
+                    # tag_name = tag_name.lower()
 
                     if tag[0] == '&':
                         page_set = page_set & tag_ns.index.get_tagged_pages(tag_name)

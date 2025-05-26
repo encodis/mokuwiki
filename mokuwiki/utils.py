@@ -4,6 +4,7 @@ import re
 import argparse
 import logging
 
+DEFAULT_IMAGE_TYPE = 'jpg'
 MARKDOWN_PARA_SEP = "\n\n"
 
 
@@ -18,6 +19,11 @@ class OptionsParser:
     or just do parse_known_args() and ignore errors?
     """
     
+    def _update(self, options):
+        """Update options based on others
+        """
+        return options
+    
     def parse(self, line) -> dict:
         try:
             options = self._parser.parse_args(re.findall(r"(?:\".*?\"|\S)+", line))
@@ -30,6 +36,8 @@ class OptionsParser:
         for attr in vars(options):
             if isinstance(getattr(options, attr), str):
                 setattr(options, attr, getattr(options, attr).replace('"', '').replace('\\n', '\n'))
+        
+        options = self._update(options)
         
         return options
 
@@ -56,7 +64,7 @@ class ImageIncludeParser(OptionsParser):
     def __init__(self) -> None:
         super().__init__()
         self._parser.add_argument('image', nargs='+')
-        self._parser.add_argument('--ext', default='jpg')
+        self._parser.add_argument('--ext', default=DEFAULT_IMAGE_TYPE)
         self._parser.add_argument('--link', default='')
         self._parser.add_argument('--style', default='')
         self._parser.add_argument('--media', default='')
@@ -76,6 +84,7 @@ class TagListParser(OptionsParser):
         self._parser.add_argument('--header', default='')
         self._parser.add_argument('--before', default='\n')
         self._parser.add_argument('--after', default='\n')
+        self._parser.add_argument('--table', default='')
         
         """TODO --table option eg. --table "<Name:title,Rank:level"
         so would have column_title:metadata_element, then maybe some 
@@ -85,11 +94,59 @@ class TagListParser(OptionsParser):
         
         so --table would set --header, --format and --after accordingly
         
-        would do this here
+        would do this here? or in parse and have super().parse()
         
         """
         
         logging.debug("TagListParser initialized")
+
+    def _update(self, options):
+        """Table definition, will override format and header options
+        
+        Name1:metadata1;Name2:metadata2
+        
+        which is column name and metadata element used to populate
+        
+        <Name = Left justify, i.e. :----
+        >Name = Right justify, i.e. ---:
+        otherwise centered (:---:)
+        
+        number of dashes = len(name) - 1 or 2
+        
+        Name+ = double number of dashes.
+        Name++ = triple etc
+        
+        """
+        if not options.table:
+            return options
+
+        # breakpoint()
+        
+        header1 = "|"
+        header2 = "|"
+        format = "|"
+        
+        for column_def in options.table.split(';'):
+            col_name, _, col_meta = column_def.partition(':')
+
+            width = col_name.count('+') + 1
+            width = width * len(col_name)
+            
+            if col_name.startswith("<"):
+                header2 = f"{header2} :{'-'*width} |"
+            elif col_name.startswith(">"):
+                header2 = f"{header2} {'-'*width}: |"
+            else:
+                header2 = f"{header2} :{'-'*width}: |"
+
+            header1 = f"{header1} {col_name.strip('<>+')} |"
+            format = f"{format} ?{{{col_meta}}} | "
+        
+        setattr(options, "format", format)
+        setattr(options, "header", f"{header1}\n{header2}")
+        setattr(options, "after", "")
+        
+        return options
 
 
 def make_file_name(name: str, ext: str = '') -> str:
@@ -126,7 +183,11 @@ def make_markdown_link(show_name: str, page_name: str = '', ns_path: str = '', r
     # TODO if namespace targets could be different then you would need to factor that in here
     if not page_name:
         page_name = make_file_name(show_name)
-
+    else:
+        page_name = make_file_name(page_name)
+    
+    # TODO if anchor already in page_name separate out and add later
+    
     if anchor_name:
         anchor_name = f"#{anchor_name}"
 
@@ -141,17 +202,22 @@ def make_markdown_link(show_name: str, page_name: str = '', ns_path: str = '', r
     # otherwise go up and come back down
     return f'[{show_name}](../{ns_path}/{page_name}.html{anchor_name})'
 
-def make_wiki_link(title: str, namespace: str = ''):
+def make_wiki_link(page_name: str, namespace: str = '', show_name: str = ''):
     """Make a wiki link from a title and optional namespace alias"""
-    if title.startswith('[[') and title.endswith(']]'):
-        return title
+    
+    # TODO needs optional show_name c.f. nav links
+    if page_name.startswith('[[') and page_name.endswith(']]'):
+        return page_name
     
     if namespace:
-        title = f"{namespace}:{title}"
-        
-    return f"[[{title}]]"
+        page_name = f"{namespace}:{page_name}"
+    
+    if show_name:
+        return f"[[{show_name}|{page_name}]]"
+    
+    return f"[[{page_name}]]"
 
-def make_image_link(image_name: str, caption_name:str|None = None,image_ext: str = 'jpg', media_dir: str = '') -> str:
+def make_image_link(image_name: str, caption_name:str|None = None, image_ext: str = 'jpg', media_dir: str = '') -> str:
     
     # TODO with optional class(es)
     

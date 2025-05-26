@@ -69,88 +69,6 @@ def test_tags_directive(tmp_path):
     tags: [abc]
     ...
     [Page One](page_one.html)
-
-    [Page Two](page_two.html)
-    """
-    
-    assert Markdown.compare(expect1, actual1)
-    
-    actual3 = tmp_path / 'ns1' / PROCESS / 'page_three.md'
-    assert actual3.exists()
-    
-    expect3 = """
-    ---
-    title: Page Three
-    tags: [xyz]
-    ...
-    [Page Three](page_three.html)
-    """
-    
-    assert Markdown.compare(expect3, actual3)
-    
-def test_tags_directive_spaces(tmp_path):
-    """Test that the directive '{{tag}}' produces a list of pages with that tag,
-    and that pages without those tags are not included in the list
-    """
-   
-    source = tmp_path / 'source'
-    source.mkdir()
-    
-    ns1 = source / 'ns1'
-    ns1.mkdir()
-
-    file1 = ns1 / 'file1.md'
-    Markdown.write(file1,
-                   """
-                   ---
-                   title: Page One
-                   tags: [a bc]
-                   ...
-                   {{a_bc}}
-                   """)
-    
-    file2 = ns1 / 'file2.md'
-    Markdown.write(file2,
-                   """
-                   ---
-                   title: Page Two
-                   tags: [a bc]
-                   ...
-                   Text 2
-                   """)
-
-    file3 = ns1 / 'file3.md'
-    Markdown.write(file3,
-                   """
-                   ---
-                   title: Page Three
-                   tags: [xyz]
-                   ...
-                   {{xyz}}
-                   """)
-
-    wiki_config = f"""
-        name: test
-        build_dir: {tmp_path}
-        namespaces:
-          ns1:
-              content: {ns1}
-        """
-
-    wiki = Wiki(yaml.safe_load(wiki_config))
-    wiki.process_wiki()
-
-    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
-    assert actual1.exists()
-    
-    expect1 = """
-    ---
-    title: Page One
-    tags: [a bc]
-    ...
-    [Page One](page_one.html)
-
-    [Page Two](page_two.html)
     """
     
     assert Markdown.compare(expect1, actual1)
@@ -1221,6 +1139,84 @@ def test_tags_format_table(tmp_path):
     | Text 2 | 67.4 |
     | Text 3 | 92 |
     
+    """
+    
+    assert Markdown.compare(expect1, actual1)
+
+
+def test_tags_table(tmp_path):
+    """Test that the directive '{{tag}}' produces a list of pages with that tag,
+    and that pages without those tags are not included in the list
+    """
+   
+    source = tmp_path / 'source'
+    source.mkdir()
+    
+    ns1 = source / 'ns1'
+    ns1.mkdir()
+
+    file1 = ns1 / 'file1.md'
+    Markdown.write(file1,
+                   """
+                   ---
+                   title: Page One
+                   tags: [abc]
+                   foo: Text 1
+                   bar: 23
+                   ...
+                   {{abc --table "<Foo:foo;>Bar++:bar"}}
+                   """)
+    
+    file2 = ns1 / 'file2.md'
+    Markdown.write(file2,
+                   """
+                   ---
+                   title: Page Two
+                   tags: [abc]
+                   foo: Text 2
+                   bar: 67.4
+                   ...
+                   Text 2
+                   """)
+
+    file3 = ns1 / 'file3.md'
+    Markdown.write(file3,
+                   """
+                   ---
+                   title: Page Three
+                   tags: [abc]
+                   foo: Text 3
+                   bar: 92
+                   ...
+                   {{xyz}}
+                   """)
+
+    wiki_config = f"""
+        name: test
+        build_dir: {tmp_path}
+        namespaces:
+          ns1:
+              content: {ns1}
+        """
+
+    wiki = Wiki(yaml.safe_load(wiki_config))
+    wiki.process_wiki()
+
+    actual1 = tmp_path / 'ns1' / PROCESS / 'page_one.md'    
+    assert actual1.exists()
+    
+    expect1 = """
+    ---
+    title: Page One
+    tags: [abc]
+    foo: Text 1
+    bar: 23
+    ...
+    | Foo | Bar |
+    | :---- | ------------------: |
+    | Text 1 |  23 | 
+    | Text 2 |  67.4 | 
+    | Text 3 |  92 |
     """
     
     assert Markdown.compare(expect1, actual1)

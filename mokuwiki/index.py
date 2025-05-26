@@ -84,7 +84,7 @@ class Index:
         return True if page_name in self._aliases.keys() else False
 
     def has_tag(self, tag_name: str) -> bool:        
-        return True if tag_name.lower() in self._tags.keys() else False
+        return True if tag_name in self._tags.keys() else False
     
     def has_target(self, target: str) -> bool:
         return True if target in self._titles.values() else False
